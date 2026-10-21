@@ -144,7 +144,7 @@ Repo_Group07-HeThongQuanLyCuaHangThuCung/
 ├── .gitignore                          # Cấu hình loại trừ file của Git
 ├── README.md                           # Tài liệu tổng quan dự án
 ├── KE_HOACH_PHAN_CHIA_VA_PUSH_CODE.md  # Kế hoạch phân chia mã nguồn & lộ trình tích hợp theo đợt
-├── HUONG_DAN_PUSH_CODE_THANH_VIEN.md   # Sổ tay hướng dẫn cấu hình Git, commit & PR cho thành viên
+├── HUONG_DAN_PUSH_CODE_THANH_VIEN.md   # Sổ tay hướng dẫn Clone Eclipse, commit & PR cho thành viên
 │
 ├── config/                             # File cấu hình tham số hệ thống
 │   ├── database.properties             # Cấu hình kết nối SQL Server (host, port, user, pass)
@@ -181,7 +181,7 @@ Repo_Group07-HeThongQuanLyCuaHangThuCung/
 ### 1. Yêu cầu môi trường
 - **Java Development Kit (JDK):** JDK 17 hoặc JDK 21 (Oracle JDK / OpenJDK).
 - **Hệ quản trị CSDL:** Microsoft SQL Server 2019 / 2022 / Express.
-- **IDE:** Eclipse IDE for Java Developers (khuyến nghị) hoặc IntelliJ IDEA.
+- **IDE:** Eclipse IDE for Java Developers (khuyến nghị).
 
 ### 2. Thiết lập Cơ sở dữ liệu SQL Server
 1. Mở **SQL Server Management Studio (SSMS)** và kết nối vào SQL Server instance của bạn.
@@ -197,10 +197,15 @@ Repo_Group07-HeThongQuanLyCuaHangThuCung/
    ```
 
 ### 3. Khởi chạy bằng Eclipse IDE
-1. Mở Eclipse $\rightarrow$ **File** $\rightarrow$ **Import...** $\rightarrow$ **General** $\rightarrow$ **Existing Projects into Workspace**.
-2. Chọn thư mục dự án và bấm **Finish**.
-3. Nhấp chuột phải vào dự án $\rightarrow$ **Build Path** $\rightarrow$ **Configure Build Path...** $\rightarrow$ Thẻ **Libraries** $\rightarrow$ Đảm bảo 2 tệp `.jar` trong thư mục `lib/` đã được thêm vào classpath.
-4. Mở tệp [`src/Main.java`](src/Main.java) $\rightarrow$ Nhấp chuột phải $\rightarrow$ Chọn **Run As** $\rightarrow$ **Java Application**.
+- **Cách 1 (Clone trực tiếp từ Eclipse - Khuyên dùng):**
+  1. Mở Eclipse $\rightarrow$ **Window** $\rightarrow$ **Show View** $\rightarrow$ **Other...** $\rightarrow$ **Git Repositories**.
+  2. Bấm **Clone a Git repository** $\rightarrow$ Dán URL: `https://github.com/minhto1306/N07-HeThongQuanLyCuaHangThuCung.git`.
+  3. Chọn nhánh **`develop`** $\rightarrow$ Tick chọn **Import all existing Eclipse projects after clone finishes** $\rightarrow$ Bấm **Finish**.
+  *(Xem hướng dẫn chi tiết từng bước bằng ảnh/thao tác tại: [`HUONG_DAN_PUSH_CODE_THANH_VIEN.md`](HUONG_DAN_PUSH_CODE_THANH_VIEN.md))*
+- **Cách 2 (Import dự án đã có sẵn trên máy):**
+  1. Mở Eclipse $\rightarrow$ **File** $\rightarrow$ **Import...** $\rightarrow$ **General** $\rightarrow$ **Existing Projects into Workspace**.
+  2. Chọn thư mục dự án và bấm **Finish**.
+- **Chạy chương trình:** Mở tệp [`src/Main.java`](src/Main.java) $\rightarrow$ Nhấp chuột phải $\rightarrow$ Chọn **Run As** $\rightarrow$ **Java Application**.
 
 ### 4. Khởi chạy bằng Command-line (Terminal)
 ```bash
@@ -240,7 +245,7 @@ Hệ thống được cấu hình sẵn 4 tài khoản mẫu đại diện cho 4
 
 > 📌 **Tài liệu hướng dẫn & Kế hoạch làm việc nhóm:**  
 > 👉 [**KE_HOACH_PHAN_CHIA_VA_PUSH_CODE.md**](KE_HOACH_PHAN_CHIA_VA_PUSH_CODE.md): Kế hoạch phân chia mã nguồn, chi tiết 4 gói code & lộ trình tích hợp theo đợt.  
-> 👉 [**HUONG_DAN_PUSH_CODE_THANH_VIEN.md**](HUONG_DAN_PUSH_CODE_THANH_VIEN.md): Hướng dẫn từng bước từ cấu hình Git, lệnh commit theo đợt đến quy trình Review & Merge Pull Request.
+> 👉 [**HUONG_DAN_PUSH_CODE_THANH_VIEN.md**](HUONG_DAN_PUSH_CODE_THANH_VIEN.md): Hướng dẫn Clone trực tiếp vào Eclipse, lệnh commit theo đợt đến quy trình Review & Merge Pull Request.
 
 ---
 
