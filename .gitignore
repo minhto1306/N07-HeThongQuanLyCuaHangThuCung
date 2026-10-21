@@ -1,0 +1,25 @@
+# Thư mục build và file thực thi
+dist/
+bin/
+obj/
+*.exe
+*.dll
+
+# Tệp tài liệu Word và sơ đồ Visual Paradigm (Lưu trữ trên Drive)
+*.docx
+*.xlsx
+*.pptx
+*.pdf
+*.vpp
+
+# Cấu hình môi trường và IDE
+.env
+.env.*
+.vscode/
+.idea/
+*.suo
+*.user
+
+phan_chia_code_4_thanh_vien/
+*.ps1
+
