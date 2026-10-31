@@ -146,4 +146,148 @@ public class BangGiaoCaDAO {
         }
         return null;
     }
+
+    /**
+     * Tính tổng doanh thu Tiền mặt thực thu trong ngày hôm nay từ bảng HoaDon
+     */
+    public long tinhDoanhThuTienMatTrongNgay() {
+        String sql = "SELECT ISNULL(SUM(thanhTien), 0) AS tongTienMat " +
+                     "FROM HoaDon " +
+                     "WHERE CAST(ngayLap AS DATE) = CAST(GETDATE() AS DATE) " +
+                     "  AND (trangThaiHoaDon = N'Đã thanh toán' OR trangThaiHoaDon IS NULL) " +
+                     "  AND (phuongThucThanhToan LIKE N'%Tiền mặt%' OR phuongThucThanhToan IS NULL)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getLong("tongTienMat");
+            }
+        } catch (Exception e) {
+            System.err.println("[BangGiaoCaDAO] Lỗi tính doanh thu tiền mặt: " + e.getMessage());
+        }
+        return 0L;
+    }
+
+    /**
+     * Tính tổng doanh thu Chuyển khoản / QR / VNPay / Thẻ trong ngày hôm nay từ bảng HoaDon
+     */
+    public long tinhDoanhThuChuyenKhoanTrongNgay() {
+        String sql = "SELECT ISNULL(SUM(thanhTien), 0) AS tongCK " +
+                     "FROM HoaDon " +
+                     "WHERE CAST(ngayLap AS DATE) = CAST(GETDATE() AS DATE) " +
+                     "  AND (trangThaiHoaDon = N'Đã thanh toán' OR trangThaiHoaDon IS NULL) " +
+                     "  AND phuongThucThanhToan IS NOT NULL " +
+                     "  AND phuongThucThanhToan NOT LIKE N'%Tiền mặt%'";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getLong("tongCK");
+            }
+        } catch (Exception e) {
+            System.err.println("[BangGiaoCaDAO] Lỗi tính doanh thu chuyển khoản: " + e.getMessage());
+        }
+        return 0L;
+    }
+
+    /**
+     * Tính tổng tiền hoàn trả khách (Đổi / Trả hàng) trong ngày hôm nay từ bảng PhieuDoiTra
+     */
+    public long tinhTongTienHoanTraTrongNgay() {
+        String sql = "SELECT ISNULL(SUM(tongTienHoan), 0) AS tongHoan " +
+                     "FROM PhieuDoiTra " +
+                     "WHERE CAST(ngayDoiTra AS DATE) = CAST(GETDATE() AS DATE)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getLong("tongHoan");
+            }
+        } catch (Exception e) {
+            System.err.println("[BangGiaoCaDAO] Lỗi tính tiền hoàn trả: " + e.getMessage());
+        }
+        return 0L;
+    }
+
+    /**
+     * Cập nhật trạng thái Quản lý duyệt đối soát ca vào cột lyDoChenhLech của BangGiaoCa
+     */
+    public boolean capNhatGhiChuDuyetCa(String maGiaoCa, String ghiChuMoi) {
+        String sql = "UPDATE BangGiaoCa SET lyDoChenhLech = ? WHERE maGiaoCa = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, ghiChuMoi);
+            ps.setString(2, maGiaoCa);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.err.println("[BangGiaoCaDAO] Lỗi cập nhật duyệt ca: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Lấy danh sách các biên bản giao ca đang ở trạng thái chờ Quản lý duyệt
+     */
+    public List<BangGiaoCa> getDanhSachCaChoDuyet() {
+        List<BangGiaoCa> list = new ArrayList<>();
+        String sql = "SELECT bgc.*, nv.hoTen AS tenNhanVien, c.tenCa " +
+                     "FROM BangGiaoCa bgc " +
+                     "LEFT JOIN NhanVien nv ON bgc.maNhanVien = nv.maNhanVien " +
+                     "LEFT JOIN CaLamViec c ON bgc.maCa = c.maCa " +
+                     "WHERE bgc.lyDoChenhLech LIKE N'%Chờ%duyệt%' " +
+                     "ORDER BY bgc.maGiaoCa DESC";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                NhanVien nv = new NhanVien();
+                nv.setMaNhanVien(rs.getString("maNhanVien"));
+                nv.setHoTen(rs.getString("tenNhanVien"));
+
+                CaLamViec ca = new CaLamViec();
+                ca.setMaCa(rs.getString("maCa"));
+                ca.setTenCa(rs.getString("tenCa"));
+
+                Timestamp kt = rs.getTimestamp("gioKetThucThucTe");
+                LocalDateTime gioKT = (kt != null) ? kt.toLocalDateTime() : null;
+
+                BangGiaoCa bgc = new BangGiaoCa(
+                        rs.getString("maGiaoCa"),
+                        nv,
+                        ca,
+                        rs.getBigDecimal("tienDauCa"),
+                        rs.getBigDecimal("tienCuoiCaHeThong"),
+                        rs.getBigDecimal("tienCuoiCaThucTe"),
+                        rs.getBigDecimal("tienChenhLech"),
+                        rs.getString("lyDoChenhLech"),
+                        gioKT
+                );
+                list.add(bgc);
+            }
+        } catch (Exception e) {
+            System.err.println("[BangGiaoCaDAO] Lỗi lấy danh sách ca chờ duyệt: " + e.getMessage());
+        }
+        return list;
+    }
+
+    /**
+     * Tự động phát sinh mã giao ca tiếp theo dạng GCxxx
+     */
+    public String phatSinhMaGiaoCa() {
+        String sql = "SELECT TOP 1 maGiaoCa FROM BangGiaoCa WHERE maGiaoCa LIKE 'GC%' AND maGiaoCa NOT LIKE 'GC_TEST_%' ORDER BY LEN(maGiaoCa) DESC, maGiaoCa DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                String ma = rs.getString("maGiaoCa");
+                String numStr = ma.replaceAll("[^0-9]", "");
+                if (!numStr.isEmpty()) {
+                    int num = Integer.parseInt(numStr) + 1;
+                    return String.format("GC%03d", num);
+                }
+            }
+        } catch (Exception ignored) {}
+        return "GC001";
+    }
 }
