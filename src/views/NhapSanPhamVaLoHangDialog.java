@@ -10,6 +10,7 @@ import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
@@ -224,31 +225,50 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         txtSoLo.setBorder(ThemeColors.createInputBorder());
         card.add(txtSoLo, gbc);
 
-        // Ngày sản xuất
+        // Ngày sản xuất (Kèm nút chọn lịch)
         gbc.gridx = 0; gbc.gridy = 2;
         card.add(new JLabel("Ngày sản xuất (NSX):"), gbc);
         gbc.gridx = 1;
         txtNgaySX = new JTextField(LocalDate.now().minusMonths(1).format(dtf));
-        txtNgaySX.setPreferredSize(new Dimension(0, 32));
+        txtNgaySX.setEditable(false);
+        txtNgaySX.setBackground(Color.WHITE);
         txtNgaySX.setBorder(ThemeColors.createInputBorder());
-        card.add(txtNgaySX, gbc);
+        txtNgaySX.setPreferredSize(new Dimension(0, 32));
 
-        // Hạn sử dụng
+        JButton btnChonNSX = new JButton(IconHelper.getIcon(IconHelper.CALENDAR, 14, ThemeColors.PRIMARY_ACTIVE));
+        btnChonNSX.setPreferredSize(new Dimension(34, 32));
+        btnChonNSX.setFocusPainted(false);
+        btnChonNSX.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnChonNSX.addActionListener(e -> hienThiCalendarPopup(btnChonNSX, txtNgaySX, null));
+
+        JPanel pnlNgaySX = new JPanel(new BorderLayout(4, 0));
+        pnlNgaySX.setOpaque(false);
+        pnlNgaySX.add(txtNgaySX, BorderLayout.CENTER);
+        pnlNgaySX.add(btnChonNSX, BorderLayout.EAST);
+        card.add(pnlNgaySX, gbc);
+
+        // Hạn sử dụng (Kèm nút chọn lịch)
         gbc.gridx = 0; gbc.gridy = 3;
         card.add(new JLabel("Hạn sử dụng (HSD):"), gbc);
         gbc.gridx = 1;
         txtHanSD = new JTextField(LocalDate.now().plusMonths(8).format(dtf));
-        txtHanSD.setPreferredSize(new Dimension(0, 32));
+        txtHanSD.setEditable(false);
+        txtHanSD.setBackground(Color.WHITE);
         txtHanSD.setBorder(ThemeColors.createInputBorder());
-        txtHanSD.addActionListener(e -> capNhatDanhGiaFefo());
-        txtHanSD.addFocusListener(new java.awt.event.FocusAdapter() {
-            @Override
-            public void focusLost(java.awt.event.FocusEvent e) {
-                capNhatDanhGiaFefo();
-            }
-        });
-        card.add(txtHanSD, gbc);
+        txtHanSD.setPreferredSize(new Dimension(0, 32));
 
+        JButton btnChonHSD = new JButton(IconHelper.getIcon(IconHelper.CALENDAR, 14, ThemeColors.PRIMARY_ACTIVE));
+        btnChonHSD.setPreferredSize(new Dimension(34, 32));
+        btnChonHSD.setFocusPainted(false);
+        btnChonHSD.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnChonHSD.addActionListener(e -> hienThiCalendarPopup(btnChonHSD, txtHanSD, this::capNhatDanhGiaFefo));
+
+        JPanel pnlHanSD = new JPanel(new BorderLayout(4, 0));
+        pnlHanSD.setOpaque(false);
+        pnlHanSD.add(txtHanSD, BorderLayout.CENTER);
+        pnlHanSD.add(btnChonHSD, BorderLayout.EAST);
+        card.add(pnlHanSD, gbc);
+//        ----
         // Đánh giá FEFO Live
         gbc.gridx = 0; gbc.gridy = 4;
         card.add(new JLabel("Đánh giá FEFO:"), gbc);
@@ -347,4 +367,128 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
             JOptionPane.showMessageDialog(this, "Đơn giá nhập và giá bán phải là số hợp lệ!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
         }
     }
+//   ----thêm 
+//    Bật Popup bảng lịch chọn ngày tháng trực quan chống gõ sai
+
+    private void hienThiCalendarPopup(JComponent invoker, JTextField targetField, Runnable onDatePicked) {
+        LocalDate initialDate;
+        try {
+            initialDate = LocalDate.parse(targetField.getText().trim(), dtf);
+        } catch (Exception ex) {
+            initialDate = LocalDate.now();
+        }
+
+        JPopupMenu popup = new JPopupMenu();
+        popup.setBorder(new CompoundBorder(
+                new LineBorder(ThemeColors.BORDER_ACCENT, 1, true),
+                new EmptyBorder(6, 6, 6, 6)
+        ));
+        popup.setBackground(Color.WHITE);
+
+        final YearMonth[] currentYM = {YearMonth.from(initialDate)};
+        final LocalDate currentDate = initialDate;
+
+        JPanel pnlCalendar = new JPanel(new BorderLayout(0, 6));
+        pnlCalendar.setBackground(Color.WHITE);
+        pnlCalendar.setPreferredSize(new Dimension(270, 240));
+
+        JPanel pnlHeader = new JPanel(new BorderLayout());
+        pnlHeader.setOpaque(false);
+
+        JButton btnPrev = new JButton("<");
+        JButton btnNext = new JButton(">");
+        JLabel lblMonthYear = new JLabel("", SwingConstants.CENTER);
+        lblMonthYear.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblMonthYear.setForeground(ThemeColors.PRIMARY_ACTIVE);
+
+        btnPrev.setPreferredSize(new Dimension(36, 26));
+        btnNext.setPreferredSize(new Dimension(36, 26));
+        btnPrev.setFocusPainted(false);
+        btnNext.setFocusPainted(false);
+
+        pnlHeader.add(btnPrev, BorderLayout.WEST);
+        pnlHeader.add(lblMonthYear, BorderLayout.CENTER);
+        pnlHeader.add(btnNext, BorderLayout.EAST);
+        pnlCalendar.add(pnlHeader, BorderLayout.NORTH);
+
+        JPanel pnlDaysGrid = new JPanel(new GridLayout(7, 7, 2, 2));
+        pnlDaysGrid.setOpaque(false);
+        pnlCalendar.add(pnlDaysGrid, BorderLayout.CENTER);
+
+        Runnable renderGrid = () -> {
+            pnlDaysGrid.removeAll();
+            lblMonthYear.setText("Tháng " + currentYM[0].getMonthValue() + " / " + currentYM[0].getYear());
+
+            String[] dowNames = {"T2", "T3", "T4", "T5", "T6", "T7", "CN"};
+            for (String dow : dowNames) {
+                JLabel l = new JLabel(dow, SwingConstants.CENTER);
+                l.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                l.setForeground(ThemeColors.TEXT_MUTED);
+                pnlDaysGrid.add(l);
+            }
+
+            LocalDate firstDay = currentYM[0].atDay(1);
+            int startCol = firstDay.getDayOfWeek().getValue() - 1;
+            int daysInMonth = currentYM[0].lengthOfMonth();
+
+            for (int i = 0; i < startCol; i++) {
+                pnlDaysGrid.add(new JLabel(""));
+            }
+
+            for (int d = 1; d <= daysInMonth; d++) {
+                int dayNum = d;
+                LocalDate thisDate = currentYM[0].atDay(dayNum);
+                JButton btnDay = new JButton(String.valueOf(dayNum));
+                btnDay.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                btnDay.setMargin(new Insets(1, 1, 1, 1));
+                btnDay.setFocusPainted(false);
+                btnDay.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+                if (thisDate.equals(currentDate)) {
+                    btnDay.setBackground(ThemeColors.PRIMARY);
+                    btnDay.setForeground(Color.WHITE);
+                    btnDay.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                } else if (thisDate.equals(LocalDate.now())) {
+                    btnDay.setBackground(ThemeColors.PRIMARY_TINT);
+                    btnDay.setForeground(ThemeColors.PRIMARY_ACTIVE);
+                } else {
+                    btnDay.setBackground(Color.WHITE);
+                    btnDay.setForeground(ThemeColors.TEXT_PRIMARY);
+                }
+
+                btnDay.addActionListener(ev -> {
+                    targetField.setText(thisDate.format(dtf));
+                    popup.setVisible(false);
+                    if (onDatePicked != null) {
+                        onDatePicked.run();
+                    }
+                });
+                pnlDaysGrid.add(btnDay);
+            }
+
+            int filled = startCol + daysInMonth;
+            while (filled < 42) {
+                pnlDaysGrid.add(new JLabel(""));
+                filled++;
+            }
+
+            pnlDaysGrid.revalidate();
+            pnlDaysGrid.repaint();
+        };
+
+        btnPrev.addActionListener(ev -> {
+            currentYM[0] = currentYM[0].minusMonths(1);
+            renderGrid.run();
+        });
+
+        btnNext.addActionListener(ev -> {
+            currentYM[0] = currentYM[0].plusMonths(1);
+            renderGrid.run();
+        });
+
+        renderGrid.run();
+        popup.add(pnlCalendar);
+        popup.show(invoker, 0, invoker.getHeight() + 2);
+    }
+//    -----
 }

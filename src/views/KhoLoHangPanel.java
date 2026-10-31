@@ -13,7 +13,14 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -56,10 +63,6 @@ public class KhoLoHangPanel extends JPanel {
     private static final List<LoHangRecord> DANH_SACH_LO_HANG = new ArrayList<>();
     private static final List<KhoLoHangPanel> INSTANCES = new ArrayList<>();
 
-    static {
-        khoiTaoLoHangMacDinhNeuCan();
-    }
-
     private static void khoiTaoLoHangMacDinhNeuCan() {
         if (DANH_SACH_LO_HANG.isEmpty()) {
             try {
@@ -69,7 +72,7 @@ public class KhoLoHangPanel extends JPanel {
                     for (models.entity.LoHang lh : dbList) {
                         String nsxStr = lh.getNgaySanXuat() != null ? lh.getNgaySanXuat().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
                         String hsdStr = lh.getHanSuDung() != null ? lh.getHanSuDung().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
-                        long days = java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), lh.getHanSuDung());
+                        long days = lh.getHanSuDung() != null ? java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), lh.getHanSuDung()) : 999;
                         String fefo;
                         if (days <= 0) fefo = "ĐÃ HẾT HẠN SỬ DỤNG";
                         else if (days <= 30) fefo = "CẬN DATE NGUY CẤP (" + days + " ngày) - CẦN THANH LÝ";
@@ -90,15 +93,10 @@ public class KhoLoHangPanel extends JPanel {
                                 fefo
                         ));
                     }
-                    return;
                 }
-            } catch (Exception ignored) {}
-
-            DANH_SACH_LO_HANG.add(new LoHangRecord("LH2026-001", "SP002", "Pate Whiskas Vị Cá Thu 85g", "Công ty TNHH Pet Food VN", "15/05/2026", "15/11/2026", "12,000 đ", 100, 25, "Lon", "CẬN DATE (1 tháng) - ƯU TIÊN XUẤT SỚM"));
-            DANH_SACH_LO_HANG.add(new LoHangRecord("LH2026-002", "SP002", "Pate Whiskas Vị Cá Thu 85g", "Công ty TNHH Pet Food VN", "20/06/2026", "20/12/2026", "12,000 đ", 150, 150, "Lon", "CẬN DATE (2 tháng) - ƯU TIÊN XUẤT SỚM"));
-            DANH_SACH_LO_HANG.add(new LoHangRecord("LH2026-003", "SP001", "Hạt Royal Canin Kitten 2kg", "Nhà phân phối Royal Canin", "01/03/2026", "28/11/2026", "290,000 đ", 30, 10, "Gói", "CẬN DATE (1 tháng) - ƯU TIÊN XUẤT SỚM"));
-            DANH_SACH_LO_HANG.add(new LoHangRecord("LH2026-004", "SP001", "Hạt Royal Canin Kitten 2kg", "Nhà phân phối Royal Canin", "10/08/2026", "10/08/2027", "295,000 đ", 50, 50, "Gói", "HẠN DÙNG AN TOÀN (> 6 tháng)"));
-            DANH_SACH_LO_HANG.add(new LoHangRecord("LH2026-005", "SP004", "Sữa Tắm Dưỡng Lông Bio-Care", "Công ty TNHH Pet Food VN", "10/01/2026", "10/01/2028", "55,000 đ", 40, 35, "Chai", "HẠN DÙNG AN TOÀN (> 6 tháng)"));
+            } catch (Exception e) {
+                System.err.println("[KhoLoHangPanel] Lỗi nạp lô hàng CSDL: " + e.getMessage());
+            }
         }
     }
 
@@ -127,6 +125,7 @@ public class KhoLoHangPanel extends JPanel {
         for (KhoLoHangPanel inst : INSTANCES) {
             inst.lamMoiBangLoHang();
             inst.lamMoiBangSanPhamTuDatabase();
+            inst.lamMoiBangROP();
         }
     }
 
@@ -136,9 +135,7 @@ public class KhoLoHangPanel extends JPanel {
         int canTru = soLuongMua;
         models.dao.LoHangDAO loDao = new models.dao.LoHangDAO();
         for (LoHangRecord lo : DANH_SACH_LO_HANG) {
-            boolean match = lo.maSP.equalsIgnoreCase(maSP) || lo.tenSP.equalsIgnoreCase(maSP)
-                    || ("SP005".equalsIgnoreCase(maSP) && "SP004".equalsIgnoreCase(lo.maSP))
-                    || ("SP003".equalsIgnoreCase(maSP) && "SP002".equalsIgnoreCase(lo.maSP));
+            boolean match = lo.maSP.equalsIgnoreCase(maSP) || lo.tenSP.equalsIgnoreCase(maSP);
             if (match && lo.soLuongTon > 0 && canTru > 0) {
                 int tru = Math.min(lo.soLuongTon, canTru);
                 lo.soLuongTon -= tru;
@@ -155,6 +152,7 @@ public class KhoLoHangPanel extends JPanel {
         }
         for (KhoLoHangPanel inst : INSTANCES) {
             inst.lamMoiBangLoHang();
+            inst.lamMoiBangROP();
         }
     }
 
@@ -175,6 +173,7 @@ public class KhoLoHangPanel extends JPanel {
         }
         for (KhoLoHangPanel inst : INSTANCES) {
             inst.lamMoiBangLoHang();
+            inst.lamMoiBangROP();
         }
     }
 
@@ -187,6 +186,10 @@ public class KhoLoHangPanel extends JPanel {
     private DefaultTableModel modelLoHang;
     private JTable tblLoHang;
     private TableRowSorter<DefaultTableModel> sorterLoHang;
+
+    private DefaultTableModel modelROP;
+    private JTable tblROP;
+    private TableRowSorter<DefaultTableModel> sorterROP;
     private JTabbedPane tabbedPane;
 
     public KhoLoHangPanel() {
@@ -206,6 +209,8 @@ public class KhoLoHangPanel extends JPanel {
                 IconHelper.getPrimaryIcon(IconHelper.BOXES, 16), taoTabSanPhamDonVi());
         tabbedPane.addTab("  Quản lý Lô hàng & Hạn sử dụng (FEFO)",
                 IconHelper.getPrimaryIcon(IconHelper.TAG, 16), taoTabLoHangFEFO());
+        tabbedPane.addTab("  Điểm Tái Đặt Hàng (ROP) & Đề Xuất Nhập Kho",
+                IconHelper.getPrimaryIcon(IconHelper.ALERT_TRIANGLE, 16), taoTabDiemDatHangROP());
 
         add(tabbedPane, BorderLayout.CENTER);
     }
@@ -216,6 +221,10 @@ public class KhoLoHangPanel extends JPanel {
 
     public void chonTabLoHangFEFO() {
         if (tabbedPane != null) tabbedPane.setSelectedIndex(1);
+    }
+
+    public void chonTabDiemDatHangROP() {
+        if (tabbedPane != null) tabbedPane.setSelectedIndex(2);
     }
 
     private JPanel taoTabSanPhamDonVi() {
@@ -335,12 +344,13 @@ public class KhoLoHangPanel extends JPanel {
             } else if (idx == 1) {
                 sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Ưu tiên|Cận date"));
             } else if (idx == 2) {
-                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Nguy cấp|30 ngày"));
+                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Nguy cấp|ngày"));
             } else if (idx == 3) {
-                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Hết hạn|Đã hết"));
+                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Hết hạn|Quá hạn|Đã hết|Hết",9));
             }
         });
 
+       
         pnl.add(pnlToolbar, BorderLayout.NORTH);
         pnl.add(new JScrollPane(tblLoHang), BorderLayout.CENTER);
         return pnl;
@@ -511,6 +521,7 @@ public class KhoLoHangPanel extends JPanel {
                 }
                 for (KhoLoHangPanel inst : INSTANCES) {
                     inst.lamMoiBangLoHang();
+                    inst.lamMoiBangROP();
                 }
                 TongQuanPanel.lamMoiDuLieuDashboardAll();
                 int diff = tonThucTe - tonHienTai;
@@ -546,5 +557,392 @@ public class KhoLoHangPanel extends JPanel {
         tbl.getColumnModel().getColumn(0).setCellRenderer(center);
 
         return tbl;
+    }
+
+    // =========================================================================
+    // MÔ HÌNH 5: ĐIỂM TÁI ĐẶT HÀNG (ROP) & ĐỀ XUẤT NHẬP KHO DỰ PHÒNG
+    // Công thức: ROP = (d * L) + SS
+    // =========================================================================
+
+    public static class ROPItem {
+        public String maSP;
+        public String tenSP;
+        public int tonThucTe;
+        public int tieuThuNgay; // d
+        public int leadTime;    // L
+        public int tonAnToan;   // SS
+        public int rop;         // (d * L) + SS
+        public String trangThai;
+        public int deXuatNhap;  // Q
+        public String nhaCungCap;
+        public long donGiaNhap;
+
+        public ROPItem(String maSP, String tenSP, int tonThucTe, int tieuThuNgay, int leadTime, int tonAnToan,
+                       String trangThai, int deXuatNhap, String nhaCungCap, long donGiaNhap) {
+            this.maSP = maSP;
+            this.tenSP = tenSP;
+            this.tonThucTe = tonThucTe;
+            this.tieuThuNgay = tieuThuNgay;
+            this.leadTime = leadTime;
+            this.tonAnToan = tonAnToan;
+            this.rop = (tieuThuNgay * leadTime) + tonAnToan;
+            this.trangThai = trangThai;
+            this.deXuatNhap = deXuatNhap;
+            this.nhaCungCap = nhaCungCap;
+            this.donGiaNhap = donGiaNhap;
+        }
+    }
+
+    public static List<ROPItem> tinhToanDanhSachROP() {
+        khoiTaoLoHangMacDinhNeuCan();
+        List<ROPItem> list = new ArrayList<>();
+
+        class SpConfig {
+            String ma, ten, ncc;
+            int d, L, ss;
+            long giaNhap;
+            SpConfig(String ma, String ten, String ncc, int d, int L, int ss, long giaNhap) {
+                this.ma = ma; this.ten = ten; this.ncc = ncc; this.d = d; this.L = L; this.ss = ss; this.giaNhap = giaNhap;
+            }
+        }
+
+        List<SpConfig> configs = new ArrayList<>();
+        try {
+            List<models.entity.SanPham> dsSP = new models.dao.SanPhamDAO().getAllSanPham();
+            for (models.entity.SanPham sp : dsSP) {
+                String ncc = "Nhà phân phối chính hãng";
+                long giaNhap = 50000L;
+                for (LoHangRecord lo : DANH_SACH_LO_HANG) {
+                    if (sp.getMaSanPham().equalsIgnoreCase(lo.maSP)) {
+                        ncc = lo.nhaCungCap;
+                        try {
+                            giaNhap = Long.parseLong(lo.giaNhap.replaceAll("[^0-9]", ""));
+                        } catch (Exception ignored) {}
+                        break;
+                    }
+                }
+                configs.add(new SpConfig(sp.getMaSanPham(), sp.getTenSanPham(), ncc, 5, 2, 5, giaNhap));
+            }
+        } catch (Exception e) {
+            System.err.println("[KhoLoHangPanel] Lỗi nạp ROP từ CSDL: " + e.getMessage());
+        }
+
+        for (SpConfig cfg : configs) {
+            int tonTong = 0;
+            boolean coLoCanDate = false;
+
+            for (LoHangRecord lo : DANH_SACH_LO_HANG) {
+                if (cfg.ma.equalsIgnoreCase(lo.maSP) || cfg.ten.equalsIgnoreCase(lo.tenSP)) {
+                    tonTong += Math.max(0, lo.soLuongTon);
+                    String st = lo.trangThaiFEFO != null ? lo.trangThaiFEFO.toUpperCase() : "";
+                    if (st.contains("CẬN DATE") || st.contains("NGUY CẤP") || st.contains("HẾT HẠN") || st.contains("ƯU TIÊN")) {
+                        if (lo.soLuongTon > 0) {
+                            coLoCanDate = true;
+                        }
+                    }
+                }
+            }
+
+            int ropVal = (cfg.d * cfg.L) + cfg.ss;
+            String trangThai;
+            int qDeXuat;
+
+            if (coLoCanDate) {
+                trangThai = "FEFO: CẬN DATE (Ưu tiên xả hàng)";
+                qDeXuat = 0;
+            } else if (tonTong <= ropVal) {
+                trangThai = "CẦN NHẬP HÀNG GẤP (Tồn <= ROP)";
+                qDeXuat = Math.max(10, (cfg.d * 14) + cfg.ss - tonTong);
+            } else {
+                trangThai = "AN TOÀN (Tồn đủ bán)";
+                qDeXuat = 0;
+            }
+
+            list.add(new ROPItem(cfg.ma, cfg.ten, tonTong, cfg.d, cfg.L, cfg.ss, trangThai, qDeXuat, cfg.ncc, cfg.giaNhap));
+        }
+
+        return list;
+    }
+
+    private JPanel taoTabDiemDatHangROP() {
+        JPanel pnl = new JPanel(new BorderLayout(10, 12));
+        pnl.setBackground(ThemeColors.SURFACE);
+        pnl.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
+
+        JPanel pnlToolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        pnlToolbar.setOpaque(false);
+
+        JTextField txtSearch = new JTextField(15);
+        txtSearch.setPreferredSize(new Dimension(190, 36));
+        txtSearch.putClientProperty("JTextField.placeholderText", "Tìm mã, tên sản phẩm...");
+        txtSearch.putClientProperty("JTextField.leadingIcon", IconHelper.getIcon(IconHelper.SEARCH, 15, ThemeColors.TEXT_MUTED));
+        txtSearch.setBorder(ThemeColors.createInputBorder());
+
+        JComboBox<String> cboLoc = new JComboBox<>(new String[]{"Tất cả mặt hàng", "Cần nhập hàng gấp (Tồn <= ROP)", "FEFO Cận date (Ưu tiên xả)", "An toàn"});
+        cboLoc.setPreferredSize(new Dimension(215, 36));
+
+        JButton btnTaoPO = ThemeColors.createPrimaryButton("Tạo Đơn Đề Xuất Nhập Hàng (Draft PO)", IconHelper.getIcon(IconHelper.FILE_TEXT, 14, Color.WHITE));
+        JButton btnXuatCsv = ThemeColors.createSecondaryButton("Xuất Báo Cáo ROP (.csv)", IconHelper.getIcon(IconHelper.FILE_TEXT, 14, ThemeColors.TEXT_SECONDARY));
+        JButton btnLamMoi = ThemeColors.createSecondaryButton("Làm mới (F5)", IconHelper.getIcon(IconHelper.REFRESH, 14, ThemeColors.TEXT_SECONDARY));
+
+        btnTaoPO.addActionListener(e -> moDialogDeXuatNhapHang());
+        btnXuatCsv.addActionListener(e -> xuatBaoCaoROPCsv());
+        btnLamMoi.addActionListener(e -> lamMoiBangROP());
+
+        cboLoc.addActionListener(e -> {
+            int idx = cboLoc.getSelectedIndex();
+            if (sorterROP == null) return;
+            if (idx == 1) {
+                sorterROP.setRowFilter(RowFilter.regexFilter("(?i)CẦN NHẬP", 8));
+            } else if (idx == 2) {
+                sorterROP.setRowFilter(RowFilter.regexFilter("(?i)CẬN DATE", 8));
+            } else if (idx == 3) {
+                sorterROP.setRowFilter(RowFilter.regexFilter("(?i)AN TOÀN", 8));
+            } else {
+                sorterROP.setRowFilter(null);
+            }
+        });
+
+        txtSearch.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) { locROP(txtSearch.getText().trim()); }
+            @Override
+            public void removeUpdate(DocumentEvent e) { locROP(txtSearch.getText().trim()); }
+            @Override
+            public void changedUpdate(DocumentEvent e) { locROP(txtSearch.getText().trim()); }
+        });
+
+        pnlToolbar.add(new JLabel("Tìm:"));
+        pnlToolbar.add(txtSearch);
+        pnlToolbar.add(new JLabel("Lọc trạng thái:"));
+        pnlToolbar.add(cboLoc);
+        pnlToolbar.add(btnTaoPO);
+        pnlToolbar.add(btnXuatCsv);
+        pnlToolbar.add(btnLamMoi);
+
+        String[] cols = {"STT", "Mã SP", "Tên sản phẩm", "Tồn thực tế", "Tiêu thụ/ngày (d)", "Lead Time (L)", "Tồn an toàn (SS)", "Điểm ROP", "Trạng thái khuyến nghị", "Đề xuất nhập (Q)", "Nhà cung cấp"};
+        modelROP = new DefaultTableModel(cols, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) { return false; }
+        };
+
+        lamMoiBangROP();
+
+        tblROP = taoBangChuan(modelROP);
+        sorterROP = new TableRowSorter<>(modelROP);
+        tblROP.setRowSorter(sorterROP);
+
+        DefaultTableCellRenderer center = new DefaultTableCellRenderer();
+        center.setHorizontalAlignment(JLabel.CENTER);
+        tblROP.getColumnModel().getColumn(0).setPreferredWidth(35);
+        tblROP.getColumnModel().getColumn(0).setCellRenderer(center);
+        tblROP.getColumnModel().getColumn(1).setPreferredWidth(65);
+        tblROP.getColumnModel().getColumn(1).setCellRenderer(center);
+        tblROP.getColumnModel().getColumn(2).setPreferredWidth(190);
+        tblROP.getColumnModel().getColumn(3).setPreferredWidth(75);
+        tblROP.getColumnModel().getColumn(3).setCellRenderer(center);
+        tblROP.getColumnModel().getColumn(4).setPreferredWidth(100);
+        tblROP.getColumnModel().getColumn(4).setCellRenderer(center);
+        tblROP.getColumnModel().getColumn(5).setPreferredWidth(85);
+        tblROP.getColumnModel().getColumn(5).setCellRenderer(center);
+        tblROP.getColumnModel().getColumn(6).setPreferredWidth(95);
+        tblROP.getColumnModel().getColumn(6).setCellRenderer(center);
+        tblROP.getColumnModel().getColumn(7).setPreferredWidth(75);
+        tblROP.getColumnModel().getColumn(7).setCellRenderer(center);
+        tblROP.getColumnModel().getColumn(8).setPreferredWidth(195);
+        tblROP.getColumnModel().getColumn(9).setPreferredWidth(100);
+        tblROP.getColumnModel().getColumn(9).setCellRenderer(center);
+        tblROP.getColumnModel().getColumn(10).setPreferredWidth(180);
+
+        tblROP.getColumnModel().getColumn(8).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                lbl.setHorizontalAlignment(SwingConstants.CENTER);
+                lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                if (value != null) {
+                    String str = value.toString();
+                    if (str.contains("CẦN NHẬP")) {
+                        lbl.setForeground(new Color(220, 38, 38));
+                    } else if (str.contains("CẬN DATE")) {
+                        lbl.setForeground(new Color(217, 119, 6));
+                    } else {
+                        lbl.setForeground(new Color(22, 163, 74));
+                    }
+                }
+                return lbl;
+            }
+        });
+
+        pnl.add(pnlToolbar, BorderLayout.NORTH);
+        pnl.add(new JScrollPane(tblROP), BorderLayout.CENTER);
+        return pnl;
+    }
+
+    public void lamMoiBangROP() {
+        if (modelROP == null) return;
+        modelROP.setRowCount(0);
+        List<ROPItem> ds = tinhToanDanhSachROP();
+        int stt = 1;
+        for (ROPItem it : ds) {
+            modelROP.addRow(new Object[]{
+                    stt++,
+                    it.maSP,
+                    it.tenSP,
+                    it.tonThucTe,
+                    it.tieuThuNgay + " đv/ngày",
+                    it.leadTime + " ngày",
+                    it.tonAnToan + " đv",
+                    it.rop,
+                    it.trangThai,
+                    (it.deXuatNhap > 0 ? ("+ " + it.deXuatNhap + " đv") : "—"),
+                    it.nhaCungCap
+            });
+        }
+    }
+
+    private void locROP(String text) {
+        if (sorterROP == null) return;
+        if (text.isEmpty()) {
+            sorterROP.setRowFilter(null);
+        } else {
+            sorterROP.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(text), 1, 2, 8, 10));
+        }
+    }
+
+    private void moDialogDeXuatNhapHang() {
+        List<ROPItem> dsAll = tinhToanDanhSachROP();
+        List<ROPItem> dsCanNhap = new ArrayList<>();
+        long tongTienUocTinh = 0;
+        for (ROPItem it : dsAll) {
+            if (it.deXuatNhap > 0) {
+                dsCanNhap.add(it);
+                tongTienUocTinh += (it.deXuatNhap * it.donGiaNhap);
+            }
+        }
+
+        if (dsCanNhap.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "TẤT CẢ MẶT HÀNG ĐANG Ở MỨC TỒN AN TOÀN!\n" +
+                            "Không có sản phẩm nào chạm ngưỡng ROP (hoặc đang ưu tiên xả hàng cận date FEFO).\n" +
+                            "Chưa cần tạo đơn đề xuất nhập hàng mới.",
+                    "Kho hàng an toàn", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Đề Xuất Đơn Hàng Nhập Kho (Draft PO)", true);
+        dialog.setSize(750, 480);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout(10, 10));
+
+        JPanel pnlHeader = new JPanel(new BorderLayout());
+        pnlHeader.setBorder(new EmptyBorder(12, 16, 8, 16));
+        pnlHeader.setBackground(new Color(254, 243, 199));
+
+        JLabel lblTitle = new JLabel("ĐỀ XUẤT NHẬP HÀNG TỰ ĐỘNG THEO CÔNG THỨC ROP = (d × L) + SS", IconHelper.getIcon(IconHelper.ALERT_TRIANGLE, 18, new Color(217, 119, 6)), SwingConstants.LEFT);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblTitle.setForeground(new Color(146, 64, 14));
+        JLabel lblSubtitle = new JLabel("Hệ thống tự động tính toán nhu cầu tồn bù 14 ngày & loại trừ các mặt hàng FEFO đang cận date.");
+        lblSubtitle.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblSubtitle.setForeground(new Color(180, 83, 9));
+
+        pnlHeader.add(lblTitle, BorderLayout.NORTH);
+        pnlHeader.add(lblSubtitle, BorderLayout.SOUTH);
+
+        String[] cols = {"Mã SP", "Tên sản phẩm", "Tồn kho", "Ngưỡng ROP", "Số lượng đặt (Q)", "Đơn giá nhập", "Thành tiền ước tính", "Nhà cung cấp"};
+        DefaultTableModel modelPO = new DefaultTableModel(cols, 0);
+        for (ROPItem it : dsCanNhap) {
+            long tt = it.deXuatNhap * it.donGiaNhap;
+            modelPO.addRow(new Object[]{
+                    it.maSP, it.tenSP, it.tonThucTe, it.rop, it.deXuatNhap, df.format(it.donGiaNhap), df.format(tt), it.nhaCungCap
+            });
+        }
+        JTable tblPO = new JTable(modelPO);
+        tblPO.setRowHeight(30);
+        tblPO.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+
+        JPanel pnlFooter = new JPanel(new BorderLayout(10, 0));
+        pnlFooter.setBorder(new EmptyBorder(10, 16, 12, 16));
+
+        JLabel lblTongTien = new JLabel("TỔNG TIỀN DỰ KIẾN: " + df.format(tongTienUocTinh));
+        lblTongTien.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTongTien.setForeground(ThemeColors.PRIMARY_ACTIVE);
+
+        JPanel pnlButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JButton btnLuuTxt = ThemeColors.createPrimaryButton("Lưu Phiếu Đề Xuất (.txt)", IconHelper.getIcon(IconHelper.FILE_TEXT, 13, Color.WHITE));
+        JButton btnDong = ThemeColors.createSecondaryButton("Đóng", null);
+
+        final long finalTongTien = tongTienUocTinh;
+        btnLuuTxt.addActionListener(e -> {
+            try {
+                File dir = new File("export");
+                if (!dir.exists()) dir.mkdirs();
+                String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                File outFile = new File(dir, "DeXuatNhapHang_ROP_" + timestamp + ".txt");
+                try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8))) {
+                    pw.println("==========================================================================");
+                    pw.println("             PHIẾU ĐỀ XUẤT NHẬP HÀNG TỰ ĐỘNG THEO ĐIỂM ROP                ");
+                    pw.println("                   CỬA HÀNG THÚ CƯNG MIO PET SHOP                        ");
+                    pw.println("==========================================================================");
+                    pw.println("Thời gian tạo: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));
+                    pw.println("Công thức ROP: ROP = (Tiêu thụ d * LeadTime L) + Tồn an toàn SS");
+                    pw.println("Quy tắc FEFO : Đã loại bỏ các mặt hàng có lô cận date khỏi đề xuất nhập mới");
+                    pw.println("--------------------------------------------------------------------------");
+                    pw.printf("%-8s | %-30s | %-6s | %-6s | %-12s | %-15s%n", "Mã SP", "Tên sản phẩm", "Tồn", "Đặt Q", "Đơn giá", "Thành tiền");
+                    pw.println("--------------------------------------------------------------------------");
+                    for (ROPItem it : dsCanNhap) {
+                        pw.printf("%-8s | %-30s | %-6d | %-6d | %-12s | %-15s%n",
+                                it.maSP, it.tenSP, it.tonThucTe, it.deXuatNhap, df.format(it.donGiaNhap), df.format(it.deXuatNhap * it.donGiaNhap));
+                    }
+                    pw.println("--------------------------------------------------------------------------");
+                    pw.println("TỔNG KINH PHÍ NHẬP HÀNG DỰ KIẾN: " + df.format(finalTongTien));
+                    pw.println("==========================================================================");
+                }
+                JOptionPane.showMessageDialog(dialog,
+                        "ĐÃ XUẤT PHIẾU ĐỀ XUẤT NHẬP HÀNG THÀNH CÔNG!\n\nĐường dẫn tệp:\n" + outFile.getAbsolutePath(),
+                        "Xuất thành công", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Lỗi khi lưu tệp: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        btnDong.addActionListener(e -> dialog.dispose());
+
+        pnlButtons.add(btnLuuTxt);
+        pnlButtons.add(btnDong);
+
+        pnlFooter.add(lblTongTien, BorderLayout.WEST);
+        pnlFooter.add(pnlButtons, BorderLayout.EAST);
+
+        dialog.add(pnlHeader, BorderLayout.NORTH);
+        dialog.add(new JScrollPane(tblPO), BorderLayout.CENTER);
+        dialog.add(pnlFooter, BorderLayout.SOUTH);
+        dialog.setVisible(true);
+    }
+
+    private void xuatBaoCaoROPCsv() {
+        try {
+            File dir = new File("export");
+            if (!dir.exists()) dir.mkdirs();
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            File outFile = new File(dir, "BaoCao_ROP_" + timestamp + ".csv");
+
+            try (OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)) {
+                osw.write('\uFEFF');
+                osw.write("STT,Mã SP,Tên sản phẩm,Tồn thực tế,Tiêu thụ ngày (d),Lead Time (L),Tồn an toàn (SS),Điểm ROP,Trạng thái khuyến nghị,Đề xuất nhập (Q),Nhà cung cấp\n");
+                List<ROPItem> ds = tinhToanDanhSachROP();
+                int stt = 1;
+                for (ROPItem it : ds) {
+                    osw.write(stt++ + ",\"" + it.maSP + "\",\"" + it.tenSP + "\"," + it.tonThucTe + ","
+                            + it.tieuThuNgay + "," + it.leadTime + "," + it.tonAnToan + "," + it.rop + ",\""
+                            + it.trangThai + "\"," + (it.deXuatNhap > 0 ? it.deXuatNhap : 0) + ",\"" + it.nhaCungCap + "\"\n");
+                }
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    "ĐÃ XUẤT BÁO CÁO ROP (.CSV) CHUẨN UTF-8 BOM!\n\nĐường dẫn: " + outFile.getAbsolutePath(),
+                    "Xuất báo cáo thành công", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Lỗi xuất báo cáo CSV: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }
