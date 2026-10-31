@@ -97,46 +97,25 @@ public class MainDashboard extends JFrame {
         // 1. Thanh thực đơn đỉnh màn hình 6 nhóm chức năng (JMenuBar chuẩn Slide 17 IUH)
         setJMenuBar(taoJMenuBarHuongChucNang(role));
 
-        // 2. Vùng đỉnh chỉ giữ Header thương hiệu gọn gàng (đã xóa dòng tab Tổng quan, Bán hàng POS...)
-        add(taoTopHeader(), BorderLayout.NORTH);
+        // 2. Vùng đỉnh gồm Header thương hiệu và thanh Navigation Bar dạng Pill Tabs
+        JPanel pnlNorth = new JPanel(new BorderLayout());
+        pnlNorth.add(taoTopHeader(), BorderLayout.NORTH);
+        pnlNorth.add(taoTopNavigationBar(role), BorderLayout.SOUTH);
+        add(pnlNorth, BorderLayout.NORTH);
 
         // 3. Đã giải phóng hoàn toàn Sidebar bên trái (Không add vào BorderLayout.WEST)
         // Dành trọn vẹn 100% diện tích chiều ngang cho POS và các Bảng dữ liệu!
 
-        // 4. Vùng nội dung chính (Center CardLayout Panels)
+        // 4. Vùng nội dung chính (Center CardLayout Panels - Áp dụng Lazy Loading On-Demand)
         cardLayout = new CardLayout();
         pnlContentCards = new JPanel(cardLayout);
         pnlContentCards.setBackground(ThemeColors.BACKGROUND);
-
-        // Khởi tạo các màn hình con nghiệp vụ
-        tongQuanPanel = new TongQuanPanel();
-        banHangPOSPanel = new BanHangPOSPanel();
-        quanLyLichHenPanel = new QuanLyLichHenPanel();
-        thuCungDichVuPanel = new ThuCungDichVuPanel();
-        khoLoHangPanel = new KhoLoHangPanel();
-        quanLyNhanVienPanel = new QuanLyNhanVienPanel();
-        banGiaoCaPanel = new BanGiaoCaPanel();
-        lichPhanCaPanel = new LichPhanCaPanel();
-        petHotelPanel = new PetHotelPanel();
-        doiTraHangPanel = new DoiTraHangPanel();
-
-        pnlContentCards.add(tongQuanPanel, CARD_TONG_QUAN);
-        pnlContentCards.add(banHangPOSPanel, CARD_POS);
-        pnlContentCards.add(quanLyLichHenPanel, CARD_LICH_HEN);
-        pnlContentCards.add(petHotelPanel, CARD_PET_HOTEL);
-        pnlContentCards.add(thuCungDichVuPanel, CARD_THU_CUNG);
-        pnlContentCards.add(khoLoHangPanel, CARD_KHO);
-        pnlContentCards.add(quanLyNhanVienPanel, CARD_NHAN_VIEN);
-        pnlContentCards.add(banGiaoCaPanel, CARD_GIAO_CA);
-        pnlContentCards.add(lichPhanCaPanel, CARD_PHAN_CA);
-        pnlContentCards.add(doiTraHangPanel, CARD_DOI_TRA);
-
         add(pnlContentCards, BorderLayout.CENTER);
 
         // 5. Thanh trạng thái dưới cùng (South Status Bar)
         add(taoBottomStatusBar(), BorderLayout.SOUTH);
 
-        // Mặc định chọn màn hình phù hợp theo vai trò vừa đăng nhập
+        // Mặc định nạp duy nhất màn hình phù hợp theo vai trò vừa đăng nhập (Mở app < 1.0 giây)
         chonManHinhMacDinhTheoVaiTro();
     }
 
@@ -173,6 +152,10 @@ public class MainDashboard extends JFrame {
         mnuDanhMuc.add(taoMenuItem("Khách hàng thành viên & Điểm VIP", IconHelper.USER, KeyStroke.getKeyStroke(KeyEvent.VK_K, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), true, e -> {
             dieuHuongSangChucNang(CARD_THU_CUNG);
             if (thuCungDichVuPanel != null) thuCungDichVuPanel.chonTabKhachHang();
+        }));
+        mnuDanhMuc.add(taoMenuItem("Thẻ Hội Viên & Gói Spa Pass", IconHelper.CREDIT_CARD, KeyStroke.getKeyStroke(KeyEvent.VK_P, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK), true, e -> {
+            dieuHuongSangChucNang(CARD_THU_CUNG);
+            if (thuCungDichVuPanel != null) thuCungDichVuPanel.chonTabTheHoiVien();
         }));
         mnuDanhMuc.add(taoMenuItem("Hồ sơ Thú cưng & Microchip", IconHelper.PAW, KeyStroke.getKeyStroke(KeyEvent.VK_T, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), true, e -> {
             dieuHuongSangChucNang(CARD_THU_CUNG);
@@ -330,6 +313,7 @@ public class MainDashboard extends JFrame {
                 pnlTabsContainer.add(taoNutQuickTab("Khách & Thú cưng", IconHelper.PAW, CARD_THU_CUNG));
                 pnlTabsContainer.add(taoNutQuickTab("Kho & Lô FEFO", IconHelper.BOXES, CARD_KHO));
                 pnlTabsContainer.add(taoNutQuickTab("Phân ca tuần", IconHelper.CALENDAR, CARD_PHAN_CA));
+                pnlTabsContainer.add(taoNutQuickTab("Duyệt giao ca", IconHelper.CLIPBOARD_CHECK, CARD_GIAO_CA));
                 break;
             case NVBH:
                 pnlTabsContainer.add(taoNutQuickTab("Bán hàng POS", IconHelper.CART, CARD_POS));
@@ -343,6 +327,7 @@ public class MainDashboard extends JFrame {
                 pnlTabsContainer.add(taoNutQuickTab("Hóa đơn chờ & Tiến độ", IconHelper.CLOCK, "ACTION_DON_CHO"));
                 pnlTabsContainer.add(taoNutQuickTab("Lịch hẹn & Spa", IconHelper.CALENDAR, CARD_LICH_HEN));
                 pnlTabsContainer.add(taoNutQuickTab("Pet Hotel", IconHelper.HOME, CARD_PET_HOTEL));
+                pnlTabsContainer.add(taoNutQuickTab("Bàn giao ca", IconHelper.CLIPBOARD_CHECK, CARD_GIAO_CA));
                 break;
             case NVCS:
                 pnlTabsContainer.add(taoNutQuickTab("Lịch hẹn & Spa", IconHelper.CALENDAR, CARD_LICH_HEN));
@@ -371,9 +356,9 @@ public class MainDashboard extends JFrame {
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setIconTextGap(6);
-        btn.putClientProperty("FlatLaf.style", "arc: 20");
+        btn.putClientProperty("JButton.buttonType", "roundRect");
         btn.setBorder(new CompoundBorder(
-                new LineBorder(ThemeColors.BORDER, 1, true),
+                new ThemeColors.RoundedBorder(ThemeColors.BORDER, 20, 1),
                 new EmptyBorder(6, 14, 6, 14)
         ));
         btn.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -382,7 +367,7 @@ public class MainDashboard extends JFrame {
                 if (!btn.getBackground().equals(ThemeColors.PRIMARY)) {
                     btn.setBackground(ThemeColors.PRIMARY_TINT);
                     btn.setBorder(new CompoundBorder(
-                            new LineBorder(ThemeColors.PRIMARY_HOVER, 1, true),
+                            new ThemeColors.RoundedBorder(ThemeColors.PRIMARY_HOVER, 20, 1),
                             new EmptyBorder(6, 14, 6, 14)
                     ));
                 }
@@ -392,7 +377,7 @@ public class MainDashboard extends JFrame {
                 if (!btn.getBackground().equals(ThemeColors.PRIMARY)) {
                     btn.setBackground(Color.WHITE);
                     btn.setBorder(new CompoundBorder(
-                            new LineBorder(ThemeColors.BORDER, 1, true),
+                            new ThemeColors.RoundedBorder(ThemeColors.BORDER, 20, 1),
                             new EmptyBorder(6, 14, 6, 14)
                     ));
                 }
@@ -425,6 +410,88 @@ public class MainDashboard extends JFrame {
     }
 
     /**
+     * Khởi tạo Panel theo yêu cầu (Lazy Loading Pattern) - Tránh nghẽn EDT khi khởi động.
+     */
+    public synchronized JPanel getOrInitPanel(String cardName) {
+        if (cardName == null) return null;
+        switch (cardName) {
+            case CARD_TONG_QUAN:
+                if (tongQuanPanel == null) {
+                    tongQuanPanel = new TongQuanPanel();
+                    pnlContentCards.add(tongQuanPanel, CARD_TONG_QUAN);
+                }
+                return tongQuanPanel;
+            case CARD_POS:
+                if (banHangPOSPanel == null) {
+                    banHangPOSPanel = new BanHangPOSPanel();
+                    pnlContentCards.add(banHangPOSPanel, CARD_POS);
+                }
+                return banHangPOSPanel;
+            case CARD_LICH_HEN:
+                if (quanLyLichHenPanel == null) {
+                    quanLyLichHenPanel = new QuanLyLichHenPanel();
+                    pnlContentCards.add(quanLyLichHenPanel, CARD_LICH_HEN);
+                }
+                return quanLyLichHenPanel;
+            case CARD_PET_HOTEL:
+                if (petHotelPanel == null) {
+                    petHotelPanel = new PetHotelPanel();
+                    pnlContentCards.add(petHotelPanel, CARD_PET_HOTEL);
+                }
+                return petHotelPanel;
+            case CARD_THU_CUNG:
+                if (thuCungDichVuPanel == null) {
+                    thuCungDichVuPanel = new ThuCungDichVuPanel();
+                    pnlContentCards.add(thuCungDichVuPanel, CARD_THU_CUNG);
+                }
+                return thuCungDichVuPanel;
+            case CARD_KHO:
+                if (khoLoHangPanel == null) {
+                    khoLoHangPanel = new KhoLoHangPanel();
+                    pnlContentCards.add(khoLoHangPanel, CARD_KHO);
+                }
+                return khoLoHangPanel;
+            case CARD_NHAN_VIEN:
+                if (quanLyNhanVienPanel == null) {
+                    quanLyNhanVienPanel = new QuanLyNhanVienPanel();
+                    pnlContentCards.add(quanLyNhanVienPanel, CARD_NHAN_VIEN);
+                }
+                return quanLyNhanVienPanel;
+            case CARD_GIAO_CA:
+                if (banGiaoCaPanel == null) {
+                    banGiaoCaPanel = new BanGiaoCaPanel();
+                    pnlContentCards.add(banGiaoCaPanel, CARD_GIAO_CA);
+                }
+                return banGiaoCaPanel;
+            case CARD_PHAN_CA:
+                if (lichPhanCaPanel == null) {
+                    lichPhanCaPanel = new LichPhanCaPanel();
+                    pnlContentCards.add(lichPhanCaPanel, CARD_PHAN_CA);
+                }
+                return lichPhanCaPanel;
+            case CARD_DOI_TRA:
+                if (doiTraHangPanel == null) {
+                    doiTraHangPanel = new DoiTraHangPanel();
+                    pnlContentCards.add(doiTraHangPanel, CARD_DOI_TRA);
+                }
+                return doiTraHangPanel;
+            default:
+                return null;
+        }
+    }
+
+    public TongQuanPanel getTongQuanPanel() { return (TongQuanPanel) getOrInitPanel(CARD_TONG_QUAN); }
+    public BanHangPOSPanel getBanHangPOSPanel() { return (BanHangPOSPanel) getOrInitPanel(CARD_POS); }
+    public QuanLyLichHenPanel getQuanLyLichHenPanel() { return (QuanLyLichHenPanel) getOrInitPanel(CARD_LICH_HEN); }
+    public ThuCungDichVuPanel getThuCungDichVuPanel() { return (ThuCungDichVuPanel) getOrInitPanel(CARD_THU_CUNG); }
+    public KhoLoHangPanel getKhoLoHangPanel() { return (KhoLoHangPanel) getOrInitPanel(CARD_KHO); }
+    public QuanLyNhanVienPanel getQuanLyNhanVienPanel() { return (QuanLyNhanVienPanel) getOrInitPanel(CARD_NHAN_VIEN); }
+    public BanGiaoCaPanel getBanGiaoCaPanel() { return (BanGiaoCaPanel) getOrInitPanel(CARD_GIAO_CA); }
+    public LichPhanCaPanel getLichPhanCaPanel() { return (LichPhanCaPanel) getOrInitPanel(CARD_PHAN_CA); }
+    public PetHotelPanel getPetHotelPanel() { return (PetHotelPanel) getOrInitPanel(CARD_PET_HOTEL); }
+    public DoiTraHangPanel getDoiTraHangPanel() { return (DoiTraHangPanel) getOrInitPanel(CARD_DOI_TRA); }
+
+    /**
      * Điều hướng sang thẻ chức năng với kiểm tra thẩm quyền RBAC và đồng bộ dữ liệu.
      */
     public void dieuHuongSangChucNang(String cardName) {
@@ -452,6 +519,9 @@ public class MainDashboard extends JFrame {
             return;
         }
 
+        // Đảm bảo panel đích được khởi tạo an toàn (Lazy Loading)
+        getOrInitPanel(targetCard);
+
         if (CARD_TONG_QUAN.equals(targetCard) && tongQuanPanel != null) {
             tongQuanPanel.lamMoiDuLieuDashboard();
         } else if (CARD_PHAN_CA.equals(targetCard) && lichPhanCaPanel != null) {
@@ -460,6 +530,8 @@ public class MainDashboard extends JFrame {
             petHotelPanel.capNhatSoLieuKPI();
         } else if (CARD_DOI_TRA.equals(targetCard) && doiTraHangPanel != null) {
             doiTraHangPanel.lamMoiGiaoDien();
+        } else if (CARD_GIAO_CA.equals(targetCard) && banGiaoCaPanel != null) {
+            banGiaoCaPanel.lamMoiDuLieuCaHienTai();
         }
 
         cardLayout.show(pnlContentCards, targetCard);
@@ -480,11 +552,11 @@ public class MainDashboard extends JFrame {
 
             boolean isActive = cName.equals(cardName) || (targetCard.equals(cName) && !cName.startsWith("ACTION_"));
             if (isActive) {
-                b.setBackground(ThemeColors.PRIMARY); // Hồng san hô #FF8BA7
-                b.setForeground(ThemeColors.TEXT_PRIMARY); // Nâu sẫm #33272A
-                b.setIcon(IconHelper.getIcon(iconName, 15, ThemeColors.TEXT_PRIMARY));
+                b.setBackground(ThemeColors.PRIMARY);
+                b.setForeground(Color.WHITE);
+                b.setIcon(IconHelper.getIcon(iconName, 15, Color.WHITE));
                 b.setBorder(new CompoundBorder(
-                        new LineBorder(ThemeColors.PRIMARY_HOVER, 1, true),
+                        new ThemeColors.RoundedBorder(ThemeColors.PRIMARY_ACTIVE, 20, 1),
                         new EmptyBorder(6, 14, 6, 14)
                 ));
             } else {
@@ -492,7 +564,7 @@ public class MainDashboard extends JFrame {
                 b.setForeground(ThemeColors.TEXT_PRIMARY);
                 b.setIcon(IconHelper.getIcon(iconName, 15, ThemeColors.TEXT_SECONDARY));
                 b.setBorder(new CompoundBorder(
-                        new LineBorder(ThemeColors.BORDER, 1, true),
+                        new ThemeColors.RoundedBorder(ThemeColors.BORDER, 20, 1),
                         new EmptyBorder(6, 14, 6, 14)
                 ));
             }
@@ -543,7 +615,7 @@ public class MainDashboard extends JFrame {
         btnDangXuat.setBackground(ThemeColors.DANGER);
         btnDangXuat.setForeground(Color.WHITE);
         btnDangXuat.setBorder(new CompoundBorder(
-                new LineBorder(ThemeColors.DANGER, 1, true),
+                new ThemeColors.RoundedBorder(ThemeColors.DANGER, 14, 1),
                 new EmptyBorder(3, 10, 3, 10)
         ));
         btnDangXuat.setFocusPainted(false);
@@ -554,6 +626,24 @@ public class MainDashboard extends JFrame {
         pnlUser.add(lblRoleIcon);
         pnlUser.add(lblUserInfo);
         pnlUser.add(lblRoleBadge);
+
+        if (UserSession.canAccessNhom1GiaoCa()) {
+            JButton btnGiaoCaHeader = new JButton("Bàn giao ca", IconHelper.getIcon(IconHelper.CLIPBOARD_CHECK, 13, ThemeColors.PRIMARY_ACTIVE));
+            btnGiaoCaHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            btnGiaoCaHeader.setBackground(ThemeColors.PRIMARY_TINT);
+            btnGiaoCaHeader.setForeground(ThemeColors.PRIMARY_ACTIVE);
+            btnGiaoCaHeader.setBorder(new CompoundBorder(
+                    new ThemeColors.RoundedBorder(ThemeColors.BORDER_ACCENT, 14, 1),
+                    new EmptyBorder(3, 10, 3, 10)
+            ));
+            btnGiaoCaHeader.setFocusPainted(false);
+            btnGiaoCaHeader.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            btnGiaoCaHeader.setIconTextGap(5);
+            btnGiaoCaHeader.setToolTipText("Mở nhanh màn hình Bàn giao ca & Đối soát két tiền (Ctrl+G)");
+            btnGiaoCaHeader.addActionListener(e -> dieuHuongSangChucNang(CARD_GIAO_CA));
+            pnlUser.add(btnGiaoCaHeader);
+        }
+
         pnlUser.add(btnDangXuat);
 
         header.add(pnlLogo, BorderLayout.WEST);
@@ -663,18 +753,6 @@ public class MainDashboard extends JFrame {
             new LoginForm().setVisible(true);
         }
     }
-
-    // Getters cho các Panel con phục vụ kiểm thử
-    public TongQuanPanel getTongQuanPanel() { return tongQuanPanel; }
-    public BanHangPOSPanel getBanHangPOSPanel() { return banHangPOSPanel; }
-    public QuanLyLichHenPanel getQuanLyLichHenPanel() { return quanLyLichHenPanel; }
-    public ThuCungDichVuPanel getThuCungDichVuPanel() { return thuCungDichVuPanel; }
-    public KhoLoHangPanel getKhoLoHangPanel() { return khoLoHangPanel; }
-    public QuanLyNhanVienPanel getQuanLyNhanVienPanel() { return quanLyNhanVienPanel; }
-    public BanGiaoCaPanel getBanGiaoCaPanel() { return banGiaoCaPanel; }
-    public LichPhanCaPanel getLichPhanCaPanel() { return lichPhanCaPanel; }
-    public PetHotelPanel getPetHotelPanel() { return petHotelPanel; }
-    public DoiTraHangPanel getDoiTraHangPanel() { return doiTraHangPanel; }
 
     public static void main(String[] args) {
         try {

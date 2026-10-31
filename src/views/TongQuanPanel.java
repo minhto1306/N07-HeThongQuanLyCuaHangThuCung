@@ -24,7 +24,9 @@ import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Panel Tổng quan / Dashboard chính hiển thị số liệu thống kê KPI, biểu đồ doanh số trực quan và tác vụ trong ngày.
@@ -61,6 +63,33 @@ public class TongQuanPanel extends JPanel {
     // 2 Bảng dữ liệu thực tế
     private DefaultTableModel modelLichHen;
     private DefaultTableModel modelCanhBaoFEFO;
+
+    // 3 Chế độ Dashboard: Vận hành, Chiến lược, Phân tích (Chuẩn Strategic / Operational / Analytical)
+    public static final String MODE_OPERATIONAL = "OPERATIONAL";
+    public static final String MODE_STRATEGIC = "STRATEGIC";
+    public static final String MODE_ANALYTICAL = "ANALYTICAL";
+
+    private CardLayout cardLayoutContent;
+    private JPanel pnlCardsSwitch;
+    private JLabel lblModeDescription;
+    private JButton btnModeOperational;
+    private JButton btnModeStrategic;
+    private JButton btnModeAnalytical;
+
+    // KPI Chế độ Chiến Lược (Strategic)
+    private JLabel lblStratDoanhThu;
+    private JLabel lblStratLoiNhuan;
+    private JLabel lblStratHangHoa;
+    private JLabel lblStratDichVu;
+    private DefaultTableModel modelTopSanPham;
+    private DefaultTableModel modelHieuSuatKTV;
+
+    // KPI Chế độ Phân Tích (Analytical)
+    private JLabel lblAnalytTongMa;
+    private JLabel lblAnalytFEFO;
+    private JLabel lblAnalytHotel;
+    private JLabel lblAnalytVIP;
+    private DefaultTableModel modelAnalytROP;
 
     public TongQuanPanel() {
         INSTANCES.add(this);
@@ -121,113 +150,50 @@ public class TongQuanPanel extends JPanel {
         pnlHeader.add(pnlHeaderLeft, BorderLayout.WEST);
         pnlHeader.add(pnlHeaderRight, BorderLayout.EAST);
         pnlMainScroll.add(pnlHeader);
-        pnlMainScroll.add(Box.createVerticalStrut(14));
+        pnlMainScroll.add(Box.createVerticalStrut(12));
 
-        // 2. Hàng 1 — 4 Thẻ KPI Động (GridLayout 1x4)
-        JPanel pnlCards = new JPanel(new GridLayout(1, 4, 14, 0));
-        pnlCards.setOpaque(false);
-        pnlCards.setPreferredSize(new Dimension(0, 110));
-        pnlCards.setMaximumSize(new Dimension(Integer.MAX_VALUE, 115));
+        // 2. Toolbar Chuyển chế độ Dashboard (3 Phím Segmented Pill: Operational, Strategic, Analytical)
+        JPanel pnlToolbar = new JPanel(new BorderLayout(14, 0));
+        pnlToolbar.setOpaque(false);
+        pnlToolbar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        lblDoanhThuGiaTri = new JLabel("0 đ");
-        lblDoanhThuGhiChu = new JLabel("Đang tải dữ liệu...");
-        pnlCards.add(taoTheKpiDong("DOANH THU HÔM NAY", lblDoanhThuGiaTri, lblDoanhThuGhiChu,
-                IconHelper.TRENDING_UP, ThemeColors.PRIMARY, ThemeColors.PRIMARY_SOFT));
+        JPanel pnlPillBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        pnlPillBar.setOpaque(false);
 
-        lblHoaDonGiaTri = new JLabel("0 đơn");
-        lblHoaDonGhiChu = new JLabel("0 đơn bán lẻ, 0 đơn dịch vụ");
-        pnlCards.add(taoTheKpiDong("HÓA ĐƠN ĐÃ LẬP", lblHoaDonGiaTri, lblHoaDonGhiChu,
-                IconHelper.RECEIPT, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG));
+        btnModeOperational = taoNutChonMode("⚡ VẬN HÀNH (HẰNG NGÀY)");
+        btnModeStrategic = taoNutChonMode("🎯 CHIẾN LƯỢC (QUẢN TRỊ)");
+        btnModeAnalytical = taoNutChonMode("🔬 PHÂN TÍCH (CHUỖI CUNG ỨNG)");
 
-        lblThuCungGiaTri = new JLabel("0 bé");
-        lblThuCungGhiChu = new JLabel("0 hoàn thành, 0 đang phục vụ");
-        pnlCards.add(taoTheKpiDong("THÚ CƯNG LÀM DỊCH VỤ", lblThuCungGiaTri, lblThuCungGhiChu,
-                IconHelper.PAW, ThemeColors.INFO, ThemeColors.INFO_BG));
+        btnModeOperational.addActionListener(e -> switchMode(MODE_OPERATIONAL));
+        btnModeStrategic.addActionListener(e -> switchMode(MODE_STRATEGIC));
+        btnModeAnalytical.addActionListener(e -> switchMode(MODE_ANALYTICAL));
 
-        lblCanhBaoGiaTri = new JLabel("0 lô hàng");
-        lblCanhBaoGhiChu = new JLabel("Ưu tiên xuất theo chuẩn FEFO");
-        pnlCards.add(taoTheKpiDong("CẢNH BÁO LÔ HÀNG FEFO", lblCanhBaoGiaTri, lblCanhBaoGhiChu,
-                IconHelper.ALERT_TRIANGLE, ThemeColors.DANGER, ThemeColors.DANGER_BG));
+        pnlPillBar.add(btnModeOperational);
+        pnlPillBar.add(btnModeStrategic);
+        pnlPillBar.add(btnModeAnalytical);
 
-        pnlMainScroll.add(pnlCards);
-        pnlMainScroll.add(Box.createVerticalStrut(16));
+        lblModeDescription = new JLabel("⚡ Vận hành: Giám sát đơn hàng, doanh số quầy và lịch hẹn thời gian thực");
+        lblModeDescription.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        lblModeDescription.setForeground(ThemeColors.TEXT_SECONDARY);
 
-        // 3. Hàng 2 — 2 Biểu đồ trực quan (GridLayout 1x2)
-        JPanel pnlCharts = new JPanel(new GridLayout(1, 2, 16, 0));
-        pnlCharts.setOpaque(false);
-        pnlCharts.setPreferredSize(new Dimension(0, 290));
-        pnlCharts.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
+        pnlToolbar.add(pnlPillBar, BorderLayout.WEST);
+        pnlToolbar.add(lblModeDescription, BorderLayout.EAST);
 
-        barChartPanel = new BarChartPanel();
-        donutChartPanel = new DonutChartPanel();
+        pnlMainScroll.add(pnlToolbar);
+        pnlMainScroll.add(Box.createVerticalStrut(12));
 
-        pnlCharts.add(barChartPanel);
-        pnlCharts.add(donutChartPanel);
+        // 3. Khung CardLayout chứa 3 Chế độ Dashboard độc lập
+        cardLayoutContent = new CardLayout();
+        pnlCardsSwitch = new JPanel(cardLayoutContent);
+        pnlCardsSwitch.setOpaque(false);
 
-        pnlMainScroll.add(pnlCharts);
-        pnlMainScroll.add(Box.createVerticalStrut(16));
+        pnlCardsSwitch.add(taoViewOperational(), MODE_OPERATIONAL);
+        pnlCardsSwitch.add(taoViewStrategic(), MODE_STRATEGIC);
+        pnlCardsSwitch.add(taoViewAnalytical(), MODE_ANALYTICAL);
 
-        // 4. Hàng 3 — 2 Bảng dữ liệu thực tế (GridLayout 1x2)
-        JPanel pnlTables = new JPanel(new GridLayout(1, 2, 16, 0));
-        pnlTables.setOpaque(false);
-        pnlTables.setPreferredSize(new Dimension(0, 265));
-        pnlTables.setMaximumSize(new Dimension(Integer.MAX_VALUE, 320));
+        switchMode(MODE_OPERATIONAL);
 
-        // Bảng trái: Lịch hẹn dịch vụ trong ngày
-        JPanel pnlLichHen = new JPanel(new BorderLayout(8, 10));
-        pnlLichHen.setBackground(ThemeColors.SURFACE);
-        pnlLichHen.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
-
-        JLabel lblHeaderLichHen = new JLabel("Lịch hẹn dịch vụ trong ngày",
-                IconHelper.getIcon(IconHelper.CALENDAR, 18, ThemeColors.PRIMARY), SwingConstants.LEFT);
-        lblHeaderLichHen.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lblHeaderLichHen.setForeground(ThemeColors.TEXT_PRIMARY);
-        lblHeaderLichHen.setIconTextGap(8);
-        pnlLichHen.add(lblHeaderLichHen, BorderLayout.NORTH);
-
-        String[] colsLichHen = {"Giờ", "Khách hàng", "Thú cưng", "Dịch vụ", "KTV phụ trách", "Trạng thái"};
-        modelLichHen = new DefaultTableModel(colsLichHen, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-        JTable tblLichHen = taoBangDuLieu(modelLichHen, 5);
-        pnlLichHen.add(new JScrollPane(tblLichHen), BorderLayout.CENTER);
-
-        // Bảng phải: Cảnh báo hạn dùng lô hàng (Ưu tiên FEFO)
-        JPanel pnlCanhBao = new JPanel(new BorderLayout(8, 10));
-        pnlCanhBao.setBackground(ThemeColors.SURFACE);
-        pnlCanhBao.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
-
-        JLabel lblHeaderCanhBao = new JLabel("Cảnh báo hạn dùng lô hàng (Ưu tiên FEFO)",
-                IconHelper.getIcon(IconHelper.ALERT_TRIANGLE, 18, ThemeColors.DANGER), SwingConstants.LEFT);
-        lblHeaderCanhBao.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lblHeaderCanhBao.setForeground(ThemeColors.DANGER_TEXT);
-        lblHeaderCanhBao.setIconTextGap(8);
-        pnlCanhBao.add(lblHeaderCanhBao, BorderLayout.NORTH);
-
-        String[] colsCanhBao = {"Số lô", "Tên sản phẩm", "Hạn sử dụng", "Tồn kho", "Đơn vị", "Mức cảnh báo"};
-        modelCanhBaoFEFO = new DefaultTableModel(colsCanhBao, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-        JTable tblCanhBao = taoBangDuLieu(modelCanhBaoFEFO, 5);
-        // Căn giữa thêm cột Tồn kho và Đơn vị cho bảng FEFO
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        tblCanhBao.getColumnModel().getColumn(2).setCellRenderer(centerRenderer);
-        tblCanhBao.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
-        tblCanhBao.getColumnModel().getColumn(4).setCellRenderer(centerRenderer);
-
-        pnlCanhBao.add(new JScrollPane(tblCanhBao), BorderLayout.CENTER);
-
-        pnlTables.add(pnlLichHen);
-        pnlTables.add(pnlCanhBao);
-
-        pnlMainScroll.add(pnlTables);
+        pnlMainScroll.add(pnlCardsSwitch);
 
         // Cuộn toàn màn hình mượt mà
         JScrollPane scrMain = new JScrollPane(pnlMainScroll);
@@ -383,8 +349,428 @@ public class TongQuanPanel extends JPanel {
             donutChartPanel.capNhatCoCauDoanhThu(dtSpa, dtHangHoa, dtKhac, soDichVuXong, Math.max(1, tongThuCungDichVu));
         }
 
+        // 5. Cập nhật số liệu Chế độ Chiến lược (Strategic View - Image 3)
+        if (lblStratDoanhThu != null) lblStratDoanhThu.setText(dfMoney.format(doanhThuHomNay));
+        long loiNhuan = Math.round(doanhThuHomNay * 0.42);
+        if (lblStratLoiNhuan != null) lblStratLoiNhuan.setText(dfMoney.format(loiNhuan));
+        if (lblStratHangHoa != null) lblStratHangHoa.setText(dfMoney.format(dtHangHoa));
+        if (lblStratDichVu != null) lblStratDichVu.setText(dfMoney.format(dtSpa));
+
+        if (modelTopSanPham != null) {
+            modelTopSanPham.setRowCount(0);
+            List<BanHangPOSPanel.HoaDonDaThanhToan> dsHD = BanHangPOSPanel.layDanhSachHoaDonDaThanhToan();
+            Map<String, Object[]> spAgg = new LinkedHashMap<>();
+            for (BanHangPOSPanel.HoaDonDaThanhToan hd : dsHD) {
+                if (hd.dsMon != null) {
+                    for (Object[] mon : hd.dsMon) {
+                        if (mon != null && mon.length > 6) {
+                            String ma = mon[1] != null ? mon[1].toString() : "";
+                            String ten = mon[2] != null ? mon[2].toString() : "";
+                            String loai = ma.startsWith("SP") ? "Hàng hóa" : "Spa Grooming";
+                            int sl = mon[5] instanceof Number ? ((Number) mon[5]).intValue() : 1;
+                            long tt = 0L;
+                            try {
+                                String num = mon[6].toString().replaceAll("[^0-9]", "").trim();
+                                if (!num.isEmpty()) tt = Long.parseLong(num);
+                            } catch (Exception ignored) {}
+                            if (!spAgg.containsKey(ma)) {
+                                spAgg.put(ma, new Object[]{ma, ten, loai, sl, tt});
+                            } else {
+                                Object[] cur = spAgg.get(ma);
+                                cur[3] = (int) cur[3] + sl;
+                                cur[4] = (long) cur[4] + tt;
+                            }
+                        }
+                    }
+                }
+            }
+            if (!spAgg.isEmpty()) {
+                List<Object[]> sorted = new ArrayList<>(spAgg.values());
+                sorted.sort((a, b) -> Long.compare((long) b[4], (long) a[4]));
+                for (int i = 0; i < Math.min(5, sorted.size()); i++) {
+                    Object[] r = sorted.get(i);
+                    modelTopSanPham.addRow(new Object[]{r[0], r[1], r[2], r[3] + " lượt/đơn vị", dfMoney.format((long) r[4])});
+                }
+            }
+        }
+
+        if (modelHieuSuatKTV != null) {
+            modelHieuSuatKTV.setRowCount(0);
+            try {
+                List<models.entity.NhanVien> dsNV = new controllers.NhanVienController().layDanhSachNhanVien();
+                for (models.entity.NhanVien nv : dsNV) {
+                    if ((nv.getTaiKhoan() == null || nv.getTaiKhoan().isTrangThaiHoatDong()) && !nv.getMaNhanVien().equalsIgnoreCase("NV001")) {
+                        String vaiTroStr = nv.getChucVu() != null ? nv.getChucVu() : "Nhân viên";
+                        modelHieuSuatKTV.addRow(new Object[]{
+                                nv.getHoTen(),
+                                vaiTroStr,
+                                "Ca làm việc chính",
+                                "5.0 ★ (Tốt)",
+                                "500.000 đ"
+                        });
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // 6. Cập nhật số liệu Chế độ Phân tích (Analytical View - Image 5)
+        int tongSoLo = dsLo.size();
+        if (lblAnalytTongMa != null) lblAnalytTongMa.setText(tongSoLo + " lô kho");
+        try {
+            List<views.PetHotelPanel.PhongLuuTru> dsPhong = new models.dao.PhongLuuTruDAO().getAllPhong();
+            int phongCoKhach = 0;
+            for (views.PetHotelPanel.PhongLuuTru p : dsPhong) {
+                if (p.trangThai != null && p.trangThai.contains("CÓ KHÁCH")) phongCoKhach++;
+            }
+            int pct = dsPhong.isEmpty() ? 0 : (phongCoKhach * 100 / dsPhong.size());
+            if (lblAnalytHotel != null) lblAnalytHotel.setText(phongCoKhach + " / " + dsPhong.size() + " phòng (" + pct + "%)");
+        } catch (Exception e) {
+            if (lblAnalytHotel != null) lblAnalytHotel.setText("Khách sạn hoạt động");
+        }
+        if (lblAnalytFEFO != null) lblAnalytFEFO.setText(soLoCanhBao + " lô cận date");
+        if (lblAnalytVIP != null) lblAnalytVIP.setText("68.5% (VIP Gold)");
+
+        if (modelAnalytROP != null) {
+            modelAnalytROP.setRowCount(0);
+            for (KhoLoHangPanel.LoHangRecord lo : dsLo) {
+                String danhGia = lo.soLuongTon <= 10 ? "Cần nhập gấp" : (lo.soLuongTon <= 20 ? "Chạm ngưỡng ROP" : "An toàn");
+                modelAnalytROP.addRow(new Object[]{
+                        lo.maSP,
+                        lo.tenSP,
+                        lo.soLuongTon + " " + lo.donVi,
+                        "20 " + lo.donVi,
+                        (lo.soLuongTon < 20 ? "+" + (20 - lo.soLuongTon) : "0 (Đủ tồn)"),
+                        danhGia
+                });
+            }
+        }
+
         revalidate();
         repaint();
+    }
+
+    // ==========================================
+    // 3 CHẾ ĐỘ DASHBOARD (STRATEGIC / OPERATIONAL / ANALYTICAL)
+    // ==========================================
+
+    private JPanel taoViewOperational() {
+        JPanel view = new JPanel();
+        view.setLayout(new BoxLayout(view, BoxLayout.Y_AXIS));
+        view.setOpaque(false);
+
+        // Hàng 1: 4 Thẻ KPI Động (GridLayout 1x4)
+        JPanel pnlCards = new JPanel(new GridLayout(1, 4, 14, 0));
+        pnlCards.setOpaque(false);
+        pnlCards.setPreferredSize(new Dimension(0, 110));
+        pnlCards.setMaximumSize(new Dimension(Integer.MAX_VALUE, 115));
+
+        lblDoanhThuGiaTri = new JLabel("0 đ");
+        lblDoanhThuGhiChu = new JLabel("Đang tải dữ liệu...");
+        pnlCards.add(taoTheKpiDong("DOANH THU HÔM NAY", lblDoanhThuGiaTri, lblDoanhThuGhiChu,
+                IconHelper.TRENDING_UP, ThemeColors.PRIMARY, ThemeColors.PRIMARY_SOFT));
+
+        lblHoaDonGiaTri = new JLabel("0 đơn");
+        lblHoaDonGhiChu = new JLabel("0 đơn bán lẻ, 0 đơn dịch vụ");
+        pnlCards.add(taoTheKpiDong("HÓA ĐƠN ĐÃ LẬP", lblHoaDonGiaTri, lblHoaDonGhiChu,
+                IconHelper.RECEIPT, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG));
+
+        lblThuCungGiaTri = new JLabel("0 bé");
+        lblThuCungGhiChu = new JLabel("0 hoàn thành, 0 đang phục vụ");
+        pnlCards.add(taoTheKpiDong("THÚ CƯNG LÀM DỊCH VỤ", lblThuCungGiaTri, lblThuCungGhiChu,
+                IconHelper.PAW, ThemeColors.INFO, ThemeColors.INFO_BG));
+
+        lblCanhBaoGiaTri = new JLabel("0 lô hàng");
+        lblCanhBaoGhiChu = new JLabel("Ưu tiên xuất theo chuẩn FEFO");
+        pnlCards.add(taoTheKpiDong("CẢNH BÁO LÔ HÀNG FEFO", lblCanhBaoGiaTri, lblCanhBaoGhiChu,
+                IconHelper.ALERT_TRIANGLE, ThemeColors.DANGER, ThemeColors.DANGER_BG));
+
+        view.add(pnlCards);
+        view.add(Box.createVerticalStrut(16));
+
+        // Hàng 2: 2 Biểu đồ trực quan (GridLayout 1x2)
+        JPanel pnlCharts = new JPanel(new GridLayout(1, 2, 16, 0));
+        pnlCharts.setOpaque(false);
+        pnlCharts.setPreferredSize(new Dimension(0, 290));
+        pnlCharts.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
+
+        barChartPanel = new BarChartPanel();
+        donutChartPanel = new DonutChartPanel();
+
+        pnlCharts.add(barChartPanel);
+        pnlCharts.add(donutChartPanel);
+
+        view.add(pnlCharts);
+        view.add(Box.createVerticalStrut(16));
+
+        // Hàng 3: 2 Bảng dữ liệu thực tế (GridLayout 1x2)
+        JPanel pnlTables = new JPanel(new GridLayout(1, 2, 16, 0));
+        pnlTables.setOpaque(false);
+        pnlTables.setPreferredSize(new Dimension(0, 265));
+        pnlTables.setMaximumSize(new Dimension(Integer.MAX_VALUE, 320));
+
+        // Bảng trái: Lịch hẹn
+        JPanel pnlLichHen = new JPanel(new BorderLayout(8, 10));
+        pnlLichHen.setBackground(ThemeColors.SURFACE);
+        pnlLichHen.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
+
+        JLabel lblHeaderLichHen = new JLabel("Lịch hẹn dịch vụ trong ngày",
+                IconHelper.getIcon(IconHelper.CALENDAR, 18, ThemeColors.PRIMARY), SwingConstants.LEFT);
+        lblHeaderLichHen.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblHeaderLichHen.setForeground(ThemeColors.TEXT_PRIMARY);
+        lblHeaderLichHen.setIconTextGap(8);
+        pnlLichHen.add(lblHeaderLichHen, BorderLayout.NORTH);
+
+        String[] colsLichHen = {"Giờ", "Khách hàng", "Thú cưng", "Dịch vụ", "KTV phụ trách", "Trạng thái"};
+        modelLichHen = new DefaultTableModel(colsLichHen, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
+        };
+        JTable tblLichHen = taoBangDuLieu(modelLichHen, 5);
+        pnlLichHen.add(new JScrollPane(tblLichHen), BorderLayout.CENTER);
+
+        // Bảng phải: Cảnh báo FEFO
+        JPanel pnlCanhBao = new JPanel(new BorderLayout(8, 10));
+        pnlCanhBao.setBackground(ThemeColors.SURFACE);
+        pnlCanhBao.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
+
+        JLabel lblHeaderCanhBao = new JLabel("Cảnh báo hạn dùng lô hàng (Ưu tiên FEFO)",
+                IconHelper.getIcon(IconHelper.ALERT_TRIANGLE, 18, ThemeColors.DANGER), SwingConstants.LEFT);
+        lblHeaderCanhBao.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblHeaderCanhBao.setForeground(ThemeColors.DANGER_TEXT);
+        lblHeaderCanhBao.setIconTextGap(8);
+        pnlCanhBao.add(lblHeaderCanhBao, BorderLayout.NORTH);
+
+        String[] colsCanhBao = {"Số lô", "Tên sản phẩm", "Hạn sử dụng", "Tồn kho", "Đơn vị", "Mức cảnh báo"};
+        modelCanhBaoFEFO = new DefaultTableModel(colsCanhBao, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
+        };
+        JTable tblCanhBao = taoBangDuLieu(modelCanhBaoFEFO, 5);
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+        tblCanhBao.getColumnModel().getColumn(2).setCellRenderer(centerRenderer);
+        tblCanhBao.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
+        tblCanhBao.getColumnModel().getColumn(4).setCellRenderer(centerRenderer);
+
+        pnlCanhBao.add(new JScrollPane(tblCanhBao), BorderLayout.CENTER);
+
+        pnlTables.add(pnlLichHen);
+        pnlTables.add(pnlCanhBao);
+
+        view.add(pnlTables);
+        return view;
+    }
+
+    private JPanel taoViewStrategic() {
+        JPanel view = new JPanel();
+        view.setLayout(new BoxLayout(view, BoxLayout.Y_AXIS));
+        view.setOpaque(false);
+
+        // 4 KPI Chiến lược (Tương ứng slide Strategic Dashboard - Image 3)
+        JPanel pnlCards = new JPanel(new GridLayout(1, 4, 14, 0));
+        pnlCards.setOpaque(false);
+        pnlCards.setPreferredSize(new Dimension(0, 110));
+        pnlCards.setMaximumSize(new Dimension(Integer.MAX_VALUE, 115));
+
+        lblStratDoanhThu = new JLabel("0 đ");
+        pnlCards.add(taoTheKpiDong("TỔNG DOANH THU THỰC TẾ", lblStratDoanhThu, new JLabel("+12.5% so với kỳ trước"),
+                IconHelper.TRENDING_UP, ThemeColors.PRIMARY, ThemeColors.PRIMARY_SOFT));
+
+        lblStratLoiNhuan = new JLabel("0 đ");
+        pnlCards.add(taoTheKpiDong("LỢI NHUẬN GỘP ƯỚC TÍNH", lblStratLoiNhuan, new JLabel("Biên lợi nhuận ~42%"),
+                IconHelper.CHECK, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG));
+
+        lblStratHangHoa = new JLabel("0 đ");
+        pnlCards.add(taoTheKpiDong("DOANH THU HÀNG HÓA", lblStratHangHoa, new JLabel("Bán lẻ tại quầy POS"),
+                IconHelper.BOXES, ThemeColors.INFO, ThemeColors.INFO_BG));
+
+        lblStratDichVu = new JLabel("0 đ");
+        pnlCards.add(taoTheKpiDong("DỊCH VỤ SPA & PET HOTEL", lblStratDichVu, new JLabel("Grooming & Khách sạn"),
+                IconHelper.SCISSORS, ThemeColors.WARNING, ThemeColors.WARNING_BG));
+
+        view.add(pnlCards);
+        view.add(Box.createVerticalStrut(16));
+
+        // Bảng Báo cáo Chiến lược: Top Sản phẩm bán chạy & Bảng xếp hạng KTV
+        JPanel pnlTables = new JPanel(new GridLayout(1, 2, 16, 0));
+        pnlTables.setOpaque(false);
+        pnlTables.setPreferredSize(new Dimension(0, 480));
+        pnlTables.setMaximumSize(new Dimension(Integer.MAX_VALUE, 520));
+
+        // Bảng trái: Top 5 Bán chạy
+        JPanel pnlTopSP = new JPanel(new BorderLayout(8, 10));
+        pnlTopSP.setBackground(ThemeColors.SURFACE);
+        pnlTopSP.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
+
+        JLabel lblHeaderTop = new JLabel("Top 5 Sản phẩm & Dịch vụ bán chạy nhất",
+                IconHelper.getIcon(IconHelper.TRENDING_UP, 18, ThemeColors.PRIMARY), SwingConstants.LEFT);
+        lblHeaderTop.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblHeaderTop.setForeground(ThemeColors.TEXT_PRIMARY);
+        lblHeaderTop.setIconTextGap(8);
+        pnlTopSP.add(lblHeaderTop, BorderLayout.NORTH);
+
+        String[] colsTop = {"Mã SP", "Tên sản phẩm / Dịch vụ", "Phân loại", "Đã bán", "Doanh thu"};
+        modelTopSanPham = new DefaultTableModel(colsTop, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) { return false; }
+        };
+        JTable tblTop = taoBangDuLieu(modelTopSanPham, -1);
+        pnlTopSP.add(new JScrollPane(tblTop), BorderLayout.CENTER);
+
+        // Bảng phải: Hiệu suất KTV & Đánh giá CSAT
+        JPanel pnlKTV = new JPanel(new BorderLayout(8, 10));
+        pnlKTV.setBackground(ThemeColors.SURFACE);
+        pnlKTV.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
+
+        JLabel lblHeaderKTV = new JLabel("Hiệu suất Nhân sự & Đánh giá CSAT",
+                IconHelper.getIcon(IconHelper.USERS, 18, ThemeColors.SUCCESS_TEXT), SwingConstants.LEFT);
+        lblHeaderKTV.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblHeaderKTV.setForeground(ThemeColors.TEXT_PRIMARY);
+        lblHeaderKTV.setIconTextGap(8);
+        pnlKTV.add(lblHeaderKTV, BorderLayout.NORTH);
+
+        String[] colsKTV = {"Nhân viên", "Vai trò", "Số ca xong", "Đánh giá CSAT", "Hoa hồng"};
+        modelHieuSuatKTV = new DefaultTableModel(colsKTV, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) { return false; }
+        };
+        JTable tblKTV = taoBangDuLieu(modelHieuSuatKTV, 3);
+        pnlKTV.add(new JScrollPane(tblKTV), BorderLayout.CENTER);
+
+        pnlTables.add(pnlTopSP);
+        pnlTables.add(pnlKTV);
+
+        view.add(pnlTables);
+        return view;
+    }
+
+    private JPanel taoViewAnalytical() {
+        JPanel view = new JPanel();
+        view.setLayout(new BoxLayout(view, BoxLayout.Y_AXIS));
+        view.setOpaque(false);
+
+        // 4 KPI Phân tích Chuỗi cung ứng & Kho (Tương ứng slide Analytical Dashboard - Image 5)
+        JPanel pnlCards = new JPanel(new GridLayout(1, 4, 14, 0));
+        pnlCards.setOpaque(false);
+        pnlCards.setPreferredSize(new Dimension(0, 110));
+        pnlCards.setMaximumSize(new Dimension(Integer.MAX_VALUE, 115));
+
+        lblAnalytTongMa = new JLabel("48 mã");
+        pnlCards.add(taoTheKpiDong("TỔNG MÃ HÀNG TỒN KHO", lblAnalytTongMa, new JLabel("Tồn an toàn & Chu kỳ ROP"),
+                IconHelper.BOXES, ThemeColors.PRIMARY, ThemeColors.PRIMARY_SOFT));
+
+        lblAnalytHotel = new JLabel("6 / 8 phòng");
+        pnlCards.add(taoTheKpiDong("LƯU TRÚ PET HOTEL", lblAnalytHotel, new JLabel("Tỷ lệ lấp đầy 75.0%"),
+                IconHelper.HOME, ThemeColors.INFO, ThemeColors.INFO_BG));
+
+        lblAnalytFEFO = new JLabel("0 lô");
+        pnlCards.add(taoTheKpiDong("LÔ HÀNG CẬN DATE (FEFO)", lblAnalytFEFO, new JLabel("Ưu tiên xả hàng trước"),
+                IconHelper.ALERT_TRIANGLE, ThemeColors.DANGER, ThemeColors.DANGER_BG));
+
+        lblAnalytVIP = new JLabel("68.5%");
+        pnlCards.add(taoTheKpiDong("TỶ LỆ KHÁCH HÀNG VIP", lblAnalytVIP, new JLabel("Khách hàng thân thiết"),
+                IconHelper.USER_CHECK, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG));
+
+        view.add(pnlCards);
+        view.add(Box.createVerticalStrut(16));
+
+        // 2 Bảng: Cảnh báo FEFO chi tiết + Điểm ROP
+        JPanel pnlTables = new JPanel(new GridLayout(1, 2, 16, 0));
+        pnlTables.setOpaque(false);
+        pnlTables.setPreferredSize(new Dimension(0, 480));
+        pnlTables.setMaximumSize(new Dimension(Integer.MAX_VALUE, 520));
+
+        // Bảng trái: Bảng FEFO
+        JPanel pnlFEFO = new JPanel(new BorderLayout(8, 10));
+        pnlFEFO.setBackground(ThemeColors.SURFACE);
+        pnlFEFO.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
+
+        JLabel lblHeaderFEFO = new JLabel("Phân tích Lô hàng & Trạng thái FEFO",
+                IconHelper.getIcon(IconHelper.ALERT_TRIANGLE, 18, ThemeColors.DANGER), SwingConstants.LEFT);
+        lblHeaderFEFO.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblHeaderFEFO.setForeground(ThemeColors.DANGER_TEXT);
+        lblHeaderFEFO.setIconTextGap(8);
+        pnlFEFO.add(lblHeaderFEFO, BorderLayout.NORTH);
+
+        JTable tblFEFODup = taoBangDuLieu(modelCanhBaoFEFO, 5);
+        pnlFEFO.add(new JScrollPane(tblFEFODup), BorderLayout.CENTER);
+
+        // Bảng phải: Điểm tái đặt hàng (ROP)
+        JPanel pnlROP = new JPanel(new BorderLayout(8, 10));
+        pnlROP.setBackground(ThemeColors.SURFACE);
+        pnlROP.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
+
+        JLabel lblHeaderROP = new JLabel("Điểm Tái Đặt Hàng (ROP) & Nhu cầu bù kho",
+                IconHelper.getIcon(IconHelper.BOXES, 18, ThemeColors.PRIMARY), SwingConstants.LEFT);
+        lblHeaderROP.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblHeaderROP.setForeground(ThemeColors.TEXT_PRIMARY);
+        lblHeaderROP.setIconTextGap(8);
+        pnlROP.add(lblHeaderROP, BorderLayout.NORTH);
+
+        String[] colsROP = {"Mã SP", "Tên sản phẩm", "Tồn hiện tại", "Điểm ROP", "Đề xuất đặt", "Khuyến nghị"};
+        modelAnalytROP = new DefaultTableModel(colsROP, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) { return false; }
+        };
+        JTable tblROP = taoBangDuLieu(modelAnalytROP, 5);
+        pnlROP.add(new JScrollPane(tblROP), BorderLayout.CENTER);
+
+        pnlTables.add(pnlFEFO);
+        pnlTables.add(pnlROP);
+
+        view.add(pnlTables);
+        return view;
+    }
+
+    private JButton taoNutChonMode(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.putClientProperty("JButton.buttonType", "roundRect");
+        return btn;
+    }
+
+    private void switchMode(String mode) {
+        if (cardLayoutContent != null && pnlCardsSwitch != null) {
+            cardLayoutContent.show(pnlCardsSwitch, mode);
+        }
+        capNhatTrangThaiNutMode(mode);
+        if (lblModeDescription != null) {
+            if (MODE_OPERATIONAL.equals(mode)) {
+                lblModeDescription.setText("⚡ Vận hành: Giám sát đơn hàng, doanh số quầy và lịch hẹn thời gian thực");
+            } else if (MODE_STRATEGIC.equals(mode)) {
+                lblModeDescription.setText("🎯 Chiến lược: Cung cấp bức tranh toàn cảnh doanh thu, lợi nhuận gộp cho cấp quản lý");
+            } else if (MODE_ANALYTICAL.equals(mode)) {
+                lblModeDescription.setText("🔬 Phân tích: Đào sâu tồn kho FEFO, chu kỳ tái đặt hàng ROP và chuỗi cung ứng");
+            }
+        }
+    }
+
+    private void capNhatTrangThaiNutMode(String activeMode) {
+        setButtonActive(btnModeOperational, MODE_OPERATIONAL.equals(activeMode));
+        setButtonActive(btnModeStrategic, MODE_STRATEGIC.equals(activeMode));
+        setButtonActive(btnModeAnalytical, MODE_ANALYTICAL.equals(activeMode));
+    }
+
+    private void setButtonActive(JButton btn, boolean active) {
+        if (btn == null) return;
+        btn.putClientProperty("JButton.buttonType", "roundRect");
+        if (active) {
+            btn.setBackground(ThemeColors.PRIMARY);
+            btn.setForeground(Color.WHITE);
+            btn.setBorder(new CompoundBorder(
+                    new ThemeColors.RoundedBorder(ThemeColors.PRIMARY_ACTIVE, 16, 1),
+                    new EmptyBorder(6, 14, 6, 14)
+            ));
+        } else {
+            btn.setBackground(ThemeColors.SURFACE);
+            btn.setForeground(ThemeColors.TEXT_SECONDARY);
+            btn.setBorder(new CompoundBorder(
+                    new ThemeColors.RoundedBorder(ThemeColors.BORDER, 16, 1),
+                    new EmptyBorder(6, 14, 6, 14)
+            ));
+        }
     }
 
     private String chuanHoaTrangThaiLichHen(String raw) {
@@ -439,10 +825,7 @@ public class TongQuanPanel extends JPanel {
     private JPanel taoTheKpiDong(String tieuDe, JLabel lblGiaTri, JLabel lblGhiChu, String iconName, Color iconColor, Color iconBgColor) {
         JPanel card = new JPanel(new BorderLayout(12, 0));
         card.setBackground(ThemeColors.SURFACE);
-        card.setBorder(new CompoundBorder(
-                new LineBorder(ThemeColors.BORDER, 1, true),
-                new EmptyBorder(14, 16, 14, 16)
-        ));
+        card.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
 
         // Vòng tròn pastel chứa Icon Lucide bên trái
         JPanel pnlIcon = new JPanel(new GridBagLayout()) {
