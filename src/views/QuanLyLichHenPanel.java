@@ -432,7 +432,10 @@ public class QuanLyLichHenPanel extends JPanel {
 
         String maLH = (String) modelLichHen.getValueAt(row, 0);
         String khTen = (String) modelLichHen.getValueAt(row, 2);
+        String sdt = (String) modelLichHen.getValueAt(row, 3);
+        String thuCung = (String) modelLichHen.getValueAt(row, 4);
         String dvTen = (String) modelLichHen.getValueAt(row, 5);
+        String ktv = (String) modelLichHen.getValueAt(row, 6);
         String trangThai = (String) modelLichHen.getValueAt(row, 7);
 
         if (!"Hoàn thành".equalsIgnoreCase(trangThai)) {
@@ -442,15 +445,24 @@ public class QuanLyLichHenPanel extends JPanel {
             if (opt != JOptionPane.YES_OPTION) return;
         }
 
-        String msg = String.format(
-                "ĐÃ CHUYỂN LỊCH HẸN SANG MÀN HÌNH BÁN HÀNG POS!\n\n" +
-                        "• Mã lịch hẹn: %s\n" +
-                        "• Khách hàng: %s\n" +
-                        "• Dịch vụ: %s\n\n" +
-                        "Thu ngân có thể kiểm tra giỏ hàng tại tab 'Bán hàng POS' để chốt thanh toán.",
-                maLH, khTen, dvTen
-        );
-
-        JOptionPane.showMessageDialog(this, msg, "Chuyển Hóa đơn thành công", JOptionPane.INFORMATION_MESSAGE);
+        Container top = getTopLevelAncestor();
+        if (top instanceof MainDashboard) {
+            MainDashboard md = (MainDashboard) top;
+            md.dieuHuongSangChucNang(MainDashboard.CARD_POS);
+            BanHangPOSPanel pos = md.getBanHangPOSPanel();
+            if (pos != null) {
+                pos.tiepNhanDichVuLichHen(maLH, khTen, sdt, thuCung, dvTen, ktv);
+            }
+        } else {
+            String msg = String.format(
+                    "ĐÃ CHUYỂN LỊCH HẸN SANG MÀN HÌNH BÁN HÀNG POS!\n\n" +
+                            "• Mã lịch hẹn: %s\n" +
+                            "• Khách hàng: %s (%s)\n" +
+                            "• Dịch vụ: %s\n\n" +
+                            "Thu ngân có thể kiểm tra giỏ hàng tại tab 'Bán hàng POS' để chốt thanh toán.",
+                    maLH, khTen, sdt, dvTen
+            );
+            JOptionPane.showMessageDialog(this, msg, "Chuyển Hóa đơn thành công", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 }

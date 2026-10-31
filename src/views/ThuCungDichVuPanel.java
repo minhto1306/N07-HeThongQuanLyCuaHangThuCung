@@ -1,10 +1,12 @@
 package views;
 
 import controllers.BanHangController;
+import controllers.SpaPassController;
 import controllers.ThuCungController;
 import models.entity.HoSoSucKhoe;
 import models.entity.HoSoThuCung;
 import models.entity.KhachHang;
+import models.entity.TheSpaPass;
 import models.entity.ThuCung;
 import utils.IconHelper;
 import utils.ThemeColors;
@@ -35,12 +37,17 @@ public class ThuCungDichVuPanel extends JPanel {
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
     private final DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    private final SpaPassController spaPassController = new SpaPassController();
     private DefaultTableModel modelHoSo;
     private DefaultTableModel modelSucKhoe;
     private DefaultTableModel modelKhachHang;
     private JTable tblKhachHang;
     private JTextField txtTimKhachHang;
     private JComboBox<String> cboLocHangKhach;
+    private DefaultTableModel modelTheHoiVien;
+    private JTable tblTheHoiVien;
+    private JTextField txtTimTheHoiVien;
+    private JComboBox<String> cboLocTrangThaiThe;
     private JTabbedPane tabbedPane;
 
     public ThuCungDichVuPanel() {
@@ -60,6 +67,8 @@ public class ThuCungDichVuPanel extends JPanel {
                 IconHelper.getPrimaryIcon(IconHelper.CALENDAR, 16), new QuanLyLichHenPanel(controller));
         tabbedPane.addTab("  Khách hàng Thành viên & Điểm VIP",
                 IconHelper.getPrimaryIcon(IconHelper.USERS, 16), taoTabQuanLyKhachHang());
+        tabbedPane.addTab("  Thẻ Hội Viên & Gói Spa Pass",
+                IconHelper.getPrimaryIcon(IconHelper.CREDIT_CARD, 16), taoTabQuanLyTheHoiVien());
 
         add(tabbedPane, BorderLayout.CENTER);
     }
@@ -80,6 +89,13 @@ public class ThuCungDichVuPanel extends JPanel {
         if (tabbedPane != null) {
             tabbedPane.setSelectedIndex(3);
             napDuLieuKhachHang();
+        }
+    }
+
+    public void chonTabTheHoiVien() {
+        if (tabbedPane != null) {
+            tabbedPane.setSelectedIndex(4);
+            napDuLieuTheHoiVien();
         }
     }
 
@@ -251,7 +267,27 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogKhamSucKhoe() {
-        JTextField txtTenTc = new JTextField("Miu Miu");
+        // 1. Tạo ComboBox lấy danh sách thú cưng thực tế từ Controller thay vì gõ tay
+        JComboBox<ThuCung> cboThuCung = new JComboBox<>();
+        List<HoSoThuCung> dsHoSo = controller.layDanhSachHoSoThuCung();
+        for (HoSoThuCung hs : dsHoSo) {
+            if (hs.getThuCung() != null) {
+                cboThuCung.addItem(hs.getThuCung());
+            }
+        }
+        // Custom hiển thị tên trên ComboBox
+        cboThuCung.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof ThuCung) {
+                    ThuCung t = (ThuCung) value;
+                    setText(t.getMaThuCung() + " - " + t.getTenThuCung() + " (" + t.getGiongLoai() + ")");
+                }
+                return this;
+            }
+        });
+
         JTextField txtCanNang = new JTextField("4.5");
         JTextField txtNhietDo = new JTextField("38.6");
         JTextField txtVeRan = new JTextField("Không có");
@@ -259,7 +295,7 @@ public class ThuCungDichVuPanel extends JPanel {
         JTextField txtGhiChu = new JTextField("Thể trạng bình thường, sẵn sàng làm dịch vụ");
 
         Object[] msg = {
-                "Thú cưng khám:", txtTenTc,
+                "Chọn thú cưng khám:", cboThuCung, // Thay JTextField bằng JComboBox
                 "Cân nặng (kg):", txtCanNang,
                 "Nhiệt độ (°C):", txtNhietDo,
                 "Tình trạng ve rận / da lông:", txtVeRan,
@@ -269,11 +305,19 @@ public class ThuCungDichVuPanel extends JPanel {
 
         int opt = JOptionPane.showConfirmDialog(this, msg, "KIỂM TRA THỂ TRẠNG TRƯỚC DỊCH VỤ", JOptionPane.OK_CANCEL_OPTION);
         if (opt == JOptionPane.OK_OPTION) {
-            ThuCung tc = new ThuCung("TC001", txtTenTc.getText().trim(), "Mèo", null, "Cái");
+            // 2. Lấy đúng đối tượng thú cưng được chọn từ ComboBox
+            ThuCung selectedTC = (ThuCung) cboThuCung.getSelectedItem();
+            if (selectedTC == null) {
+                JOptionPane.showMessageDialog(this, "Vui lòng chọn thú cưng!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            models.entity.NhanVien nvKiemTra = new models.entity.NhanVien("NV001", "Lê Khải Minh", "NVQL", null, null);
+
             HoSoSucKhoe sk = new HoSoSucKhoe(
                     "SK" + System.currentTimeMillis() % 10000,
-                    tc,
-                    null,
+                    selectedTC, // Truyền đúng thú cưng đã chọn (mang mã và tên thật)
+                    nvKiemTra,
                     new BigDecimal(txtCanNang.getText().trim()),
                     new BigDecimal(txtNhietDo.getText().trim()),
                     txtVeRan.getText().trim(),
@@ -281,6 +325,7 @@ public class ThuCungDichVuPanel extends JPanel {
                     txtGhiChu.getText().trim(),
                     LocalDateTime.now()
             );
+            
             controller.themHoSoSucKhoe(sk);
             napDuLieuSucKhoe();
             JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ sức khỏe và thể trạng thú cưng!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
@@ -513,6 +558,234 @@ public class ThuCungDichVuPanel extends JPanel {
                 napDuLieuKhachHang();
                 JOptionPane.showMessageDialog(this, "Đã xóa khách hàng [" + maKH + "] khỏi hệ thống.",
                         "Đã xóa", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    }
+
+    // =========================================================================
+    // TAB 5: QUẢN LÝ THẺ HỘI VIÊN & GÓI DỊCH VỤ SPA PASS (PUNCH CARD TRẢ TRƯỚC)
+    // =========================================================================
+    private JPanel taoTabQuanLyTheHoiVien() {
+        JPanel pnl = new JPanel(new BorderLayout(10, 12));
+        pnl.setBackground(ThemeColors.SURFACE);
+        pnl.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
+
+        JPanel pnlToolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        pnlToolbar.setOpaque(false);
+
+        txtTimTheHoiVien = new JTextField(18);
+        txtTimTheHoiVien.setPreferredSize(new Dimension(240, 36));
+        txtTimTheHoiVien.putClientProperty("JTextField.placeholderText", "Tìm theo SĐT, tên khách, mã thẻ...");
+        txtTimTheHoiVien.putClientProperty("JTextField.leadingIcon", IconHelper.getIcon(IconHelper.SEARCH, 15, ThemeColors.TEXT_MUTED));
+        txtTimTheHoiVien.setBorder(ThemeColors.createInputBorder());
+
+        cboLocTrangThaiThe = new JComboBox<>(new String[]{"Tất cả trạng thái", "Đang hoạt động", "Đã hết buổi", "Hết hạn sử dụng"});
+        cboLocTrangThaiThe.setPreferredSize(new Dimension(170, 36));
+        cboLocTrangThaiThe.setBackground(ThemeColors.SURFACE);
+
+        JButton btnPhatHanhThe = ThemeColors.createPrimaryButton("Phát hành Thẻ mới", IconHelper.getIcon(IconHelper.PLUS, 14, Color.WHITE));
+        JButton btnNapBuoi = ThemeColors.createSecondaryButton("Nạp thêm / Gia hạn buổi", IconHelper.getIcon(IconHelper.EDIT, 14, ThemeColors.TEXT_SECONDARY));
+        JButton btnLamMoiThe = ThemeColors.createSecondaryButton("Làm mới", IconHelper.getIcon(IconHelper.REFRESH, 14, ThemeColors.TEXT_SECONDARY));
+
+        txtTimTheHoiVien.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { napDuLieuTheHoiVien(); }
+            public void removeUpdate(DocumentEvent e) { napDuLieuTheHoiVien(); }
+            public void changedUpdate(DocumentEvent e) { napDuLieuTheHoiVien(); }
+        });
+        cboLocTrangThaiThe.addActionListener(e -> napDuLieuTheHoiVien());
+
+        btnPhatHanhThe.addActionListener(e -> moDialogPhatHanhTheMoi());
+        btnNapBuoi.addActionListener(e -> moDialogGiaHanHoacNapBuoi());
+        btnLamMoiThe.addActionListener(e -> {
+            txtTimTheHoiVien.setText("");
+            cboLocTrangThaiThe.setSelectedIndex(0);
+            napDuLieuTheHoiVien();
+        });
+
+        pnlToolbar.add(new JLabel("Tìm kiếm:"));
+        pnlToolbar.add(txtTimTheHoiVien);
+        pnlToolbar.add(new JLabel("Trạng thái:"));
+        pnlToolbar.add(cboLocTrangThaiThe);
+        pnlToolbar.add(btnPhatHanhThe);
+        pnlToolbar.add(btnNapBuoi);
+        pnlToolbar.add(btnLamMoiThe);
+
+        String[] cols = {"Mã Thẻ", "Tên khách hàng", "Số điện thoại", "Tên gói dịch vụ", "Tổng buổi", "Đã dùng", "Còn lại", "Đơn giá gói", "Ngày kích hoạt", "Hạn sử dụng", "Trạng thái"};
+        modelTheHoiVien = new DefaultTableModel(cols, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) { return false; }
+        };
+
+        tblTheHoiVien = taoBangChuan(modelTheHoiVien);
+
+        DefaultTableCellRenderer center = new DefaultTableCellRenderer();
+        center.setHorizontalAlignment(JLabel.CENTER);
+        tblTheHoiVien.getColumnModel().getColumn(4).setCellRenderer(center);
+        tblTheHoiVien.getColumnModel().getColumn(5).setCellRenderer(center);
+        tblTheHoiVien.getColumnModel().getColumn(6).setCellRenderer(center);
+        tblTheHoiVien.getColumnModel().getColumn(8).setCellRenderer(center);
+        tblTheHoiVien.getColumnModel().getColumn(9).setCellRenderer(center);
+
+        tblTheHoiVien.getColumnModel().getColumn(10).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                lbl.setHorizontalAlignment(JLabel.CENTER);
+                lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                String st = value != null ? value.toString() : "";
+                if ("ĐANG HOẠT ĐỘNG".equalsIgnoreCase(st)) {
+                    lbl.setForeground(new Color(5, 150, 105)); // Emerald
+                } else if ("ĐÃ HẾT BUỔI".equalsIgnoreCase(st)) {
+                    lbl.setForeground(new Color(220, 38, 38)); // Red
+                } else {
+                    lbl.setForeground(new Color(217, 119, 6)); // Amber
+                }
+                return lbl;
+            }
+        });
+
+        napDuLieuTheHoiVien();
+
+        pnl.add(pnlToolbar, BorderLayout.NORTH);
+        pnl.add(new JScrollPane(tblTheHoiVien), BorderLayout.CENTER);
+        return pnl;
+    }
+
+    public void napDuLieuTheHoiVien() {
+        if (modelTheHoiVien == null) return;
+        modelTheHoiVien.setRowCount(0);
+        String kw = txtTimTheHoiVien != null ? txtTimTheHoiVien.getText().trim().toLowerCase() : "";
+        int filterIdx = cboLocTrangThaiThe != null ? cboLocTrangThaiThe.getSelectedIndex() : 0;
+
+        List<TheSpaPass> dsThe = spaPassController.layTatCaThe();
+        for (TheSpaPass the : dsThe) {
+            the.capNhatTrangThai();
+            String st = the.getTrangThai();
+
+            if (filterIdx == 1 && !"ĐANG HOẠT ĐỘNG".equalsIgnoreCase(st)) continue;
+            if (filterIdx == 2 && !"ĐÃ HẾT BUỔI".equalsIgnoreCase(st)) continue;
+            if (filterIdx == 3 && !"HẾT HẠN SỬ DỤNG".equalsIgnoreCase(st)) continue;
+
+            if (!kw.isEmpty()) {
+                boolean match = (the.getMaThe() != null && the.getMaThe().toLowerCase().contains(kw))
+                        || (the.getTenKhachHang() != null && the.getTenKhachHang().toLowerCase().contains(kw))
+                        || (the.getSdtKhachHang() != null && the.getSdtKhachHang().contains(kw))
+                        || (the.getTenGoi() != null && the.getTenGoi().toLowerCase().contains(kw));
+                if (!match) continue;
+            }
+
+            modelTheHoiVien.addRow(new Object[]{
+                    the.getMaThe(),
+                    the.getTenKhachHang(),
+                    the.getSdtKhachHang(),
+                    the.getTenGoi(),
+                    the.getTongSoBuoi() + " buổi",
+                    the.getSoBuoiDaDung() + " buổi",
+                    the.getSoBuoiConLai() + " buổi",
+                    String.format("%,d đ", the.getDonGiaGoi()),
+                    the.getNgayKichHoat() != null ? the.getNgayKichHoat().format(df) : "",
+                    the.getNgayHetHan() != null ? the.getNgayHetHan().format(df) : "",
+                    st
+            });
+        }
+    }
+
+    private void moDialogPhatHanhTheMoi() {
+        JTextField txtSdt = new JTextField();
+        JTextField txtHoTen = new JTextField();
+        JComboBox<String> cboGoi = new JComboBox<>(new String[]{
+                "Gói Spa Pass 5 Buổi (900.000 đ - Tiết kiệm 20%)",
+                "Gói Spa Pass 10 Buổi (1.600.000 đ - Tặng 2 buổi tắm)",
+                "Gói Chăm Sóc Định Kỳ 3 Buổi (580.000 đ)"
+        });
+
+        txtSdt.getDocument().addDocumentListener(new DocumentListener() {
+            private void lookup() {
+                String s = txtSdt.getText().trim();
+                if (s.matches("^0\\d{9}$")) {
+                    List<KhachHang> ds = BanHangController.timKiemGoiYKhachHang(s);
+                    for (KhachHang kh : ds) {
+                        if (s.equals(kh.getSoDienThoai())) {
+                            txtHoTen.setText(kh.getHoTen());
+                            break;
+                        }
+                    }
+                }
+            }
+            public void insertUpdate(DocumentEvent e) { lookup(); }
+            public void removeUpdate(DocumentEvent e) { lookup(); }
+            public void changedUpdate(DocumentEvent e) { lookup(); }
+        });
+
+        Object[] msg = {
+                "Số điện thoại khách hàng (10 số) (*):", txtSdt,
+                "Họ và tên khách hàng (*):", txtHoTen,
+                "Loại gói Spa Pass phát hành (*):", cboGoi
+        };
+
+        int opt = JOptionPane.showConfirmDialog(this, msg, "PHÁT HÀNH THẺ HỘI VIÊN / SPA PASS MỚI", JOptionPane.OK_CANCEL_OPTION);
+        if (opt == JOptionPane.OK_OPTION) {
+            String sdt = txtSdt.getText().trim();
+            String ten = txtHoTen.getText().trim();
+            if (ten.isEmpty() || !sdt.matches("^0\\d{9}$")) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập Họ tên và Số điện thoại 10 chữ số hợp lệ!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int goiIdx = cboGoi.getSelectedIndex();
+            int soBuoi = goiIdx == 1 ? 10 : (goiIdx == 2 ? 3 : 5);
+            long donGia = goiIdx == 1 ? 1600000L : (goiIdx == 2 ? 580000L : 900000L);
+            String tenGoi = goiIdx == 1 ? "Gói Spa Pass 10 Buổi (Gia Đình)" : (goiIdx == 2 ? "Gói Chăm Sóc Định Kỳ 3 Buổi" : "Gói Spa Pass 5 Buổi (Punch Card)");
+
+            TheSpaPass theMoi = spaPassController.kichHoatTheMoi(sdt, ten, tenGoi, soBuoi, donGia);
+            napDuLieuTheHoiVien();
+            JOptionPane.showMessageDialog(this,
+                    "Phát hành Thẻ Spa Pass thành công!\n"
+                            + "- Mã thẻ: " + theMoi.getMaThe() + "\n"
+                            + "- Khách hàng: " + theMoi.getTenKhachHang() + " (" + theMoi.getSdtKhachHang() + ")\n"
+                            + "- Gói dịch vụ: " + theMoi.getTenGoi() + " (" + theMoi.getTongSoBuoi() + " buổi)\n"
+                            + "- Hạn sử dụng: Đến ngày " + theMoi.getNgayHetHanStr(),
+                    "Phát hành thành công", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    private void moDialogGiaHanHoacNapBuoi() {
+        int row = tblTheHoiVien.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn 1 thẻ trên bảng để nạp thêm hoặc gia hạn!", "Chưa chọn thẻ", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        String maThe = modelTheHoiVien.getValueAt(row, 0).toString();
+        String tenKhach = modelTheHoiVien.getValueAt(row, 1).toString();
+        TheSpaPass the = spaPassController.timTheTheoMa(maThe);
+        if (the == null) {
+            JOptionPane.showMessageDialog(this, "Không tìm thấy thông tin thẻ: " + maThe, "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        JTextField txtSoBuoiNap = new JTextField("5");
+        JTextField txtSoNgayGiaHan = new JTextField("60");
+
+        Object[] msg = {
+                "Mã thẻ: " + the.getMaThe() + " - Khách hàng: " + tenKhach,
+                "Số buổi hiện tại: " + the.getSoBuoiConLai() + "/" + the.getTongSoBuoi() + " buổi (Hạn: " + the.getNgayHetHanStr() + ")",
+                "Số buổi nạp thêm:", txtSoBuoiNap,
+                "Số ngày gia hạn thêm (ngày):", txtSoNgayGiaHan
+        };
+
+        int opt = JOptionPane.showConfirmDialog(this, msg, "NẠP THÊM BUỔI & GIA HẠN THẺ SPA PASS", JOptionPane.OK_CANCEL_OPTION);
+        if (opt == JOptionPane.OK_OPTION) {
+            try {
+                int buoi = Integer.parseInt(txtSoBuoiNap.getText().trim());
+                int ngay = Integer.parseInt(txtSoNgayGiaHan.getText().trim());
+                the.napThemBuoi(buoi, ngay);
+                napDuLieuTheHoiVien();
+                JOptionPane.showMessageDialog(this,
+                        "Đã nạp thêm " + buoi + " buổi và gia hạn " + ngay + " ngày cho thẻ [" + maThe + "] thành công!\n"
+                                + "- Số buổi khả dụng mới: " + the.getSoBuoiConLai() + "/" + the.getTongSoBuoi() + " buổi\n"
+                                + "- Hạn sử dụng mới: " + the.getNgayHetHanStr(),
+                        "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Số buổi và số ngày phải là số nguyên dương hợp lệ!", "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
             }
         }
     }

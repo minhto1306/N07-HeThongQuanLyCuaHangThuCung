@@ -79,15 +79,13 @@ public class PetHotelPanel extends JPanel {
         try {
             models.dao.PhongLuuTruDAO dao = new models.dao.PhongLuuTruDAO();
             List<PhongLuuTru> dbList = dao.getAllPhong();
-            if (dbList != null && !dbList.isEmpty()) {
+            if (dbList != null) {
                 DANH_SACH_PHONG.clear();
                 DANH_SACH_PHONG.addAll(dbList);
-                return;
             }
         } catch (Exception e) {
             System.err.println("[PetHotelPanel] Lỗi tải phòng lưu trú CSDL: " + e.getMessage());
         }
-        khoiTaoDuLieuMauPetHotel();
     }
 
     public static void luuPhongXuongDB(PhongLuuTru p) {
@@ -97,99 +95,6 @@ public class PetHotelPanel extends JPanel {
         } catch (Exception e) {
             System.err.println("[PetHotelPanel] Lỗi cập nhật phòng CSDL: " + e.getMessage());
         }
-    }
-
-    private static void khoiTaoDuLieuMauPetHotel() {
-        if (!DANH_SACH_PHONG.isEmpty()) return;
-
-        // 1. Dãy Phòng Tiêu Chuẩn (Standard Room - 150k/ngày)
-        PhongLuuTru p101 = new PhongLuuTru("P101", "Phòng Tiêu chuẩn", 150000, "ĐANG CÓ KHÁCH");
-        p101.tenThuCung = "Bim Bim";
-        p101.giongLoai = "Corgi (8.5kg)";
-        p101.tenChu = "Nguyễn Văn An";
-        p101.sdtChu = "0988111222";
-        p101.thoiGianCheckIn = LocalDateTime.now().minusDays(2).withHour(9).withMinute(0);
-        p101.duKienCheckOut = LocalDateTime.now().plusDays(1).withHour(17).withMinute(0);
-        p101.ghiChuChamSoc = "Ăn hạt Royal Canin ngâm mềm, dắt đi dạo 2 lần/ngày, sợ sấm sét";
-        p101.daChoAnSang = true;
-        p101.daChoAnToi = true;
-        p101.daDiDaoVeSinh = true;
-        DANH_SACH_PHONG.add(p101);
-
-        PhongLuuTru p102 = new PhongLuuTru("P102", "Phòng Tiêu chuẩn", 150000, "TRỐNG");
-        DANH_SACH_PHONG.add(p102);
-
-        PhongLuuTru p103 = new PhongLuuTru("P103", "Phòng Tiêu chuẩn", 150000, "ĐANG CÓ KHÁCH");
-        p103.tenThuCung = "Bơ";
-        p103.giongLoai = "Poodle Tiny (3.2kg)";
-        p103.tenChu = "Trần Thị Mai";
-        p103.sdtChu = "0977333444";
-        p103.thoiGianCheckIn = LocalDateTime.now().minusDays(1).withHour(10).withMinute(30);
-        p103.duKienCheckOut = LocalDateTime.now().plusDays(2).withHour(12).withMinute(0);
-        p103.ghiChuChamSoc = "Ăn kèm pate gà, chải lông mỗi chiều, uống men tiêu hóa buổi sáng";
-        p103.daChoAnSang = true;
-        p103.daChoAnToi = false;
-        p103.daDiDaoVeSinh = true;
-        DANH_SACH_PHONG.add(p103);
-
-        PhongLuuTru p104 = new PhongLuuTru("P104", "Phòng Tiêu chuẩn", 150000, "ĐANG DỌN DẸP");
-        DANH_SACH_PHONG.add(p104);
-
-        // 2. Dãy Phòng VIP Suite (Máy lạnh, camera 24/7 - 250k/ngày)
-        PhongLuuTru v201 = new PhongLuuTru("V201", "Phòng VIP Suite", 250000, "ĐANG CÓ KHÁCH");
-        v201.tenThuCung = "Lu Lu";
-        v201.giongLoai = "Golden Retriever (24kg)";
-        v201.tenChu = "Phạm Hoàng Long";
-        v201.sdtChu = "0918776655";
-        v201.thoiGianCheckIn = LocalDateTime.now().minusDays(3).withHour(14).withMinute(0);
-        v201.duKienCheckOut = LocalDateTime.now().plusDays(1).withHour(18).withMinute(0);
-        v201.ghiChuChamSoc = "Camera VIP bật 24/7 cho chủ xem, ăn 3 bữa, uống canxi kèm sữa chua";
-        v201.daChoAnSang = true;
-        v201.daChoAnToi = true;
-        v201.daDiDaoVeSinh = true;
-        DANH_SACH_PHONG.add(v201);
-
-        PhongLuuTru v202 = new PhongLuuTru("V202", "Phòng VIP Suite", 250000, "TRỐNG");
-        DANH_SACH_PHONG.add(v202);
-
-        PhongLuuTru v203 = new PhongLuuTru("V203", "Phòng VIP Suite", 250000, "TRỐNG");
-        DANH_SACH_PHONG.add(v203);
-
-        PhongLuuTru v204 = new PhongLuuTru("V204", "Phòng VIP Suite", 250000, "ĐANG CÓ KHÁCH");
-        v204.tenThuCung = "Sammy";
-        v204.giongLoai = "Samoyed (19kg)";
-        v204.tenChu = "Đỗ Quỳnh Chi";
-        v204.sdtChu = "0905123456";
-        v204.thoiGianCheckIn = LocalDateTime.now().minusHours(8);
-        v204.duKienCheckOut = LocalDateTime.now().plusDays(3).withHour(16).withMinute(0);
-        v204.ghiChuChamSoc = "Bật điều hòa 22 độ C liên tục, chải lông kĩ tránh vón búi";
-        v204.daChoAnSang = true;
-        v204.daChoAnToi = false;
-        v204.daDiDaoVeSinh = true;
-        DANH_SACH_PHONG.add(v204);
-
-        // 3. Dãy Condo Cho Mèo (Cat Condo nhiều tầng - 200k/ngày)
-        PhongLuuTru c301 = new PhongLuuTru("C301", "Condo cho Mèo", 200000, "ĐANG CÓ KHÁCH");
-        c301.tenThuCung = "Miu Miu";
-        c301.giongLoai = "Mèo Anh Lông Ngắn (4.5kg)";
-        c301.tenChu = "Lê Hoàng Yến";
-        c301.sdtChu = "0912345678";
-        c301.thoiGianCheckIn = LocalDateTime.now().minusDays(1).withHour(8).withMinute(0);
-        c301.duKienCheckOut = LocalDateTime.now().plusDays(2).withHour(18).withMinute(0);
-        c301.ghiChuChamSoc = "Ăn hạt Orijen + súp thưởng Ciao lúc 15h, dọn khay cát 2 lần/ngày";
-        c301.daChoAnSang = true;
-        c301.daChoAnToi = false;
-        c301.daDiDaoVeSinh = true;
-        DANH_SACH_PHONG.add(c301);
-
-        PhongLuuTru c302 = new PhongLuuTru("C302", "Condo cho Mèo", 200000, "TRỐNG");
-        DANH_SACH_PHONG.add(c302);
-
-        PhongLuuTru c303 = new PhongLuuTru("C303", "Condo cho Mèo", 200000, "TRỐNG");
-        DANH_SACH_PHONG.add(c303);
-
-        PhongLuuTru c304 = new PhongLuuTru("C304", "Condo cho Mèo", 200000, "TRỐNG");
-        DANH_SACH_PHONG.add(c304);
     }
 
     // UI Components
@@ -609,6 +514,7 @@ public class PetHotelPanel extends JPanel {
             JTextField txtEditChu = new JTextField(p.tenChu);
             JTextField txtEditSdt = new JTextField(p.sdtChu);
             JTextField txtEditNote = new JTextField(p.ghiChuChamSoc != null ? p.ghiChuChamSoc : "");
+            JTextField txtEditPhi = new JTextField(p.phiDichVuPhatSinh > 0 ? String.valueOf(p.phiDichVuPhatSinh) : "0");
 
             ge.gridx = 0; ge.gridy = 0; ge.weightx = 0;
             pnlQuickEdit.add(new JLabel("Bé cưng:"), ge);
@@ -628,6 +534,11 @@ public class PetHotelPanel extends JPanel {
             pnlQuickEdit.add(new JLabel("Dặn dò:"), ge);
             ge.gridx = 1; ge.gridwidth = 3; ge.weightx = 1.0;
             pnlQuickEdit.add(txtEditNote, ge);
+
+            ge.gridx = 0; ge.gridy = 3; ge.gridwidth = 1; ge.weightx = 0;
+            pnlQuickEdit.add(new JLabel("Phí phát sinh:"), ge);
+            ge.gridx = 1; ge.gridwidth = 3; ge.weightx = 1.0;
+            pnlQuickEdit.add(txtEditPhi, ge);
 
             pnl.add(pnlQuickEdit, gbc);
 
@@ -676,6 +587,10 @@ public class PetHotelPanel extends JPanel {
                 if (!txtEditChu.getText().trim().isEmpty()) p.tenChu = txtEditChu.getText().trim();
                 if (!txtEditSdt.getText().trim().isEmpty()) p.sdtChu = txtEditSdt.getText().trim();
                 p.ghiChuChamSoc = txtEditNote.getText().trim();
+                try {
+                    String rawPhi = txtEditPhi.getText().trim().replaceAll("[^0-9]", "");
+                    p.phiDichVuPhatSinh = rawPhi.isEmpty() ? 0L : Long.parseLong(rawPhi);
+                } catch (Exception ignored) {}
                 luuPhongXuongDB(p);
                 locVaHienThiGridPhong();
                 capNhatKhungChiTiet(p);
@@ -703,6 +618,14 @@ public class PetHotelPanel extends JPanel {
             btnHoanTatDon.setPreferredSize(new Dimension(0, 38));
             btnHoanTatDon.addActionListener(e -> {
                 p.trangThai = "TRỐNG";
+                p.tenThuCung = "";
+                p.tenChu = "";
+                p.sdtChu = "";
+                p.giongLoai = "";
+                p.thoiGianCheckIn = null;
+                p.duKienCheckOut = null;
+                p.ghiChuChamSoc = "";
+                p.phiDichVuPhatSinh = 0L;
                 luuPhongXuongDB(p);
                 capNhatSoLieuKPI();
                 locVaHienThiGridPhong();
@@ -795,6 +718,7 @@ public class PetHotelPanel extends JPanel {
                 p.daChoAnSang = false;
                 p.daChoAnToi = false;
                 p.daDiDaoVeSinh = false;
+                p.phiDichVuPhatSinh = 0L;
                 luuPhongXuongDB(p);
                 capNhatSoLieuKPI();
                 locVaHienThiGridPhong();
@@ -808,6 +732,14 @@ public class PetHotelPanel extends JPanel {
             btnChuyenDonDep.setPreferredSize(new Dimension(0, 32));
             btnChuyenDonDep.addActionListener(e -> {
                 p.trangThai = "ĐANG DỌN DẸP";
+                p.tenThuCung = "";
+                p.tenChu = "";
+                p.sdtChu = "";
+                p.giongLoai = "";
+                p.thoiGianCheckIn = null;
+                p.duKienCheckOut = null;
+                p.ghiChuChamSoc = "";
+                p.phiDichVuPhatSinh = 0L;
                 luuPhongXuongDB(p);
                 capNhatSoLieuKPI();
                 locVaHienThiGridPhong();
@@ -963,6 +895,7 @@ public class PetHotelPanel extends JPanel {
             pChon.daChoAnSang = false;
             pChon.daChoAnToi = false;
             pChon.daDiDaoVeSinh = false;
+            pChon.phiDichVuPhatSinh = 0L;
             luuPhongXuongDB(pChon);
 
             capNhatSoLieuKPI();
