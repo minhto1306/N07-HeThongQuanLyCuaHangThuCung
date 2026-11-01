@@ -38,7 +38,7 @@ public class HoaDonPreviewDialog extends JDialog {
         this.hoaDon = hd;
         this.tienKhachDua = tienKhachDua > 0 ? tienKhachDua : (hd != null ? hd.tongThanhToan : 0);
         this.tienThoiLai = Math.max(0, this.tienKhachDua - (hd != null ? hd.tongThanhToan : 0));
-        this.diemCongThem = diemCongThem >= 0 ? diemCongThem : (int) ((hd != null ? hd.tongThanhToan : 0) / 10000L);
+        this.diemCongThem = diemCongThem >= 0 ? diemCongThem : (int) ((hd != null ? hd.tongThanhToan : 0) / 100000L);
         this.tongDiemSauTT = tongDiemSauTT;
 
         khoiTaoGiaoDien();
@@ -305,6 +305,7 @@ public class HoaDonPreviewDialog extends JDialog {
         pnlBottomActions.setBorder(new MatteBorder(1, 0, 0, 0, ThemeColors.BORDER));
 
         JButton btnInMayIn = ThemeColors.createPrimaryButton("In Hóa Đơn (Máy in 80mm)", IconHelper.getIcon(IconHelper.CLIPBOARD_CHECK, 15, ThemeColors.TEXT_PRIMARY));
+        JButton btnXuatHtmlPdf = ThemeColors.createSecondaryButton("Xuất HTML / In PDF", IconHelper.getIcon(IconHelper.FILE_TEXT, 14, ThemeColors.PRIMARY_ACTIVE));
         JButton btnXuatFile = ThemeColors.createSecondaryButton("Lưu phiếu (.txt)", IconHelper.getIcon(IconHelper.FILE_TEXT, 14, ThemeColors.TEXT_SECONDARY));
         JButton btnDong = ThemeColors.createSecondaryButton("Đóng (ESC)", null);
 
@@ -318,9 +319,11 @@ public class HoaDonPreviewDialog extends JDialog {
                     "In hóa đơn thành công", JOptionPane.INFORMATION_MESSAGE);
         });
 
+        btnXuatHtmlPdf.addActionListener(e -> luuPhieuRaFileHtml());
         btnXuatFile.addActionListener(e -> luuPhieuRaFileTxt());
         btnDong.addActionListener(e -> dispose());
 
+        pnlBottomActions.add(btnXuatHtmlPdf);
         pnlBottomActions.add(btnXuatFile);
         pnlBottomActions.add(btnInMayIn);
         pnlBottomActions.add(btnDong);
@@ -411,6 +414,74 @@ public class HoaDonPreviewDialog extends JDialog {
                     "Lưu phiếu thành công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Lỗi lưu file: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void luuPhieuRaFileHtml() {
+        try {
+            File dir = new File("export");
+            if (!dir.exists()) dir.mkdirs();
+            File f = new File(dir, "HoaDon_" + hoaDon.maHoaDon + ".html");
+            try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(new FileOutputStream(f), StandardCharsets.UTF_8))) {
+                pw.println("<!DOCTYPE html>");
+                pw.println("<html><head><meta charset='UTF-8'><title>Hóa đơn " + hoaDon.maHoaDon + "</title>");
+                pw.println("<style>");
+                pw.println("body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; padding: 20px; display: flex; justify-content: center; margin: 0; }");
+                pw.println(".receipt { width: 330px; background: #fff; padding: 24px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border-radius: 8px; font-size: 13px; line-height: 1.5; color: #1e293b; }");
+                pw.println(".header { text-align: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 12px; margin-bottom: 12px; }");
+                pw.println(".title { font-size: 17px; font-weight: bold; margin: 4px 0; color: #0284c7; }");
+                pw.println(".meta { font-size: 11px; color: #64748b; margin-bottom: 4px; }");
+                pw.println("table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }");
+                pw.println("th { text-align: left; border-bottom: 1px solid #e2e8f0; padding: 5px 0; color: #475569; }");
+                pw.println("td { padding: 6px 0; border-bottom: 1px dashed #f1f5f9; }");
+                pw.println(".total-row { display: flex; justify-content: space-between; margin: 5px 0; font-size: 12px; }");
+                pw.println(".grand-total { font-size: 16px; font-weight: bold; color: #0f172a; border-top: 2px solid #0f172a; padding-top: 8px; margin-top: 8px; }");
+                pw.println(".qr-box { text-align: center; margin-top: 14px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1; }");
+                pw.println(".footer { text-align: center; margin-top: 15px; font-size: 11px; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 10px; }");
+                pw.println("@media print { body { background: #fff; padding: 0; } .receipt { box-shadow: none; width: 100%; } button { display: none; } }");
+                pw.println("</style></head><body>");
+                pw.println("<div class='receipt'>");
+                pw.println("<div class='header'>");
+                pw.println("<div class='title'>🐾 PET SHOP MANAGEMENT</div>");
+                pw.println("<div class='meta'>12 Nguyễn Văn Bảo, P.4, Q. Gò Vấp, TP.HCM</div>");
+                pw.println("<div class='meta'>Hotline: 1900 6868 - 0988 111 222</div>");
+                pw.println("</div>");
+                pw.println("<div class='meta'><strong>Mã HĐ:</strong> " + hoaDon.maHoaDon + "</div>");
+                pw.println("<div class='meta'><strong>Thời gian:</strong> " + hoaDon.thoiGian + "</div>");
+                pw.println("<div class='meta'><strong>Khách hàng:</strong> " + hoaDon.tenKhach + " (" + hoaDon.sdt + ")</div>");
+                pw.println("<div class='meta'><strong>Thu ngân:</strong> " + hoaDon.thuNgan + " | <strong>HTTT:</strong> " + hoaDon.phuongThuc + "</div>");
+                pw.println("<table>");
+                pw.println("<tr><th>Món</th><th style='text-align:center;'>SL</th><th style='text-align:right;'>Tiền</th></tr>");
+                for (Object[] mon : hoaDon.dsMon) {
+                    pw.println("<tr><td>" + mon[2] + "</td><td style='text-align:center;'>" + mon[4] + "</td><td style='text-align:right;'>" + mon[6] + "</td></tr>");
+                }
+                pw.println("</table>");
+                pw.println("<div class='total-row'><span>Tạm tính:</span><span>" + df.format(hoaDon.tongTienHang) + "</span></div>");
+                if (hoaDon.giamGia > 0) {
+                    pw.println("<div class='total-row' style='color:#ef4444;'><span>Giảm VIP / Voucher:</span><span>-" + df.format(hoaDon.giamGia) + "</span></div>");
+                }
+                pw.println("<div class='total-row grand-total'><span>TỔNG THANH TOÁN:</span><span>" + df.format(hoaDon.tongThanhToan) + "</span></div>");
+                pw.println("<div class='total-row'><span>Tiền khách đưa:</span><span>" + df.format(tienKhachDua) + "</span></div>");
+                pw.println("<div class='total-row' style='color:#16a34a; font-weight:bold;'><span>Tiền thối lại:</span><span>" + df.format(tienThoiLai) + "</span></div>");
+                pw.println("<div class='qr-box'>");
+                pw.println("<div style='font-size:11px; font-weight:bold; color:#0284c7; margin-bottom:4px;'>VIETQR NAPAS 247</div>");
+                pw.println("<img src='https://api.vietqr.io/image/970422-0988111222-compact.jpg?amount=" + hoaDon.tongThanhToan + "&addInfo=" + hoaDon.maHoaDon + "' width='140' height='140' alt='VietQR' style='display:block; margin:0 auto;'/>");
+                pw.println("<div style='font-size:10px; color:#64748b; margin-top:4px;'>Quét app ngân hàng để thanh toán</div>");
+                pw.println("</div>");
+                pw.println("<div class='footer'>");
+                pw.println("<p><em>Cảm ơn Quý khách & Hẹn gặp lại bé cưng!</em></p>");
+                pw.println("<p style='font-size:10px;'>Quý khách vui lòng giữ phiếu để đổi trả hàng trong vòng 7 ngày</p>");
+                pw.println("<button onclick='window.print()' style='margin-top:8px; padding:6px 14px; background:#0284c7; color:#fff; border:none; border-radius:4px; cursor:pointer;'>In Phiếu Ngay</button>");
+                pw.println("</div></div></body></html>");
+            }
+            int opt = JOptionPane.showConfirmDialog(this,
+                    "Đã xuất hóa đơn HTML (In PDF chuẩn K80) thành công tại:\n" + f.getAbsolutePath() + "\n\nBạn có muốn mở ngay trên trình duyệt để in / lưu PDF không?",
+                    "Xuất hóa đơn thành công", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
+            if (opt == JOptionPane.YES_OPTION && Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(f);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Lỗi xuất file HTML: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

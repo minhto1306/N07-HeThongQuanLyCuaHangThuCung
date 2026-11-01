@@ -22,27 +22,15 @@ public class BanHangController {
     private static final List<KhachHang> DANH_SACH_KHACH_HANG = new ArrayList<>();
     private static final KhachHangDAO STATIC_KH_DAO = new KhachHangDAO();
 
-    static {
-        dongBoKhachHangTuDatabase();
-    }
-
     public static synchronized void dongBoKhachHangTuDatabase() {
         try {
             List<KhachHang> dbList = STATIC_KH_DAO.getAllKhachHang();
-            if (dbList != null && !dbList.isEmpty()) {
+            if (dbList != null) {
                 DANH_SACH_KHACH_HANG.clear();
                 DANH_SACH_KHACH_HANG.addAll(dbList);
-                return;
             }
         } catch (SQLException e) {
             System.err.println("[BanHangController] Lỗi đọc KhachHang từ CSDL: " + e.getMessage());
-        }
-        if (DANH_SACH_KHACH_HANG.isEmpty()) {
-            DANH_SACH_KHACH_HANG.add(new KhachHang("KH001", "Nguyễn Văn An", "0988111222", 120));
-            DANH_SACH_KHACH_HANG.add(new KhachHang("KH002", "Trần Thị Mai", "0977333444", 50));
-            DANH_SACH_KHACH_HANG.add(new KhachHang("KH003", "Lê Hoàng Yến", "0912345678", 15));
-            DANH_SACH_KHACH_HANG.add(new KhachHang("KH004", "Phạm Hoàng Long", "0918776655", 210));
-            DANH_SACH_KHACH_HANG.add(new KhachHang("KH005", "Đỗ Quỳnh Chi", "0905123456", 35));
         }
     }
 
@@ -63,7 +51,7 @@ public class BanHangController {
      */
     public void khoiTaoHoaDonMoi(String maHoaDon, NhanVien nhanVien) {
         if (maHoaDon == null || maHoaDon.trim().isEmpty()) {
-            maHoaDon = "HD" + System.currentTimeMillis() % 1000000;
+            maHoaDon = utils.MaTuSinhHelper.sinhMaHoaDon(nhanVien != null ? nhanVien.getMaNhanVien() : utils.UserSession.getUserId());
         }
         this.hoaDonHienTai = new HoaDon(
                 maHoaDon,
@@ -115,7 +103,9 @@ public class BanHangController {
      * Tìm danh sách khách hàng gợi ý khi gõ SĐT, Mã KH hoặc Họ tên
      */
     public static List<KhachHang> timKiemGoiYKhachHang(String tuKhoa) {
-        dongBoKhachHangTuDatabase();
+        if (DANH_SACH_KHACH_HANG.isEmpty()) {
+            dongBoKhachHangTuDatabase();
+        }
         List<KhachHang> kq = new ArrayList<>();
         if (tuKhoa == null || tuKhoa.trim().isEmpty()) {
             kq.addAll(DANH_SACH_KHACH_HANG);
@@ -175,16 +165,7 @@ public class BanHangController {
     }
 
     public static String sinhMaKhachHangMoi() {
-        dongBoKhachHangTuDatabase();
-        int max = DANH_SACH_KHACH_HANG.size() + 1;
-        for (KhachHang kh : DANH_SACH_KHACH_HANG) {
-            try {
-                int num = Integer.parseInt(kh.getMaKhachHang().replaceAll("\\D+", ""));
-                if (num >= max) max = num + 1;
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return String.format("KH%03d", max);
+        return utils.MaTuSinhHelper.sinhMaKhachHang();
     }
 
     public static boolean capNhatThongTinKhachHang(String maKH, String hoTenMoi, String sdtMoi, int diemMoi) {
