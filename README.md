@@ -54,7 +54,7 @@
 
 ---
 
-## 📖 BÀI TOÁN NGHIỆP VỤ & CƠ CHẾ HOẠT ĐỘNG KHỚP VỚI CHƯƠNG TRÌNH
+## 📖 BÀI TOÁN NGHIỆP VỤ & CƠ CHẾ HOẠT ĐỘNG
 
 Hệ thống được thiết kế chuyên biệt cho mô hình siêu thị thú cưng kết hợp dịch vụ chăm sóc trọn gói (Bán lẻ sản phẩm thú cưng, Thức ăn dinh dưỡng, Spa Grooming, Pet Hotel). Dưới đây là mô tả chi tiết từng quy trình nghiệp vụ khớp trực tiếp với giao diện và mã nguồn của ứng dụng:
 
