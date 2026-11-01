@@ -271,12 +271,14 @@ public class DatLichHenDialog extends JDialog {
         pnlContent.add(new JLabel("Gói Dịch vụ Chăm sóc:"));
         pnlContent.add(Box.createVerticalStrut(3));
         cboDichVu = new JComboBox<>(new String[]{
-                "DV001 - Tắm sấy khử mùi & Vệ sinh tai móng (150,000 đ - 45p)",
-                "DV002 - Cắt tỉa lông tạo kiểu trọn gói (300,000 đ - 60p)",
-                "DV003 - Spa ngâm bồn sục Ozone thư giãn (250,000 đ - 60p)",
-                "DV004 - Tắm dưỡng thảo dược & Trị ve rận (200,000 đ - 45p)",
-                "DV005 - Nhuộm lông nghệ thuật 2 tai & đuôi (180,000 đ - 45p)",
-                "DV006 - Khách sạn thú cưng lưu trú 24h (180,000 đ)"
+                "DV001 - Cắt Tia Lông Tạo Kiểu Thẩm Mỹ (300,000 đ - 90p)",
+                "DV002 - Cắt Mài Móng & Vệ Sinh Tai (100,000 đ - 30p)",
+                "DV003 - Vắt Tuyến Hôi & Cạo Bàn Chân (90,000 đ - 30p)",
+                "DV004 - Tắm Sấy Khử Mùi & Dưỡng Lông (150,000 đ - 45p)",
+                "DV005 - Tắm Thảo Dược & Trị Ve Rận (220,000 đ - 60p)",
+                "DV006 - Ngâm Bồn Sục Ozone Thư Giãn (250,000 đ - 60p)",
+                "DV007 - Nhuộm Lông Nghệ Thuật (Tai & Đuôi) (180,000 đ - 60p)",
+                "DV008 - Lưu Chuồng Pet Hotel (VIP) (200,000 đ - 1440p)"
         });
         cboDichVu.setPreferredSize(new Dimension(360, 30));
         cboDichVu.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
@@ -573,8 +575,8 @@ public class DatLichHenDialog extends JDialog {
             return;
         }
 
-        String maLH = "LH" + System.currentTimeMillis() % 1000000;
-        KhachHang kh = new KhachHang("KH" + System.currentTimeMillis() % 10000, hoTen, sdt, 0);
+        String maLH = utils.MaTuSinhHelper.sinhMaLichHen();
+        KhachHang kh = new KhachHang(utils.MaTuSinhHelper.sinhMaKhachHang(), hoTen, sdt, 0);
 
         String ktvSelected = (String) cboKtv.getSelectedItem();
         String maKtv = "NV003";
@@ -586,7 +588,7 @@ public class DatLichHenDialog extends JDialog {
         NhanVien ktv = new NhanVien(maKtv, tenKtv, "Kỹ thuật viên", "", null);
 
         String gioiTinh = radDuc.isSelected() ? "Đực" : "Cái";
-        ThuCung tc = new ThuCung("TC" + System.currentTimeMillis() % 10000, tenTc, (String) cboGiongLoai.getSelectedItem(), null, gioiTinh);
+        ThuCung tc = new ThuCung(utils.MaTuSinhHelper.sinhMaThuCung(), tenTc, (String) cboGiongLoai.getSelectedItem(), null, gioiTinh);
 
         String dvStr = (String) cboDichVu.getSelectedItem();
         String maDv = dvStr.substring(0, 5);
@@ -612,7 +614,7 @@ public class DatLichHenDialog extends JDialog {
         }
 
         LichHen lh = new LichHen(maLH, kh, ktv, henDateTime, "Đã đặt", sbNote.toString());
-        lh.addChiTiet(new ChiTietLichHen("CT" + System.currentTimeMillis() % 10000, lh, tc, dv, ktv));
+        lh.addChiTiet(new ChiTietLichHen(maLH + "_1", lh, tc, dv, ktv));
 
         boolean ok = controller.datLichHenMoi(lh);
         if (ok) {
