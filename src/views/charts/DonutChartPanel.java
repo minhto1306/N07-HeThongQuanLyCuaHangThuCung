@@ -46,10 +46,7 @@ public class DonutChartPanel extends JPanel {
         initDefaultData();
         setLayout(new BorderLayout(12, 10));
         setBackground(ThemeColors.SURFACE);
-        setBorder(new CompoundBorder(
-                new LineBorder(ThemeColors.BORDER, 1, true),
-                new EmptyBorder(14, 16, 14, 16)
-        ));
+        setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
         setPreferredSize(new Dimension(420, 290));
 
         // Header Panel
@@ -87,9 +84,9 @@ public class DonutChartPanel extends JPanel {
 
     private void initDefaultData() {
         slices = new SliceData[]{
-                new SliceData("Spa & Grooming", 45.0, 11_250_000L, new Color(0xFF, 0x8B, 0xA7)), // Hồng san hô #FF8BA7
-                new SliceData("Thức ăn thú cưng", 35.0, 8_750_000L, new Color(0xC3, 0xF0, 0xCA)), // Mint pastel #C3F0CA
-                new SliceData("Pet Hotel & Khác", 20.0, 5_000_000L, new Color(0xFF, 0xC6, 0xC7))  // Hồng phấn #FFC6C7
+                new SliceData("Spa & Grooming", 45.0, 11_250_000L, ThemeColors.PRIMARY), // Emerald #059669
+                new SliceData("Thức ăn thú cưng", 35.0, 8_750_000L, new Color(0x02, 0x84, 0xC7)), // Ocean Sky #0284C7
+                new SliceData("Pet Hotel & Khác", 20.0, 5_000_000L, new Color(0xF5, 0x9E, 0x0B))  // Amber Honey #F59E0B
         };
     }
 
@@ -163,7 +160,7 @@ public class DonutChartPanel extends JPanel {
         JPanel pnlTotal = new JPanel(new GridLayout(2, 1, 0, 2));
         pnlTotal.setBackground(new Color(0xF8, 0xFA, 0xFC));
         pnlTotal.setBorder(new CompoundBorder(
-                new LineBorder(ThemeColors.BORDER_LIGHT, 1, true),
+                new ThemeColors.RoundedBorder(ThemeColors.BORDER_LIGHT, 12, 1),
                 new EmptyBorder(6, 10, 6, 10)
         ));
 
