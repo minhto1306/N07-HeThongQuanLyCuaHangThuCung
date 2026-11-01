@@ -48,8 +48,17 @@ public class DangNhapController {
         }
     }
 
+    private String chuanHoaTenDangNhap(String u) {
+        if (u == null) return "";
+        String s = u.trim().toLowerCase();
+        if ("banhang".equals(s)) return "banhang01";
+        if ("thungan".equals(s)) return "thungan01";
+        if ("chamsoc".equals(s) || "chamsoc01".equals(s)) return "ktv01";
+        return s;
+    }
+
     /**
-     * Xử lý xác thực đăng nhập người dùng.
+     * Xử lý xác thực đăng nhập người dùng 100% từ CSDL SQL Server.
      * @param tenDangNhap Tên đăng nhập
      * @param matKhau Mật khẩu
      * @return KetQuaDangNhap chi tiết
@@ -63,42 +72,37 @@ public class DangNhapController {
             return new KetQuaDangNhap(false, "Vui lòng nhập mật khẩu!", null);
         }
 
-        String user = tenDangNhap.trim().toLowerCase();
+        String rawUser = tenDangNhap.trim();
+        String cleanUser = chuanHoaTenDangNhap(rawUser);
         String pass = matKhau.trim();
 
-        // Xác thực thuần in-memory (Prototype Pure GUI - Tuyệt đối không gọi DB)
-        NhanVien userMock = kiemTraTaiKhoanMacDinh(user, pass);
-        if (userMock != null) {
-            currentUser = userMock;
-            utils.UserSession.initSession(userMock);
-            return new KetQuaDangNhap(true, "Đăng nhập thành công!", userMock);
+        try {
+            // Xác thực 100% qua CSDL SQL Server (TaiKhoanDAO & NhanVienDAO)
+            TaiKhoan tk = taiKhoanDAO.kiemTraDangNhap(cleanUser, pass);
+            if (tk != null) {
+                NhanVien nv = nhanVienDAO.findByTenDangNhap(tk.getTenDangNhap());
+                if (nv != null) {
+                    currentUser = nv;
+                    utils.UserSession.initSession(nv);
+                    return new KetQuaDangNhap(true, "Đăng nhập thành công!", nv);
+                } else {
+                    return new KetQuaDangNhap(false, "Tài khoản [" + cleanUser + "] chưa được gán thông tin Nhân viên trong CSDL!", null);
+                }
+            } else {
+                // Kiểm tra lý do thất bại chi tiết để hỗ trợ người dùng
+                TaiKhoan tonTai = taiKhoanDAO.findByTenDangNhap(cleanUser);
+                if (tonTai == null) {
+                    return new KetQuaDangNhap(false, "Tên đăng nhập không tồn tại trong hệ thống!\n(Gợi ý: admin, banhang, thungan, chamsoc - Mật khẩu: 123456)", null);
+                } else if (!tonTai.isTrangThaiHoatDong()) {
+                    return new KetQuaDangNhap(false, "Tài khoản [" + cleanUser + "] đang bị khóa hoặc ngừng hoạt động!", null);
+                } else {
+                    return new KetQuaDangNhap(false, "Mật khẩu không chính xác! Vui lòng thử lại.", null);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DangNhapController] Lỗi SQL khi xác thực: " + e.getMessage());
+            return new KetQuaDangNhap(false, "Không thể kết nối đến máy chủ CSDL SQL Server:\n" + e.getMessage() + "\nVui lòng kiểm tra lại dịch vụ SQL Server!", null);
         }
-
-        return new KetQuaDangNhap(false, "Tên đăng nhập hoặc mật khẩu không chính xác!\n(Gợi ý: admin, banhang, thungan, chamsoc - Mật khẩu: 123456)", null);
-    }
-
-    /**
-     * Xác thực theo 4 vai trò chuẩn cho bản Prototype thuần GUI:
-     * 1. admin -> Quản lý (NVQL)
-     * 2. banhang / banhang01 -> Bán hàng (NVBH)
-     * 3. thungan / thungan01 -> Thu ngân (NVTN)
-     * 4. chamsoc / chamsoc01 -> Chăm sóc thú cưng (NVCS)
-     */
-    private NhanVien kiemTraTaiKhoanMacDinh(String user, String pass) {
-        if ("admin".equals(user)) {
-            TaiKhoan tk = new TaiKhoan("admin", pass, "NVQL", true);
-            return new NhanVien("NV001", "Lê Khãi Minh", "Quản lý hệ thống", "0901234567", tk);
-        } else if ("banhang".equals(user) || "banhang01".equals(user)) {
-            TaiKhoan tk = new TaiKhoan("banhang", pass, "NVBH", true);
-            return new NhanVien("NV002", "Trần Thị Mai", "Nhân viên bán hàng", "0934567890", tk);
-        } else if ("thungan".equals(user) || "thungan01".equals(user)) {
-            TaiKhoan tk = new TaiKhoan("thungan", pass, "NVTN", true);
-            return new NhanVien("NV006", "Phạm Hoàng Nam", "Nhân viên thu ngân", "0912345678", tk);
-        } else if ("chamsoc".equals(user) || "chamsoc01".equals(user) || "ktv01".equals(user)) {
-            TaiKhoan tk = new TaiKhoan("chamsoc", pass, "NVCS", true);
-            return new NhanVien("NV003", "Tô Thanh Đạt", "Nhân viên chăm sóc thú cưng", "0923456789", tk);
-        }
-        return null;
     }
 
     /**
@@ -117,16 +121,22 @@ public class DangNhapController {
     }
 
     /**
-     * Đổi mật khẩu tài khoản người dùng hiện tại.
+     * Đổi mật khẩu tài khoản người dùng hiện tại (ghi trực tiếp xuống CSDL SQL Server).
      */
     public boolean doiMatKhau(String tenDangNhap, String matKhauCu, String matKhauMoi) {
         if (tenDangNhap == null || matKhauCu == null || matKhauMoi == null) return false;
         if (matKhauMoi.trim().length() < 4) return false;
-        if (currentUser != null && currentUser.getTaiKhoan() != null) {
-            currentUser.getTaiKhoan().setMatKhau(matKhauMoi.trim());
-            return true;
+        String cleanUser = chuanHoaTenDangNhap(tenDangNhap);
+        try {
+            boolean ok = taiKhoanDAO.doiMatKhau(cleanUser, matKhauMoi.trim());
+            if (ok && currentUser != null && currentUser.getTaiKhoan() != null) {
+                currentUser.getTaiKhoan().setMatKhau(matKhauMoi.trim());
+            }
+            return ok;
+        } catch (SQLException e) {
+            System.err.println("[DangNhapController] Lỗi đổi mật khẩu SQL: " + e.getMessage());
+            return false;
         }
-        return true;
     }
 
     /**

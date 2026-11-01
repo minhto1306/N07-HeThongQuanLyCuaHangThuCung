@@ -144,8 +144,8 @@ public final class UserSession {
                 return isBanHang() || isThuNgan();
 
             case "CARD_GIAO_CA":
-                // Thu ngân thực hiện kết két bàn giao ca
-                return isThuNgan();
+                // Thu ngân thực hiện kết két bàn giao ca và Quản lý duyệt ca
+                return isThuNgan() || isQuanLy();
 
             case "CARD_TONG_QUAN":
                 // Dashboard điều hành chỉ dành riêng cho NVQL

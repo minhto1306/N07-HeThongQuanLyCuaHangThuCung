@@ -74,10 +74,10 @@ public class LoginForm extends JFrame {
                 Graphics2D g2d = (Graphics2D) g;
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                // Dải màu gradient hồng phấn sang hồng san hô theo Happy Hues Palette 15
+                // Dải màu gradient Luxury Emerald & Deep Forest sang trọng
                 GradientPaint gp = new GradientPaint(
-                        0, 0, new Color(0xFF, 0xC6, 0xC7),
-                        0, getHeight(), new Color(0xFF, 0x8B, 0xA7)
+                        0, 0, new Color(0x10, 0xB9, 0x81),
+                        0, getHeight(), new Color(0x06, 0x4E, 0x3B)
                 );
                 g2d.setPaint(gp);
                 g2d.fillRect(0, 0, getWidth(), getHeight());
