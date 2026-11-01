@@ -68,12 +68,14 @@ public class ThietLapQuyDoiDialog extends JDialog {
         setLayout(new BorderLayout());
         getContentPane().setBackground(ThemeColors.SURFACE);
 
-        khoiTaoDuLieuMau();
+        dongBoDuLieuQuyDoiTuDatabase();
         initUI();
         capNhatBangTheoSanPham();
+        tinhToanGiaTuDong();
     }
 
-    private void khoiTaoDuLieuMau() {
+    private void dongBoDuLieuQuyDoiTuDatabase() {
+        dsQuyDoi.clear();
         try {
             models.dao.SanPhamDAO spDao = new models.dao.SanPhamDAO();
             List<models.entity.SanPham> dsSP = spDao.getAllSanPham();
@@ -91,20 +93,10 @@ public class ThietLapQuyDoiDialog extends JDialog {
                         ));
                     }
                 }
-                if (!dsQuyDoi.isEmpty()) return;
             }
-        } catch (Exception ignored) {}
-
-        dsQuyDoi.add(new QuyDoiItem("SP002", "Pate Whiskas Vị Cá Thu 85g", "Lon", 1, true, 20000));
-        dsQuyDoi.add(new QuyDoiItem("SP002", "Pate Whiskas Vị Cá Thu 85g", "Lốc 6 lon", 6, false, 115000));
-        dsQuyDoi.add(new QuyDoiItem("SP002", "Pate Whiskas Vị Cá Thu 85g", "Khay 12 lon", 12, false, 225000));
-        dsQuyDoi.add(new QuyDoiItem("SP002", "Pate Whiskas Vị Cá Thu 85g", "Thùng 24 lon", 24, false, 440000));
-
-        dsQuyDoi.add(new QuyDoiItem("SP001", "Hạt Royal Canin Kitten 2kg", "Gói", 1, true, 380000));
-        dsQuyDoi.add(new QuyDoiItem("SP001", "Hạt Royal Canin Kitten 2kg", "Thùng (6 gói)", 6, false, 2200000));
-
-        dsQuyDoi.add(new QuyDoiItem("SP005", "Cát vệ sinh thú cưng 5kg", "Túi", 1, true, 65000));
-        dsQuyDoi.add(new QuyDoiItem("SP005", "Cát vệ sinh thú cưng 5kg", "Bao lớn (20kg)", 4, false, 240000));
+        } catch (Exception e) {
+            System.err.println("[ThietLapQuyDoiDialog] Lỗi nạp quy đổi từ CSDL: " + e.getMessage());
+        }
     }
 
     private void initUI() {
@@ -169,17 +161,21 @@ public class ThietLapQuyDoiDialog extends JDialog {
 
         gbc.gridwidth = 1;
 
-        // Chọn sản phẩm
+        // Lấy danh sách sản phẩm động từ cơ sở dữ liệu
+        List<String> listSpCombo = new ArrayList<>();
+        for (QuyDoiItem item : dsQuyDoi) {
+            String str = item.maSP + " - " + item.tenSP;
+            if (!listSpCombo.contains(str)) {
+                listSpCombo.add(str);
+            }
+        }
+
+        // Chọn sản phẩm (CHƯA addActionListener vội để tránh lỗi NullPointerException)
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.4;
         pnl.add(new JLabel("Chọn sản phẩm:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.6;
-        cboSanPham = new JComboBox<>(new String[]{
-                "SP002 - Pate Whiskas Vị Cá Thu 85g",
-                "SP001 - Hạt Royal Canin Kitten 2kg",
-                "SP005 - Cát vệ sinh thú cưng 5kg"
-        });
+        cboSanPham = new JComboBox<>(listSpCombo.toArray(new String[0]));
         cboSanPham.setPreferredSize(new Dimension(0, 32));
-        cboSanPham.addActionListener(e -> capNhatBangTheoSanPham());
         pnl.add(cboSanPham, gbc);
 
         // ĐVT cơ sở
@@ -216,16 +212,23 @@ public class ThietLapQuyDoiDialog extends JDialog {
         gbc.gridx = 1;
         spnTyLe = new JSpinner(new SpinnerNumberModel(12, 2, 500, 1));
         spnTyLe.setPreferredSize(new Dimension(0, 32));
+        spnTyLe.addChangeListener(e -> tinhToanGiaTuDong()); // Tự tính giá khi thay đổi tỷ lệ
         pnl.add(spnTyLe, gbc);
 
-        // Giá bán niêm yết
+        // Giá bán niêm yết (Tự động chiết khấu 5%)
         gbc.gridx = 0; gbc.gridy = 6;
-        pnl.add(new JLabel("Giá bán quy cách:"), gbc);
+        pnl.add(new JLabel("Giá bán quy cách (-5%):"), gbc);
         gbc.gridx = 1;
-        txtGiaBanMoi = new JTextField("225000");
+        txtGiaBanMoi = new JTextField();
         txtGiaBanMoi.setPreferredSize(new Dimension(0, 32));
+        txtGiaBanMoi.setEditable(false); // Khóa lại vì tự động tính theo công thức
+        txtGiaBanMoi.setBackground(new Color(241, 245, 249));
         txtGiaBanMoi.setBorder(ThemeColors.createInputBorder());
         pnl.add(txtGiaBanMoi, gbc);
+        cboSanPham.addActionListener(e -> {
+            capNhatBangTheoSanPham();
+            tinhToanGiaTuDong();
+        });
 
         // Nút thêm
         gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2;
@@ -315,6 +318,31 @@ public class ThietLapQuyDoiDialog extends JDialog {
             }
         }
     }
+    
+//    tính giá tự động chiếc khấu 5% khi mua số lượng lớn -- cập nhật thêm
+    private void tinhToanGiaTuDong() {
+        if (cboSanPham == null || txtGiaBanMoi == null || spnTyLe == null) return;
+        String sel = (String) cboSanPham.getSelectedItem();
+        if (sel == null) return;
+        String maSP = sel.substring(0, sel.indexOf(" - ")).trim();
+
+        QuyDoiItem coSo = null;
+        for (QuyDoiItem item : dsQuyDoi) {
+            if (item.maSP.equals(maSP) && item.laCoSo) {
+                coSo = item;
+                break;
+            }
+        }
+
+        if (coSo != null) {
+            int tyLe = (int) spnTyLe.getValue();
+            // Công thức: (Giá gốc * Tỷ lệ) * 0.95 (giảm 5%)
+            long giaTinhToan = Math.round((double) coSo.giaBan * tyLe * 0.95);
+            txtGiaBanMoi.setText(String.valueOf(giaTinhToan));
+        }
+    }
+    
+//    ---------------
 
     private void xuLyThemQuyDoi() {
         String tenDvt = txtDonViMoi.getText().trim();
