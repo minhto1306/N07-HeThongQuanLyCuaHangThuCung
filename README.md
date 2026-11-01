@@ -1,255 +1,376 @@
-# 🐾 HỆ THỐNG QUẢN LÝ CỬA HÀNG THÚ CƯNG (PET SHOP MANAGEMENT SYSTEM)
+﻿# 🐾 HỆ THỐNG QUẢN LÝ CỬA HÀNG THÚ CƯNG MIO (MIO PET SHOP MANAGEMENT SYSTEM)
 
-[![Java](https://img.shields.io/badge/Java-17%20%7C%2021%20LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
-[![SQL Server](https://img.shields.io/badge/Database-MS%20SQL%20Server-CC292B?style=for-the-badge&logo=microsoftsqlserver&logoColor=white)](https://www.microsoft.com/sql-server)
-[![UI FlatLaf](https://img.shields.io/badge/UI-FlatLaf%203.5.4-007ACC?style=for-the-badge)](https://www.formdev.com/flatlaf/)
-[![Architecture](https://img.shields.io/badge/Architecture-Pure%20Java%20MVC-2BAF2B?style=for-the-badge)](#-kien-truc-he-thong-mvc-pure-java)
-[![Institution](https://img.shields.io/badge/IUH-Khoa%20CNTT-005BAA?style=for-the-badge)](https://fit.iuh.edu.vn/)
-
----
-
-## 📌 THÔNG TIN ĐỒ ÁN HỌC PHẦN
-- **Tên học phần:** Phát triển Ứng dụng (Application Development)
-- **Đơn vị đào tạo:** Khoa Công nghệ Thông tin - Trường Đại học Công nghiệp TP. Hồ Chí Minh (IUH)
-- **Đề tài:** Xây dựng Hệ thống Quản lý Cửa hàng Thú cưng (Pet Shop Management System)
-- **Nhóm thực hiện:** Nhóm 07 (N07)
-- **Năm học / Học kỳ:** Học kỳ 1 (2026 - 2027)
+> **Đồ án học phần:** Phát triển Ứng dụng (Application Development - AD)  
+> **Đơn vị đào tạo:** Khoa Công nghệ Thông tin - Trường Đại học Công nghiệp TP.HCM (IUH)  
+> **Nhóm thực hiện:** Nhóm 07 (N07)  
+> **Nền tảng & Kiến trúc:** Pure Java MVC (Model - View - Controller) • Microsoft SQL Server • FlatLaf Modern UI (Luxury Emerald & Mint Sage Edition)
 
 ---
 
-## 📖 MỤC LỤC
-1. [Giới thiệu Dự án](#-gioi-thieu-du-an)
-2. [Thành viên Nhóm & Phân công Nhiệm vụ](#-thanh-vien-nhom--phan-cong-nhiem-vu)
-3. [Công nghệ Sử dụng](#-cong-nghe-su-dung)
-4. [Kiến trúc Hệ thống (MVC Pure Java)](#-kien-truc-he-thong-mvc-pure-java)
-5. [Các Phân Hệ Chức Năng Chính](#-cac-phan-he-chuc-nang-chinh)
-6. [Cấu Trúc Thư Mục Dự Án](#-cau-truc-thu-muc-du-an)
-7. [Hướng Dẫn Cài Đặt & Khởi Chạy](#-huong-dan-cai-dat--khoi-chay)
-8. [Tài Khoản Đăng Nhập Mẫu (RBAC)](#-tai-khoan-dang-nhap-mau-rbac)
-9. [Quy Quy Ước Phát Triển Git (Git Flow)](#-quy-uoc-phat-trien-git-git-flow)
+## 👥 THÀNH VIÊN NHÓM VÀ PHÂN CÔNG NHIỆM VỤ
+
+<table border="1" style="border-collapse: collapse; width: 100%; border: 1px solid #cbd5e1;">
+  <thead>
+    <tr style="background-color: #f1f5f9;">
+      <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: center; width: 50px;">STT</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Họ và Tên</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">Mã Sinh Viên</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">Vai trò</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Phân hệ nghiệp vụ phụ trách</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Nhánh GitHub (Branch)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>1</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Lê Khãi Minh</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><i>(Trưởng nhóm)</i></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>Leader / Fullstack</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Bán hàng POS, In hóa đơn K80, Đổi trả hàng &amp; Hoàn kho, Tích hợp VietQR Napas 247 &amp; Cổng VNPay Sandbox</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>feature/pos-ban-hang-doi-tra</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>2</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Tô Thanh Đạt</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><i>(Thành viên)</i></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>Developer</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Quản lý Kho hàng, Danh mục sản phẩm, Quản lý Lô hàng cận date (FEFO), Thiết lập bảng quy đổi đơn vị tính đa cấp</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>feature/kho-san-pham-lo-hang</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>3</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Võ Thị Hồng Ngọc</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><i>(Thành viên)</i></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>Developer</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Quản lý Hồ sơ thú cưng, Sổ theo dõi sức khỏe &amp; tiêm phòng, Đặt lịch hẹn Spa &amp; Grooming, Khách sạn lưu trú (Pet Hotel)</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>feature/thu-cung-dich-vu-hotel</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>4</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Lê Anh Minh</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><i>(Thành viên)</i></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>Developer</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Quản lý Nhân sự, Đăng nhập &amp; Phân quyền RBAC 4 vai trò, Ma trận xếp ca trực tuần, Bàn giao ca thu ngân &amp; Két tiền, Dashboard báo biểu</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>feature/nhan-su-giao-ca-dashboard</code></td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
-## 📝 GIỚI THIỆU DỰ ÁN
+## 📖 BÀI TOÁN NGHIỆP VỤ & CƠ CHẾ HOẠT ĐỘNG KHỚP VỚI GIAO DIỆN
 
-Hệ thống Quản lý Cửa hàng Thú cưng là giải pháp phần mềm máy tính (Desktop Application) toàn diện, phục vụ tối ưu công tác vận hành kinh doanh bán lẻ và cung cấp dịch vụ thú cưng. Hệ thống giải quyết trọn vẹn chu trình nghiệp vụ bao gồm:
+Hệ thống được thiết kế chuyên biệt cho mô hình chuỗi siêu thị thú cưng kết hợp dịch vụ chăm sóc cao cấp (Bán lẻ đồ thú cưng, Thức ăn, Spa Grooming, Pet Hotel). Dưới đây là mô tả chi tiết từng quy trình nghiệp vụ tương ứng trực tiếp với các thao tác trên màn hình:
 
-- Quầy bán hàng và thanh toán nhanh (POS) tích hợp thanh toán không dùng tiền mặt (VietQR và Cổng thanh toán VNPay Sandbox).
-- Quản lý kho hàng chuyên sâu theo cơ chế **FEFO (First-Expired, First-Out)** và bảng quy đổi đơn vị tính đa cấp linh hoạt.
-- Quản lý hồ sơ bệnh án, sổ theo dõi sức khỏe thú cưng, điều phối lịch hẹn Spa và phòng khách sạn lưu trú (Pet Hotel).
-- Quản lý nhân sự, ma trận xếp ca làm việc tuần, quy trình bàn giao ca thu ngân đối soát tiền mặt nghiêm ngặt và dashboard phân tích dữ liệu trực quan.
-
----
-
-## 👥 THÀNH VIÊN NHÓM & PHÂN CÔNG NHIỆM VỤ
-
-| STT | Họ và Tên | Vai trò | Phân hệ nghiệp vụ phụ trách | Nhánh Git (Feature Branch) |
-| :---: | :--- | :---: | :--- | :--- |
-| **1** | **Tô Thanh Đạt** | **Thành viên** | **Kho hàng & Lô hàng FEFO:** Quản lý danh mục sản phẩm, kiểm soát hạn sử dụng lô hàng (FEFO), cảnh báo date 3 cấp độ, bảng quy đổi đơn vị tính đa cấp (Thùng - Khay - Lon). | `feature/kho-san-pham-lo-hang` |
-| **2** | **Võ Thị Hồng Ngọc** | **Thành viên** | **Hồ sơ Thú cưng & Dịch vụ Hotel:** Quản lý hồ sơ thú cưng, số microchip, sổ theo dõi sức khỏe và lịch tiêm ngừa, điều phối lịch hẹn Spa theo khung giờ, check-in/check-out Pet Hotel. | `feature/thu-cung-dich-vu-hotel` |
-| **3** | **Lê Anh Minh** | **Thành viên** | **Nhân sự, Giao ca & Báo biểu:** Đăng nhập & phân quyền RBAC 4 vai trò, ma trận xếp ca tuần, biên bản bàn giao ca thu ngân đối soát doanh thu thực tế vs sổ sách, Dashboard thống kê Graphics2D. | `feature/nhan-su-giao-ca-dashboard` |
-| **4** | **Lê Khãi Minh** | **Trưởng nhóm** | **Bán hàng POS & Đổi trả:** Giao diện POS cảm ứng, đơn hàng chờ (Holding Carts), in hóa đơn, đổi trả hàng hóa, tích hợp VietQR Napas 247 & Cổng VNPay Sandbox API 2.1.0 (Local Loopback). | `feature/pos-ban-hang-doi-tra` |
-
----
-
-## 💻 CÔNG NGHỆ SỬ DỤNG
-
-- **Ngôn ngữ phát triển:** Java Standard Edition (JDK 17 LTS / JDK 21 LTS).
-- **Mô hình kiến trúc:** Pure Java MVC (Model - View - Controller), độc lập, tường minh, không sử dụng Framework nặng, bám sát kiến thức nền tảng phát triển ứng dụng Java.
-- **Thư viện giao diện:** Java Swing kết hợp `FlatLaf 3.5.4` (FlatLight, FlatDark UI, tùy biến bo góc, chuẩn màu thương hiệu hiện đại).
-- **Hệ quản trị CSDL:** Microsoft SQL Server (2019 / 2022 / Express Edition).
-- **Kết nối dữ liệu:** JDBC (`mssql-jdbc-12.8.1.jre11.jar`), quản lý giao dịch tường minh qua ACID Transaction (`setAutoCommit(false)`, `commit()`, `rollback()`).
-- **Đồ họa & Trực quan hóa:** Java Graphics2D Vector (vẽ biểu đồ cột BarChart, biểu đồ tròn DonutChart độc lập không phụ thuộc thư viện thứ ba).
-- **Cổng thanh toán & Tích hợp số:**
-  - Chuẩn VietQR tĩnh và động (Napas 247 Dynamic QR Code chuẩn EMVCo).
-  - Cổng thanh toán VNPay Sandbox v2.1.0 với bảo mật chữ ký HMAC-SHA512 và Local HTTP Server đón nhận phản hồi thanh toán tự động (Instant Payment Notification).
+### 1. Phân hệ Bán hàng POS & Điều phối Thu ngân (`BanHangPOSPanel`)
+* **Bố cục màn hình 2 vùng chuyên nghiệp:**
+  - **Nửa trái (Catalog trực quan):** Chia danh mục bằng các nút lọc (`TẤT CẢ`, `Hàng hóa`, `Dịch vụ`, `Thức ăn`, `Phụ kiện`, `Thuốc thú y`). Thẻ sản phẩm hiển thị ảnh, tên, giá bán và số lượng tồn kho khả dụng. Thẻ dịch vụ có banner tím và hướng dẫn chọn thú cưng / kỹ thuật viên.
+  - **Nửa phải (Giỏ hàng & Khách hàng & Thanh toán):** Thông tin khách hàng VIP, giỏ hàng, bảng tổng tiền và các nút tác vụ.
+* **Quy trình bán hàng từng bước:**
+  1. **Nhận diện khách hàng:** Thu ngân nhập Số điện thoại khách vào ô tìm kiếm (`txtSoDienThoai`). Hệ thống tự động tra cứu họ tên, cấp bậc thành viên (VIP/Thân thiết) và số điểm tích lũy hiện có (Quy đổi: `1 điểm = 1.000 VNĐ`). Nếu khách có thú cưng, ComboBox thú cưng tự động nạp danh sách bé cưng để phục vụ dịch vụ.
+  2. **Thêm món vào giỏ hàng:**
+     - *Hàng hóa:* Nhấn trực tiếp vào thẻ sản phẩm hoặc quét mã Barcode. Món hàng lập tức đưa vào bảng giỏ hàng. Cột `SL` hỗ trợ **nhấp đúp chuột để gõ số lượng trực tiếp từ bàn phím**.
+     - *Dịch vụ Spa:* Nhấn vào thẻ dịch vụ $\rightarrow$ Màn hình hiển thị hộp thoại chọn cân nặng thú cưng (để áp giá chính xác theo size: `< 5kg`, `5-10kg`, `> 10kg`) và phân công Kỹ thuật viên chăm sóc.
+  3. **Gợi ý bán kèm thông minh (Smart Cross-Sell):** Khi giỏ hàng có thức ăn hạt hoặc dịch vụ tắm, thanh banner vàng cam nổi lên đề xuất: *“Gợi ý: Mua kèm xịt ve rận Bio-Care giảm 10%”*. Thu ngân chỉ cần bấm `+ Thêm (-10%)` để bổ sung vào đơn.
+  4. **Áp dụng Mã giảm giá (Voucher):** Nhập mã khuyến mãi vào ô `txtVoucher` (ví dụ: `PET50K` giảm 50.000đ hoặc `GIAM10` giảm 10% tổng đơn) và bấm `Áp dụng`.
+  5. **Tính toán & Tiền khách đưa:**
+     - Hệ thống hiển thị rõ ràng: `Tổng tiền hàng` $\rightarrow$ `Giảm giá` $\rightarrow$ `TỔNG THANH TOÁN (Lớn màu xanh)`.
+     - Cung cấp hàng nút bấm gợi ý tiền mặt nhanh: `[Đủ tiền]`, `[50k]`, `[100k]`, `[200k]`, `[500k]`. Khi bấm, hệ thống tự động điền vào ô `Khách đưa` và tính ngay `Tiền thối lại` với màu xanh lá trực quan.
+  6. **Đơn hàng chờ phục vụ song song (Holding Carts):** Nếu khách đang chờ người nhà chuyển tiền hoặc bé cưng đang tắm dở trong phòng Spa, thu ngân bấm nút `Lưu tạm (Đơn chờ)` $\rightarrow$ Toàn bộ giỏ hàng và thông tin khách được đưa vào danh sách đơn chờ. Thu ngân có thể bấm `Tạo đơn mới` để thanh toán ngay cho khách tiếp theo. Khi khách quay lại, bấm `Đơn chờ (x)` để khôi phục giỏ hàng trong 1 giây.
+  7. **Thanh toán & Xuất hóa đơn (`F9`):**
+     - Thu ngân nhấn phím tắt `F9` hoặc nút `THANH TOÁN (F9)`.
+     - **Tiền mặt:** Hệ thống xác nhận và mở hộp thoại xem trước hóa đơn (`HoaDonPreviewDialog`) chuẩn mẫu in K80.
+     - **Chuyển khoản VietQR:** Bật hộp thoại `VietQRDialog` tự động sinh mã QR động chuẩn Napas 247 nhúng sẵn số tiền đơn hàng cố định (chuẩn EMVCo). Khách quét app ngân hàng tự điền đúng số tiền, chống hoàn toàn rủi ro chuyển thiếu/thừa.
+     - **Cổng thanh toán điện tử VNPay Sandbox:** Bật hộp thoại `VNPayDialog` kết nối VNPay API v2.1.0 qua mã băm HMAC-SHA512 bảo mật. Tích hợp máy chủ lắng nghe nội bộ (Local Loopback Server) tự động bắt tín hiệu thanh toán thành công từ trình duyệt để tự đóng hộp thoại và chốt đơn tự động.
 
 ---
 
-## 🏛️ KIẾN TRÚC HỆ THỐNG (MVC PURE JAVA)
+### 2. Quản lý Kho, Xuất kho Cận Date (FEFO) & Quy đổi Đơn vị (`KhoLoHangPanel`)
+* **Thuật toán trừ kho FEFO (First-Expired, First-Out):**
+  - Khi một sản phẩm được bán ra, hệ thống **không trừ ngẫu nhiên** mà tự động truy vấn các lô hàng (`LoHang`) còn hạn sử dụng của sản phẩm đó, sắp xếp tăng dần theo `NgayHetHan`.
+  - Hệ thống ưu tiên xuất hết số lượng của lô cận date nhất trước, nếu chưa đủ số lượng đơn hàng sẽ tự động trừ tiếp sang lô tiếp theo, đảm bảo giảm thiểu tối đa hàng quá hạn hỏng hóc trong kho.
+* **Cảnh báo hạn sử dụng 3 cấp độ màu:**
+  - 🟢 **Xanh lá (An toàn):** Hạn sử dụng còn trên 60 ngày.
+  - 🟡 **Vàng cam (Cận date):** Hạn sử dụng còn từ 15 đến 60 ngày (Cần kích hoạt chương trình xả hàng khuyến mãi).
+  - 🔴 **Đỏ nguy cấp:** Hạn sử dụng dưới 15 ngày hoặc đã hết hạn (Cảnh báo thu hồi tiêu hủy).
+* **Quy đổi Đơn vị tính Đa cấp (`ThietLapQuyDoiDialog`):**
+  - Khai báo linh hoạt tỷ lệ quy đổi: `1 Thùng = 12 Khay = 48 Lon`.
+  - Khi khách mua lẻ 2 Lon hoặc mua 1 Khay, hệ thống tự động quy đổi chính xác về đơn vị cơ sở để trừ tồn kho thực tế của lô hàng tương ứng.
 
-```mermaid
-flowchart TD
-    subgraph UI_Layer["Tầng Giao Diện (VIEW LAYER - Swing + FlatLaf)"]
-        V1["Giao diện Bán hàng POS & Holding Carts"]
-        V2["Giao diện Quản lý Kho & FEFO"]
-        V3["Giao diện Lịch hẹn Dịch vụ & Pet Hotel"]
-        V4["Giao diện Giao ca, Nhân viên & Dashboard Graphics2D"]
-    end
+---
 
-    subgraph Controller_Layer["Tầng Điều Khiển (CONTROLLER LAYER)"]
-        C1["BanHangController"]
-        C2["KhoHangController"]
-        C3["DichVuController"]
-        C4["NhanSuController"]
-    end
+### 3. Nghiệp vụ Đổi / Trả Hàng Hóa & Hoàn Tiền (`DoiTraHangPanel`)
+* **Quy định chính sách:** Hỗ trợ đổi trả trong vòng 07 ngày kể từ ngày in hóa đơn.
+* **Thao tác nghiệp vụ chuẩn:**
+  1. **Tra cứu hóa đơn gốc:** Nhập Mã hóa đơn (vd: `HD261029-NV01-001`) hoặc Số điện thoại khách hàng vào ô tra cứu $\rightarrow$ Bấm `Tra cứu HĐ` (hoặc bấm `Chọn từ Lịch sử`).
+  2. **Chọn sản phẩm và khai báo lý do:** Tích chọn checkbox sản phẩm khách mang đến trả. Nhập số lượng trả, chọn lý do (Hàng lỗi, thú cưng không hợp vị, mua nhầm size) và tình trạng hàng hóa (`Nguyên tem, vỏ hộp mới`, `Đã bóc seal`, `Lỗi do nhà sản xuất`).
+  3. **Lựa chọn 1 trong 2 kịch bản:**
+     - **Kịch bản A (Trả hàng - Hoàn tiền):** Hệ thống tính số tiền hoàn trả cho khách, tự động khấu trừ điểm tích lũy VIP đã cộng trước đó. Nếu sản phẩm còn nguyên tem, hệ thống tự động nhập hoàn tồn kho lại cho lô hàng ban đầu.
+     - **Kịch bản B (Đổi sang sản phẩm khác):** Thu ngân chọn sản phẩm mới từ danh sách và số lượng đổi mới. Hệ thống tự động đối trừ chênh lệch giá:
+       - *Món mới đắt hơn:* Hiển thị rõ số tiền khách cần thanh toán thêm.
+       - *Món mới rẻ hơn:* Hiển thị số tiền cửa hàng cần hoàn trả lại cho khách.
+  4. Nhấn `XÁC NHẬN ĐỔI TRẢ & HOÀN TIỀN` $\rightarrow$ Tự động sinh phiếu đổi trả (`DTyyMMdd-xxx`), cập nhật lại tồn kho và xuất phiếu in xác nhận.
 
-    subgraph Model_Layer["Tầng Dữ Liệu (MODEL LAYER)"]
-        M_Entity["Entity Models (SanPham, HoaDon, ThuCung, CaLamViec...)"]
-        M_DAO["DAO Layer (SanPhamDAO, HoaDonDAO, PhieuGiaoCaDAO...)"]
-    end
+---
 
-    subgraph Data_Storage["CƠ SỞ DỮ LIỆU & DỊCH VỤ NGOÀI"]
-        DB[(Microsoft SQL Server 2019/2022)]
-        VNPAY["VNPay Sandbox Gateway (HMAC-SHA512)"]
-        VIETQR["VietQR API (Napas 247)"]
-    end
+### 4. Hồ Sơ Thú Cưng, Dịch Vụ Spa & Khách Sạn Pet Hotel
+* **Quản lý Hồ sơ & Sổ sức khỏe (`ThuCungDichVuPanel`):**
+  - Quản lý định danh từng thú cưng (Tên bé, giống loài Chó/Mèo, màu lông, ngày sinh, số microchip định danh, thông tin chủ nuôi).
+  - Sổ theo dõi sức khỏe: Ghi nhận cân nặng, nhiệt độ, tình trạng ve rận, da lông và lịch sử tiêm phòng vắc-xin dại định kỳ.
+* **Đặt lịch hẹn Spa & Grooming (`DatLichHenDialog` / `QuanLyLichHenPanel`):**
+  - Đặt lịch hẹn trực quan theo các khung giờ cố định (Time Slots): Ca sáng (`08:30`, `09:30`, `10:30`, `11:00`) và Ca chiều (`13:30`, `14:30`, `15:30`, `16:30`, `17:30`, `18:30`).
+  - Chọn kỹ thuật viên chăm sóc, tự động phát hiện trùng lịch để tránh quá tải ca làm việc.
+* **Gói Thẻ Dịch Vụ Trọn Gói (Spa Pass):**
+  - Khách hàng có thể mua thẻ gói 5 buổi hoặc 10 buổi (`PASS-0988111222-01`).
+  - Khi đến quầy POS làm dịch vụ, thu ngân chỉ cần bấm nút `Dùng Spa Pass` để trừ 1 lượt sử dụng mà không cần thanh toán tiền mặt.
+* **Khách sạn Lưu Trú Thú Cưng (`PetHotelPanel`):**
+  - **Ma trận 12 phòng lưu trú tiêu chuẩn/VIP:** Màu sắc thẻ phòng thay đổi trực quan theo thời gian thực (Xanh lá: *Phòng trống sẵn sàng*, Đỏ hồng: *Đang có khách lưu trú*, Vàng cam: *Đang dọn dẹp khử trùng tia cực tím*).
+  - **Quy trình Check-in:** Nhấn vào phòng trống $\rightarrow$ Chọn thú cưng, ngày vào, ngày dự kiến đón, gói dinh dưỡng (Pate tươi, hạt dinh dưỡng ngày 2 cữ).
+  - **Quy trình Check-out:** Nhấn vào phòng đang lưu trú $\rightarrow$ Bấm `Check-out & Tính tiền`. Hệ thống tự động tính số ngày lưu trú thực tế nhân đơn giá phòng, kết xuất chi phí đưa sang hóa đơn và chuyển trạng thái phòng sang `Đang dọn dẹp`.
 
-    UI_Layer -->|Truyền sự kiện người dùng| Controller_Layer
-    Controller_Layer -->|Xử lý nghiệp vụ & gọi DAO| Model_Layer
-    Model_Layer -->|JDBC Transaction ACID| DB
-    Controller_Layer -->|Gọi API Thanh toán| VNPAY
-    Controller_Layer -->|Sinh mã QR động| VIETQR
-    Model_Layer -->|Cập nhật dữ liệu thực thể| Controller_Layer
-    Controller_Layer -->|Hiển thị dữ liệu lên View| UI_Layer
+---
+
+### 5. Phân Ca Trực & Bàn Giao Ca Thu Ngân (`BanGiaoCaPanel` / `LichPhanCaPanel`)
+* **Ma trận phân ca tuần:** Chuẩn hóa 4 ca làm việc/ngày, xếp lịch trực linh hoạt cho nhân viên theo các ca: Sáng (`07:30 - 12:00`), Chiều (`12:00 - 17:00`), Tối (`17:00 - 21:30`) và Ca gãy (`08:00 - 17:00`).
+* **Quy trình bàn giao ca & đối soát két tiền:**
+  1. Đầu ca: Ghi nhận số tiền mặt ban đầu để trong két (`Tiền đầu ca`).
+  2. Cuối ca: Hệ thống tự động tổng hợp toàn bộ doanh thu tiền mặt phát sinh trong ca (`Doanh thu tiền mặt hệ thống`).
+  3. Hệ thống tính `Tổng tiền cuối ca lý thuyết = Tiền đầu ca + Doanh thu mặt`.
+  4. Thu ngân đếm tiền mặt thực tế trong két và nhập vào ô `Tiền mặt thực tế đếm được`.
+  5. Hệ thống tự động so khớp và tính `Chênh lệch`:
+     - Nếu chênh lệch bằng 0: Hiển thị nhãn xanh `0 đ (Khớp két 100%)`.
+     - Nếu thừa hoặc thiếu: Bắt buộc thu ngân phải nhập vào khung `Lý do chênh lệch` (ví dụ: Khách gửi tiền tip, làm rách tiền lẻ...).
+  6. Nhấn `XÁC NHẬN BÀN GIAO & KẾT CA` để chốt sổ và in biên bản giao ca.
+
+---
+
+### 6. Quy Luật Sinh Mã Nghiệp Vụ Tự Động (`MaTuSinhHelper`)
+Toàn bộ mã nghiệp vụ được sinh tự động theo quy luật chặt chẽ, đảm bảo tính duy nhất, có ý nghĩa thời gian và **tuyệt đối không vượt quá giới hạn 20 ký tự của CSDL**:
+
+<table border="1" style="border-collapse: collapse; width: 100%; border: 1px solid #cbd5e1;">
+  <thead>
+    <tr style="background-color: #f1f5f9;">
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Loại đối tượng</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Tiền tố &amp; Quy luật</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">Chiều dài</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Ví dụ thực tế</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Hóa đơn bán hàng</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>HDyyMMdd-NVxx-xxx</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">15 ký tự</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>HD261029-NV01-001</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Chi tiết hóa đơn</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>&lt;MãHĐ&gt;_CTx</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">19 ký tự</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>HD261029-NV01-001_CT1</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Phiếu đổi trả</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>DTyyMMdd-xxx</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">12 ký tự</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>DT261029-001</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Lịch hẹn Spa</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>LHyMMdd-xxx</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">12 ký tự</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>LH61029-001</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Khách hàng mới</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>KHxxxx</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">6 ký tự</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>KH0015</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Thú cưng mới</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>TCxxxx</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">6 ký tự</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>TC0024</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Thẻ Spa Pass</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>PASS-&lt;4 số cuối SĐT&gt;-xx</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">14 ký tự</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>PASS-1222-01</code></td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## 🏗️ CẤU TRÚC THƯ MỤC DỰ ÁN (MVC PURE JAVA)
+
 ```
-
----
-
-## 🎯 CÁC PHÂN HỆ CHỨC NĂNG CHÍNH
-
-### 1. Phân hệ Bán hàng POS & Đổi trả (Lê Khãi Minh)
-- **Quầy thanh toán cảm ứng:** Tìm kiếm siêu tốc qua Barcode Scanner, mã SKU hoặc tên sản phẩm; tự động tính tổng tiền, thuế VAT và chiết khấu VIP.
-- **Giỏ hàng chờ (Holding Carts):** Cho phép lưu tạm tối đa 10 hóa đơn chờ khi khách cần chọn thêm đồ hoặc đang chờ thú cưng hoàn tất dịch vụ, khôi phục đơn hàng chỉ với 1 thao tác.
-- **Tích hợp thanh toán số VietQR:** Sinh QR Code động nhúng đúng số tiền đơn hàng, chống sai sót số tiền chuyển khoản.
-- **Tích hợp Cổng thanh toán VNPay Sandbox:** Khởi tạo giao dịch chuẩn API v2.1.0; Local Loopback Server tự động tiếp nhận kết quả thành công và in hóa đơn mà không cần xác nhận thủ công.
-- **Đổi trả hàng hóa (Return & Exchange):** Tra cứu hóa đơn cũ, hỗ trợ hoàn tiền hàng hỏng hoặc đổi sang sản phẩm mới, tự động cân đối chênh lệch tiền và điều chỉnh tồn kho / điểm tích lũy.
-
-### 2. Phân hệ Quản lý Kho, Sản phẩm & Lô hàng FEFO (Tô Thanh Đạt)
-- **Quản lý danh mục & hàng hóa:** Phân loại theo ngành hàng (Thức ăn, Phụ kiện, Thuốc thú y, Hóa mỹ phẩm).
-- **Kiểm soát hạn dùng theo chuẩn FEFO (First-Expired, First-Out):** Quản lý chi tiết từng lô nhập (Số lô, ngày sản xuất, hạn sử dụng). Hệ thống tự động ưu tiên xuất bán các lô cận hạn trước để triệt tiêu hao hụt hàng hóa.
-- **Cảnh báo hạn sử dụng 3 cấp độ:** Hiển thị trực quan bằng màu sắc (Xanh: An toàn $> 90$ ngày; Vàng cam: Cận date $30 - 90$ ngày; Đỏ: Nguy cơ $< 30$ ngày).
-- **Quy đổi đơn vị tính đa cấp:** Khai báo quy đổi tự do (VD: `1 Thùng = 12 Khay = 48 Lon`), xuất bán theo mọi đơn vị nhưng quản lý tồn kho chính xác theo đơn vị cơ bản.
-
-### 3. Phân hệ Hồ sơ Thú cưng, Lịch hẹn Spa & Pet Hotel (Võ Thị Hồng Ngọc)
-- **Hồ sơ định danh thú cưng:** Lưu trữ thông tin chủng loài, ngày sinh, số microchip định danh, hình ảnh, tiền sử dị ứng và thông tin chủ nuôi.
-- **Sổ theo dõi sức khỏe điện tử:** Ghi nhận định kỳ cân nặng, nhiệt độ cơ thể, tình trạng da lông, ve rận và nhắc hẹn lịch tiêm vắc xin/dại.
-- **Điều phối lịch hẹn Dịch vụ / Spa:** Tiếp nhận lịch hẹn theo khung giờ (Time-slots), tự động phân bảng giá theo nhóm cân nặng thú cưng (Nhỏ `< 5kg`, Vừa `5 - 10kg`, Lớn `> 10kg`).
-- **Khách sạn thú cưng (Pet Hotel):** Quản lý phòng lưu trú, nhật ký chăm sóc khẩu phần ăn uống, check-in, check-out và tính phí lưu trú tự động.
-
-### 4. Phân hệ Nhân sự, Bàn giao ca & Báo biểu (Lê Anh Minh)
-- **Xác thực & Phân quyền RBAC 4 vai trò:** Quản lý Cửa Hàng (NVQL), Thu Ngân (NVTN), Nhân Viên Bán Hàng (NVBH), Kỹ Thuật Viên Spa (NVCS).
-- **Lập lịch & Xếp ca tuần:** Ma trận phân bổ nhân sự 4 ca làm việc trong ngày (Ca Sáng, Ca Chiều, Ca Tối, Ca Gãy).
-- **Biên bản bàn giao ca thu ngân:** Khai báo tiền đầu ca, tổng hợp doanh thu tiền mặt, chuyển khoản, VNPay trong ca; đối soát tiền mặt thực tế vs số liệu máy tính và lập biên bản chênh lệch quỹ.
-- **Dashboard phân tích trực quan thuần Graphics2D:** Biểu đồ doanh số theo ngày, tỷ trọng cơ cấu dịch vụ và bảng xếp hạng sản phẩm bán chạy nhất.
-
----
-
-## 📂 CẤU TRÚC THƯ MỤC DỰ ÁN
-
-```
-Repo_Group07-HeThongQuanLyCuaHangThuCung/
-├── .classpath                          # Cấu hình Classpath IDE Eclipse
-├── .project                            # Cấu hình Project IDE Eclipse
-├── .gitignore                          # Cấu hình loại trừ file của Git
-├── README.md                           # Tài liệu tổng quan dự án
-├── KE_HOACH_PHAN_CHIA_VA_PUSH_CODE.md  # Kế hoạch phân chia mã nguồn & lộ trình tích hợp theo đợt
-├── HUONG_DAN_PUSH_CODE_THANH_VIEN.md   # Sổ tay hướng dẫn Clone Eclipse, commit & PR cho thành viên
+N07-HeThongQuanLyCuaHangThuCungMio/
+├── config/                             # File cấu hình kết nối và API
+│   ├── database.properties             # Cấu hình Microsoft SQL Server (Host, Port, User, Pass)
+│   ├── vietqr.properties               # Cấu hình tài khoản thụ hưởng VietQR Napas 247
+│   └── vnpay.properties                # Cấu hình Merchant Terminal Cổng thanh toán VNPay Sandbox
 │
-├── config/                             # File cấu hình tham số hệ thống
-│   ├── database.properties             # Cấu hình kết nối SQL Server (host, port, user, pass)
-│   ├── vietqr.properties               # Cấu hình tài khoản ngân hàng nhận VietQR
-│   └── vnpay.properties                # Cấu hình Merchant Terminal Cổng VNPay Sandbox
+├── sql/                                # Cơ sở dữ liệu quan hệ
+│   └── HeThongQuanLyCuaHangThuCung.sql # Kịch bản DDL tạo Database, Bảng, Khóa chính, Khóa ngoại & Dữ liệu mẫu
 │
-├── sql/                                # Kịch bản cơ sở dữ liệu Microsoft SQL Server
-│   └── DB_HeThongQuanLyThuCung.sql     # Tệp SQL duy nhất: Khởi tạo toàn bộ CSDL và nạp sẵn dữ liệu mẫu
-│
-├── lib/                                # Các thư viện ngoại vi (.jar)
+├── lib/                                # Các thư viện phụ thuộc (Dependencies)
 │   ├── flatlaf-3.5.4.jar               # Giao diện phẳng FlatLaf hiện đại
-│   └── mssql-jdbc-12.8.1.jre11.jar     # Trình điều khiển kết nối Microsoft SQL Server
+│   └── mssql-jdbc-12.8.1.jre11.jar     # Trình điều khiển JDBC kết nối Microsoft SQL Server
 │
-├── resources/                          # Tài nguyên đồ họa ứng dụng
-│   ├── icons/                          # Bộ icon phẳng chuẩn kích thước
-│   └── images/                         # Ảnh sản phẩm và dịch vụ minh họa
+├── resources/                          # Tài nguyên đồ họa & âm thanh
+│   ├── icons/                          # Bộ icon phẳng chuẩn hóa (Lucide / Material UI)
+│   └── images/                         # Ảnh chụp sản phẩm, dịch vụ và thú cưng minh họa
 │
-└── src/                                # Mã nguồn ứng dụng (Pure Java MVC)
-    ├── Main.java                       # Điểm khởi động ứng dụng (Application Entry Point)
-    ├── controllers/                    # Tầng điều khiển nghiệp vụ (Controller Layer)
-    ├── models/
-    │   ├── entity/                     # Các lớp thực thể đối tượng (Domain Models)
-    │   └── dao/                        # Các lớp truy vấn dữ liệu SQL Server (Data Access Objects)
-    ├── utils/                          # Lớp tiện ích (DBConnection, ThemeColors, VNPayHelper...)
-    ├── views/                          # Giao diện người dùng Swing (Views, Panels, Dialogs)
-    │   └── charts/                     # Thành phần biểu đồ tùy biến bằng Java Graphics2D
-    └── tests/                          # Bộ mã kiểm thử tự động hệ thống
+├── src/                                # Toàn bộ mã nguồn chương trình (Pure Java MVC)
+│   ├── Main.java                       # Điểm khởi chạy ứng dụng (Bootstrap & Look and Feel)
+│   │
+│   ├── controllers/                    # Tầng điều khiển nghiệp vụ (Business Logic Controllers)
+│   │   ├── BanHangController.java      # Xử lý tính tiền, voucher, trừ kho FEFO, xuất hóa đơn
+│   │   ├── DangNhapController.java     # Kiểm tra đăng nhập, mã hóa và phân quyền người dùng
+│   │   ├── GiaoCaController.java       # Quản lý mở ca, chốt ca và biên bản kiểm kê két tiền
+│   │   ├── NhanVienController.java     # Thêm, sửa, xóa, tìm kiếm nhân sự cửa hàng
+│   │   ├── PhanCaController.java       # Điều phối lịch trực tuần theo ma trận 4 ca
+│   │   ├── SpaPassController.java      # Kích hoạt, tra cứu và trừ lượt sử dụng Thẻ Spa Pass
+│   │   └── ThuCungController.java      # Quản lý hồ sơ bé cưng, tiêm phòng và lịch hẹn Spa
+│   │
+│   ├── models/
+│   │   ├── entity/                     # Các lớp thực thể đối tượng (Domain Entities)
+│   │   │   ├── HoaDon.java, ChiTietHoaDon.java, ChiTietXuatLo.java, ChiTietDichVu.java...
+│   │   │   ├── SanPham.java, LoHang.java, DonViTinh.java, QuyDoiDonVi.java...
+│   │   │   ├── KhachHang.java, ThuCung.java, HoSoSucKhoe.java, TheSpaPass.java...
+│   │   │   └── NhanVien.java, TaiKhoan.java, BangGiaoCa.java, CaLamViec.java...
+│   │   │
+│   │   └── dao/                        # Tầng truy vấn cơ sở dữ liệu (Data Access Objects)
+│   │       ├── HoaDonDAO.java, SanPhamDAO.java, LoHangDAO.java, DichVuDAO.java...
+│   │       ├── KhachHangDAO.java, ThuCungDAO.java, LichHenDAO.java, PhongLuuTruDAO.java...
+│   │       └── NhanVienDAO.java, TaiKhoanDAO.java, BangGiaoCaDAO.java, PhanCaDAO.java...
+│   │
+│   ├── utils/                          # Các lớp tiện ích hỗ trợ toàn hệ thống
+│   │   ├── DBConnection.java           # Quản lý kết nối SQL Server Connection Pool
+│   │   ├── ThemeColors.java            # Bảng màu Luxury Emerald & Mint Sage, bo góc viền cong
+│   │   ├── MaTuSinhHelper.java         # Thuật toán tự sinh mã nghiệp vụ (<= 20 ký tự)
+│   │   ├── UserSession.java            # Lưu phiên làm việc của nhân viên đang đăng nhập
+│   │   ├── IconHelper.java             # Bộ nạp icon vector và màu sắc theo chủ đề
+│   │   └── VNPayHelper.java            # Thuật toán băm HMAC-SHA512 kết nối VNPay Gateway
+│   │
+│   └── views/                          # Giao diện người dùng Swing (UI Panels & Dialogs)
+│       ├── LoginForm.java              # Màn hình đăng nhập hiện đại với xác thực nhanh
+│       ├── MainDashboard.java          # Khung ứng dụng chính với thanh Sidebar điều hướng
+│       ├── TongQuanPanel.java          # Màn hình tổng quan với thống kê KPI thời gian thực
+│       ├── BanHangPOSPanel.java        # Màn hình bán hàng POS cảm ứng & Quầy thu ngân
+│       ├── DoiTraHangPanel.java        # Màn hình đổi trả hàng, hoàn tiền và hoàn tồn kho
+│       ├── KhoLoHangPanel.java         # Màn hình quản lý kho, lô hàng cận date & xuất nhập
+│       ├── ThuCungDichVuPanel.java     # Màn hình hồ sơ thú cưng, sổ tiêm phòng & sức khỏe
+│       ├── QuanLyLichHenPanel.java     # Màn hình theo dõi tiến độ lịch hẹn Spa & Grooming
+│       ├── PetHotelPanel.java          # Màn hình quản lý sơ đồ phòng khách sạn lưu trú
+│       ├── BanGiaoCaPanel.java         # Màn hình bàn giao ca và đối soát tiền mặt cuối ngày
+│       ├── LichPhanCaPanel.java        # Màn hình xếp lịch trực và phân ca tuần nhân viên
+│       ├── QuanLyNhanVienPanel.java    # Màn hình quản lý hồ sơ nhân viên và tài khoản
+│       ├── VietQRDialog.java           # Hộp thoại hiển thị mã QR động Napas 247
+│       ├── VNPayDialog.java            # Hộp thoại cổng thanh toán VNPay Sandbox
+│       ├── HoaDonPreviewDialog.java    # Hộp thoại xem trước và in phiếu hóa đơn K80
+│       └── charts/                     # Biểu đồ thống kê kết xuất bằng Java Graphics2D
+│           ├── BarChartPanel.java      # Biểu đồ cột doanh thu 7 ngày gần nhất
+│           └── DonutChartPanel.java    # Biểu đồ Donut cơ cấu doanh thu sản phẩm / dịch vụ
+│
+├── build.bat                           # Script tự động biên dịch toàn bộ dự án
+└── run.bat                             # Script khởi chạy ứng dụng trực tiếp bằng Java
 ```
 
 ---
 
-## 🚀 HƯỚNG DẪN CÀI ĐẶT & KHỞI CHẠY
+## 🚀 HƯỚNG DẪN CÀI ĐẶT & CHẠY ỨNG DỤNG
 
-### 1. Yêu cầu môi trường
-- **Java Development Kit (JDK):** JDK 17 hoặc JDK 21 (Oracle JDK / OpenJDK).
-- **Hệ quản trị CSDL:** Microsoft SQL Server 2019 / 2022 / Express.
-- **IDE:** Eclipse IDE for Java Developers (khuyến nghị).
+### 1. Yêu cầu môi trường tối thiểu
+- **Java Development Kit (JDK):** Phiên bản **Java 17** hoặc **Java 21 LTS** (Khuyên dùng OpenJDK hoặc Oracle JDK).
+- **Hệ quản trị CSDL:** **Microsoft SQL Server** (2019, 2022 hoặc bản Express) mở cổng mặc định `1433`.
+- **Môi trường phát triển (IDE):** **Eclipse IDE for Java Developers**, IntelliJ IDEA hoặc Visual Studio Code.
 
-### 2. Thiết lập Cơ sở dữ liệu SQL Server
-1. Mở **SQL Server Management Studio (SSMS)** và kết nối vào SQL Server instance của bạn.
-2. Mở tệp kịch bản duy nhất [`sql/DB_HeThongQuanLyThuCung.sql`](sql/DB_HeThongQuanLyThuCung.sql) và bấm **Execute** (`F5`).
-   - Tệp sẽ tự động tạo cơ sở dữ liệu `QuanLyCuaHangThuCung`, khởi tạo toàn bộ 25 bảng và nạp sẵn dữ liệu mẫu kiểm thử hoàn chỉnh.
-3. Mở tệp cấu hình [`config/database.properties`](config/database.properties) để kiểm tra hoặc điều chỉnh thông tin tài khoản kết nối SQL Server (nếu mật khẩu máy bạn khác `123456`):
+### 2. Khởi tạo Cơ sở dữ liệu SQL Server
+1. Mở công cụ **SQL Server Management Studio (SSMS)** hoặc **Azure Data Studio**.
+2. Mở tệp kịch bản: [`sql/HeThongQuanLyCuaHangThuCung.sql`](sql/HeThongQuanLyCuaHangThuCung.sql).
+3. Nhấn **Execute (F5)** để tự động tạo cơ sở dữ liệu `QuanLyCuaHangThuCung`, toàn bộ các bảng, ràng buộc khóa ngoại và nạp sẵn dữ liệu mẫu thực tế.
+4. Mở tệp [`config/database.properties`](config/database.properties) để kiểm tra lại tài khoản kết nối:
    ```properties
-   db.host=localhost
-   db.port=1433
-   db.databaseName=QuanLyCuaHangThuCung
-   db.username=sa
-   db.password=YourStrongPasswordHere
+   db.url=jdbc:sqlserver://localhost:1433;databaseName=QuanLyCuaHangThuCung;encrypt=true;trustServerCertificate=true;
+   db.user=sa
+   db.password=sapassword
    ```
 
-### 3. Khởi chạy bằng Eclipse IDE
-- **Cách 1 (Clone trực tiếp từ Eclipse - Khuyên dùng):**
-  1. Mở Eclipse $\rightarrow$ **Window** $\rightarrow$ **Show View** $\rightarrow$ **Other...** $\rightarrow$ **Git Repositories**.
-  2. Bấm **Clone a Git repository** $\rightarrow$ Dán URL: `https://github.com/minhto1306/N07-HeThongQuanLyCuaHangThuCung.git`.
-  3. Chọn nhánh **`develop`** $\rightarrow$ Tick chọn **Import all existing Eclipse projects after clone finishes** $\rightarrow$ Bấm **Finish**.
-  *(Xem hướng dẫn chi tiết từng bước bằng ảnh/thao tác tại: [`HUONG_DAN_PUSH_CODE_THANH_VIEN.md`](HUONG_DAN_PUSH_CODE_THANH_VIEN.md))*
-- **Cách 2 (Import dự án đã có sẵn trên máy):**
-  1. Mở Eclipse $\rightarrow$ **File** $\rightarrow$ **Import...** $\rightarrow$ **General** $\rightarrow$ **Existing Projects into Workspace**.
-  2. Chọn thư mục dự án và bấm **Finish**.
-- **Chạy chương trình:** Mở tệp [`src/Main.java`](src/Main.java) $\rightarrow$ Nhấp chuột phải $\rightarrow$ Chọn **Run As** $\rightarrow$ **Java Application**.
+### 3. Biên dịch và khởi chạy chương trình
 
-### 4. Khởi chạy bằng Command-line (Terminal)
-```bash
-# Biên dịch toàn bộ mã nguồn vào thư mục bin/
-javac -encoding UTF-8 -cp "lib/*" -d bin src/**/*.java src/Main.java
+#### Cách 1: Chạy nhanh qua tệp thực thi BAT (Khuyên dùng trên Windows)
+```cmd
+# Bước 1: Biên dịch toàn bộ mã nguồn vào thư mục bin/
+build.bat
 
-# Khởi chạy ứng dụng
-java -cp "bin;lib/*" Main
+# Bước 2: Khởi chạy ứng dụng
+run.bat
 ```
 
----
-
-## 🔑 TÀI KHOẢN ĐĂNG NHẬP MẪU (RBAC)
-
-Hệ thống được cấu hình sẵn 4 tài khoản mẫu đại diện cho 4 cấp độ phân quyền trong doanh nghiệp:
-
-| Nhóm quyền hạn | Tên đăng nhập | Mật khẩu | Phạm vi quyền hạn thực thi |
-| :--- | :---: | :---: | :--- |
-| **Quản Lý Cửa Hàng (Admin)** | `admin` | `123456` | Toàn quyền kiểm soát hệ thống: POS, Kho hàng, Hồ sơ dịch vụ, Phân ca làm việc, Bàn giao quỹ và Dashboard thống kê. |
-| **Thu Ngân (Cashier)** | `thungan01` | `123456` | Bán hàng POS, In hóa đơn, Đổi trả hàng, Khai báo đầu ca, Bàn giao ca và In báo cáo kết ca. |
-| **Nhân Viên Bán Hàng (Sales)** | `banhang01` | `123456` | Quầy bán hàng POS, Tra cứu thông tin sản phẩm và tư vấn khách hàng. |
-| **Kỹ Thuật Viên Spa (Care)** | `ktv01` | `123456` | Quản lý hồ sơ thú cưng, Sổ sức khỏe điện tử, Tiếp nhận đặt lịch Spa và Quản lý phòng Pet Hotel. |
+#### Cách 2: Khởi chạy từ Eclipse IDE
+1. Mở Eclipse $\rightarrow$ **File** $\rightarrow$ **Import...** $\rightarrow$ **Existing Projects into Workspace**.
+2. Chọn thư mục `N07-HeThongQuanLyCuaHangThuCungMio`.
+3. Nhấp chuột phải vào dự án $\rightarrow$ **Build Path** $\rightarrow$ **Configure Build Path...** $\rightarrow$ Thẻ **Libraries** $\rightarrow$ Đảm bảo 2 tệp trong thư mục `lib/` (`flatlaf-3.5.4.jar` và `mssql-jdbc-12.8.1.jre11.jar`) đã nằm trong **Classpath**.
+4. Mở tệp [`src/Main.java`](src/Main.java) $\rightarrow$ Nhấp chuột phải chọn **Run As** $\rightarrow$ **Java Application**.
 
 ---
 
-## 🌿 QUY ƯỚC PHÁT TRIỂN GIT (GIT FLOW)
+## 🔑 TÀI KHOẢN ĐĂNG NHẬP MẪU THEO PHÂN QUYỀN (RBAC)
 
-Để đảm bảo tiến độ làm việc nhóm nhịp nhàng, minh bạch và có đầy đủ lịch sử đóng góp (Contributors Graph) đồng đều giữa các thành viên, nhóm áp dụng mô hình Git Flow tiêu chuẩn:
+Hệ thống thiết lập cơ chế kiểm soát truy cập dựa trên vai trò (Role-Based Access Control - RBAC) nghiêm ngặt gồm 4 vai trò:
 
-- **Nhánh `main`:** Nhánh phát hành chính thức, bảo vệ nghiêm ngặt (Protected Branch), chỉ chứa các phiên bản ổn định phục vụ chấm điểm và bàn giao đồ án.
-- **Nhánh `develop`:** Nhánh tích hợp làm việc chung của cả nhóm. Mọi tính năng sau khi kiểm thử đạt yêu cầu sẽ được merge vào đây.
-- **Nhánh tính năng (Feature Branches):** Mỗi thành viên độc lập phát triển trên nhánh riêng của mình:
-  - `feature/kho-san-pham-lo-hang` (Tô Thanh Đạt)
-  - `feature/thu-cung-dich-vu-hotel` (Võ Thị Hồng Ngọc)
-  - `feature/nhan-su-giao-ca-dashboard` (Lê Anh Minh)
-  - `feature/pos-ban-hang-doi-tra` (Lê Khãi Minh)
-
-> 📌 **Tài liệu hướng dẫn & Kế hoạch làm việc nhóm:**  
-> 👉 [**KE_HOACH_PHAN_CHIA_VA_PUSH_CODE.md**](KE_HOACH_PHAN_CHIA_VA_PUSH_CODE.md): Kế hoạch phân chia mã nguồn, chi tiết 4 gói code & lộ trình tích hợp theo đợt.  
-> 👉 [**HUONG_DAN_PUSH_CODE_THANH_VIEN.md**](HUONG_DAN_PUSH_CODE_THANH_VIEN.md): Hướng dẫn Clone trực tiếp vào Eclipse, lệnh commit theo đợt đến quy trình Review & Merge Pull Request.
+<table border="1" style="border-collapse: collapse; width: 100%; border: 1px solid #cbd5e1;">
+  <thead>
+    <tr style="background-color: #f1f5f9;">
+      <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">Tên Đăng Nhập</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">Mật Khẩu</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Họ Tên</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Chức Vụ / Vai Trò</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Phạm Vi Quyền Hạn Thực Tế Trên Menu</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>NVQL001</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>admin123</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Trần Quản Lý</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Quản Lý Cửa Hàng (Admin)</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Toàn quyền hệ thống:</b> Truy cập đầy đủ cả 10 phân hệ (Tổng quan, POS, Kho lô hàng, Đổi trả, Thú cưng, Lịch hẹn, Khách sạn, Bàn giao ca, Phân ca, Quản lý nhân viên).</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>NVTN001</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>tn123</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Lê Anh Minh</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Thu Ngân (Cashier)</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Quầy thu ngân:</b> Bán hàng POS, In hóa đơn, Đổi trả hàng hóa, Bàn giao ca két tiền cuối ngày, Xem lịch trực cá nhân <i>(Bị khóa: Quản lý nhập kho, Quản lý nhân sự, Phân ca tuần)</i>.</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>NVBH001</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>bh123</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Nguyễn Văn Bán</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Nhân Viên Bán Hàng (Sales)</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Tư vấn bán hàng:</b> Bán hàng POS, Tra cứu sản phẩm &amp; dịch vụ, Tiếp nhận thông tin khách hàng <i>(Bị khóa: Nhập kho hàng hóa, Chốt sổ giao ca, Quản lý nhân sự)</i>.</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>NVCS001</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>cs123</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Võ Thị Chăm Sóc</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Kỹ Thuật Viên Spa (Care)</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Chăm sóc thú cưng:</b> Hồ sơ sức khỏe thú cưng, Tiếp nhận &amp; điều phối lịch hẹn Spa Grooming, Quản lý lưu trú Pet Hotel <i>(Bị khóa: Quầy thu ngân POS, Quản lý kho, Quản lý phân ca)</i>.</td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
-## 📜 BẢN QUYỀN & THÔNG TIN LIÊN HỆ
-- **Đồ án môn học:** Phát triển Ứng dụng - Khoa Công nghệ Thông tin - Đại học Công nghiệp TP.HCM (IUH).
-- **Trưởng nhóm:** Lê Khãi Minh (Email: `lekhaiminh2606@gmail.com` | GitHub: [@minhto1306](https://github.com/minhto1306)).
-- **Giấy phép:** Phục vụ mục đích học tập và nghiên cứu học thuật tại Trường Đại học Công nghiệp TP.HCM.
+## 📑 TÀI LIỆU HƯỚNG DẪN KIỂM THỬ NGHIỆP VỤ (TESTING GUIDE)
+
+Để thực hiện kiểm thử chi tiết từng chức năng, quy trình kiểm tra logic ngầm và các kịch bản kiểm thử mẫu (Test Cases) khớp 100% với thao tác trên màn hình, vui lòng xem tài liệu:
+👉 **[`TAI_LIEU_KIEM_THU_NGHIEP_VU.md`](TAI_LIEU_KIEM_THU_NGHIEP_VU.md)**
+
+---
+*© 2026 - Nhóm 07 - Đề tài môn học Phát Triển Ứng Dụng (AD) - Khoa Công nghệ Thông tin, Trường Đại học Công nghiệp TP.HCM (IUH).*
