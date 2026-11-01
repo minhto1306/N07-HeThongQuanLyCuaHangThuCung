@@ -339,6 +339,36 @@ public class HoaDonDAO {
     }
 
     /**
+     * Lấy tổng số lượng đã đổi/trả trước đó của từng mã sản phẩm thuộc một Hóa đơn gốc
+     * giúp chặn triệt để việc trả lố hoặc trả trùng nhiều lần trên cùng 1 hóa đơn.
+     */
+    public java.util.Map<String, Integer> layMapSoLuongDaTra(String maHoaDonGoc) {
+        java.util.Map<String, Integer> map = new java.util.HashMap<>();
+        if (maHoaDonGoc == null || maHoaDonGoc.trim().isEmpty()) return map;
+        String sql = "SELECT ct.maSanPham, SUM(ct.soLuongDoiTra) AS tongDaTra " +
+                     "FROM ChiTietDoiTra ct " +
+                     "JOIN PhieuDoiTra p ON ct.maPhieuDoiTra = p.maPhieuDoiTra " +
+                     "WHERE p.maHoaDonGoc = ? " +
+                     "GROUP BY ct.maSanPham";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maHoaDonGoc.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String maSP = rs.getString("maSanPham");
+                    int daTra = rs.getInt("tongDaTra");
+                    if (maSP != null) {
+                        map.put(maSP.trim().toUpperCase(), daTra);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[HoaDonDAO] Lỗi tra cứu số lượng đã trả: " + e.getMessage());
+        }
+        return map;
+    }
+
+    /**
      * Lưu phiếu đổi trả hàng hóa vào CSDL (Transaction JDBC an toàn)
      */
     public boolean luuPhieuDoiTra(PhieuDoiTra pdt) throws SQLException {
