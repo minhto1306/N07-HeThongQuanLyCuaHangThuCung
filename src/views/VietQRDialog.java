@@ -80,7 +80,8 @@ public class VietQRDialog extends JDialog {
     /**
      * Nạp thông tin tài khoản từ file `config/vietqr.properties`
      */
-    // Đọc thông tin cấu hình tài khoản và ngân hàng từ file cấu hình
+    // Đọc thông tin tài khoản ngân hàng thụ hưởng từ file `config/vietqr.properties`
+    // Tách cấu hình riêng giúp dễ dàng thay đổi số tài khoản hay chi nhánh mà không cần sửa code
     private void napCauHinhVietQR() {
         File propFile = new File("config/vietqr.properties");
         if (propFile.exists()) {
@@ -302,8 +303,11 @@ public class VietQRDialog extends JDialog {
     }
 
     /**
-     * Tải mã VietQR động trực tiếp từ máy chủ VietQR Napas (img.vietqr.io / api.vietqr.io)
-     * Kèm cơ chế tạo mã QR Vector dự phòng tại chỗ (Offline Fallback) khi mất mạng.
+     * Tải mã VietQR động bất đồng bộ qua SwingWorker để không làm nghẽn luồng giao diện (EDT)
+     * Tích hợp cơ chế 3 lớp (3-tier Fallback) cực kỳ an toàn cho quầy thu ngân:
+     * - Lớp 1: Tải ảnh PNG trực tiếp qua QuickLink API (img.vietqr.io)
+     * - Lớp 2: Dự phòng qua JSON POST API v2 (/v2/generate)
+     * - Lớp 3: Tạo mã QR Vector tại chỗ (Offline Fallback) khi mất kết nối mạng Internet
      */
     private void taiMaVietQRBatDongBo() {
         if (lblTrangThaiKetNoi != null) {

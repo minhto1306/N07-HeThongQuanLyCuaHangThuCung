@@ -2387,19 +2387,20 @@ public class BanHangPOSPanel extends JPanel {
         }
     }
 
-    // Xử lý thanh toán đơn hàng: kiểm tra giỏ hàng, xác nhận hình thức thanh toán và cập nhật CSDL
+    // Xử lý thanh toán đơn hàng tại quầy: kiểm tra giỏ hàng, xác nhận hình thức thanh toán, gọi ACID transaction và in bill K80
     private void thucHienThanhToan() {
+        // Bước 1: Kiểm tra giỏ hàng - nếu trống thì nhắc nhở thu ngân chọn món trước khi thanh toán
         if (modelGioHang.getRowCount() == 0) {
             JOptionPane.showMessageDialog(this, "Giỏ hàng đang trống! Vui lòng chọn sản phẩm hoặc dịch vụ trước khi thanh toán.", "Thông báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Kết thúc chỉnh sửa ô SL nếu đang gõ dở
+        // Bước 2: Dừng trạng thái chỉnh sửa ô bảng (Cell Editing) để chốt số lượng thực tế trong giỏ
         if (tblGioHang.isEditing()) {
             tblGioHang.getCellEditor().stopCellEditing();
         }
 
-        // Kiểm tra tiến độ dịch vụ thú cưng trước khi hoàn tất thanh toán
+        // Bước 3: Kiểm tra an toàn tiến độ dịch vụ spa (nếu có bé cưng chưa hoàn tất tắm sấy thì cảnh báo ngay)
         boolean conDichVuChuaXong = false;
         StringBuilder sbChuaXong = new StringBuilder();
         for (int i = 0; i < modelGioHang.getRowCount(); i++) {
@@ -2425,6 +2426,7 @@ public class BanHangPOSPanel extends JPanel {
             }
         }
 
+        // Bước 4: Tính toán số tiền thanh toán thực tế (Tổng tiền hàng - Giảm giá VIP/Voucher - Khấu trừ tiền đổi trả)
         long tienKhauTruDoiTra = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
         long canTra = Math.max(0, tongTienHang - tienGiamGia - tienKhauTruDoiTra);
         long tongPhaiTraTruocKhauTru = Math.max(0, tongTienHang - tienGiamGia);
@@ -2449,7 +2451,7 @@ public class BanHangPOSPanel extends JPanel {
         long tienThoiVal = 0;
         if (tienHoanThua > 0) {
             tienThoiVal = tienHoanThua;
-        // Kiểm tra tiền khách đưa đối với phương thức thanh toán tiền mặt
+        // Bước 5A: Phương thức TIỀN MẶT - Kiểm tra tiền khách đưa, chặn hoàn tất nếu thiếu tiền và tính tiền thối lại
         } else if ("Tiền mặt".equals(pttt)) {
             if (canTra > 0 && tienKhachDuaVal < canTra) {
                 long thieu = canTra - tienKhachDuaVal;
@@ -2468,7 +2470,7 @@ public class BanHangPOSPanel extends JPanel {
                 return;
             }
             tienThoiVal = Math.max(0, tienKhachDuaVal - canTra);
-        } else { // "Chuyển khoản"
+        } else { // Bước 5B: Phương thức CHUYỂN KHOẢN VIETQR - Bật popup hiển thị mã QR động chuẩn Napas 24/7
             if (canTra > 0) {
                 boolean daNhanTien = VietQRDialog.xacNhanThanhToanVietQR(this, maHD, canTra, tenKhach);
                 if (!daNhanTien) {
