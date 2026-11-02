@@ -226,9 +226,11 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.35;
         card.add(new JLabel("Số lô hàng:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
-        txtSoLo = new JTextField("LO_2026_" + (System.currentTimeMillis() % 1000));
+        models.dao.LoHangDAO loDao = new models.dao.LoHangDAO();
+        txtSoLo = new JTextField(loDao.phatSinhSoLoTuDong()); 
         txtSoLo.setPreferredSize(new Dimension(0, 32));
         txtSoLo.setBorder(ThemeColors.createInputBorder());
+        txtSoLo.setToolTipText("Số lô gợi ý tự động. Bạn có thể sửa lại theo số lô thực tế trên bao bì sản phẩm.");
         card.add(txtSoLo, gbc);
 
         // Ngày sản xuất (Kèm nút chọn lịch)

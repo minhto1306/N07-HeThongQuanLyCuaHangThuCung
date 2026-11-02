@@ -281,6 +281,38 @@ public class LoHangDAO {
             return ps.executeUpdate() > 0;
         }
     }
+    /**
+     * Tự động phát sinh số lô tiếp theo trong năm 
+     */
+    public String phatSinhSoLoTuDong() {
+        int maxNum = 0;
+        int namHienTai = java.time.LocalDate.now().getYear();
+        String prefix = "LO_" + namHienTai + "_";
+        String sql = "SELECT soLo FROM LoHang WHERE soLo LIKE ?";
+        
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, prefix + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String soLo = rs.getString("soLo");
+                    if (soLo != null && soLo.length() > prefix.length()) {
+                        try {
+                            String sttPart = soLo.substring(prefix.length()).replaceAll("[^0-9]", "");
+                            int stt = Integer.parseInt(sttPart);
+                            if (stt > maxNum) {
+                                maxNum = stt;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[LoHangDAO] Lỗi phát sinh số lô: " + e.getMessage());
+        }
+        // Trả về mã kế tiếp
+        return String.format("%s%03d", prefix, maxNum + 1);
+    }
 
     private LoHang mapResultSetToLoHang(ResultSet rs) throws SQLException {
         LoHang lo = new LoHang();
