@@ -5,6 +5,7 @@ import models.entity.BangPhanCong;
 import models.entity.CaLamViec;
 import models.entity.NhanVien;
 import utils.IconHelper;
+import utils.LichPhanCaExcelExporter;
 import utils.ThemeColors;
 import utils.UserSession;
 
@@ -14,6 +15,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -22,6 +24,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.IsoFields;
 import java.time.temporal.TemporalAdjusters;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -879,11 +883,70 @@ public class LichPhanCaPanel extends JPanel {
 
     private void xuatLichLamViec() {
         int weekNum = currentMonday.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
-        JOptionPane.showMessageDialog(this,
-                "ĐÃ XUẤT MA TRẬN LỊCH PHÂN CA TUẦN " + weekNum + " RA FILE EXCEL:\n" +
-                        "• File: export/LichPhanCa_Tuan" + weekNum + "_" + currentMonday.getYear() + ".xlsx\n" +
-                        "• Bao gồm toàn bộ phân công 4 ca và định mức nhân sự tuần.",
-                "Xuất lịch thành công", JOptionPane.INFORMATION_MESSAGE);
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Lưu lịch phân ca tuần dưới dạng Excel");
+        chooser.setFileFilter(new FileNameExtensionFilter("Excel Workbook (*.xlsx)", "xlsx"));
+        chooser.setSelectedFile(new java.io.File(
+                "LichPhanCa_Tuan" + weekNum + "_" + currentMonday.get(IsoFields.WEEK_BASED_YEAR) + ".xlsx"));
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
+
+        Path output = chooser.getSelectedFile().toPath();
+        if (!output.getFileName().toString().toLowerCase().endsWith(".xlsx")) {
+            output = Paths.get(output.toString() + ".xlsx");
+        }
+        if (java.nio.file.Files.exists(output)) {
+            int overwrite = JOptionPane.showConfirmDialog(this,
+                    "File đã tồn tại. Bạn có muốn ghi đè không?\n" + output.toAbsolutePath(),
+                    "Xác nhận ghi đè", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (overwrite != JOptionPane.YES_OPTION) return;
+        }
+
+        try {
+            List<List<String>> rows = new ArrayList<>();
+            List<String> header = new ArrayList<>();
+            header.add("Ca làm việc");
+            for (int day = 0; day < 7; day++) {
+                LocalDate date = currentMonday.plusDays(day);
+                header.add(tenThu(day) + " (" + dtfFull.format(date) + ")");
+            }
+            rows.add(header);
+
+            for (CaLamViec ca : controller.layDanhSachCaLamViec()) {
+                List<String> row = new ArrayList<>();
+                row.add(ca.getMaCa() + " - " + ca.getTenCa());
+                for (int day = 0; day < 7; day++) {
+                    List<BangPhanCong> assignments = controller.layPhanCongTheoCaVaNgay(
+                            ca.getMaCa(), currentMonday.plusDays(day));
+                    StringBuilder cell = new StringBuilder();
+                    for (BangPhanCong pc : assignments) {
+                        if (cell.length() > 0) cell.append("\n");
+                        String maNV = pc.getNhanVien() != null ? pc.getNhanVien().getMaNhanVien() : "";
+                        String tenNV = pc.getNhanVien() != null ? pc.getNhanVien().getHoTen() : "";
+                        cell.append(maNV).append(" - ").append(tenNV);
+                        if (pc.getGhiChu() != null && !pc.getGhiChu().trim().isEmpty()) {
+                            cell.append(" | ").append(pc.getGhiChu().trim());
+                        }
+                    }
+                    row.add(cell.length() == 0 ? "Chưa có nhân sự" : cell.toString());
+                }
+                rows.add(row);
+            }
+
+            LichPhanCaExcelExporter.export(output, "Phân ca tuần " + weekNum, rows);
+            int open = JOptionPane.showConfirmDialog(this,
+                    "Đã tạo file Excel thành công:\n" + output.toAbsolutePath() + "\n\nBạn có muốn mở file ngay không?",
+                    "Xuất lịch thành công", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
+            if (open == JOptionPane.YES_OPTION && Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(output.toFile());
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Không thể tạo file Excel:\n" + ex.getMessage(),
+                    "Lỗi xuất lịch", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private String tenThu(int dayIndex) {
+        return dayIndex == 6 ? "Chủ Nhật" : "Thứ " + (dayIndex + 2);
     }
 
     // ==========================================

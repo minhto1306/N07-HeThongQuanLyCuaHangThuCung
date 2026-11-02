@@ -579,7 +579,7 @@ public class BanGiaoCaPanel extends JPanel {
                     long tt = bgc.getTienCuoiCaThucTe() != null ? bgc.getTienCuoiCaThucTe().longValue() : 0L;
                     long cl = bgc.getTienChenhLech() != null ? bgc.getTienChenhLech().longValue() : 0L;
                     String gioKT = bgc.getGioKetThucThucTe() != null ? bgc.getGioKetThucThucTe().format(dtf) : "Đang mở";
-                    String ghiChu = bgc.getLyDoChenhLech() != null ? bgc.getLyDoChenhLech() : "Khớp két";
+                    String ghiChu = taoMoTaTrangThai(bgc);
                     modelLichSu.addRow(new Object[]{
                             bgc.getMaGiaoCa(), maCa, tenNV,
                             df.format(dauCa), df.format(ht), df.format(tt), df.format(cl),
@@ -601,6 +601,18 @@ public class BanGiaoCaPanel extends JPanel {
         if (tblLichSu != null) {
             tblLichSu.setRowSelectionInterval(0, 0);
         }
+    }
+
+    private String taoMoTaTrangThai(BangGiaoCa bgc) {
+        String lyDo = bgc.getLyDoChenhLech() != null ? bgc.getLyDoChenhLech().trim() : "";
+        if (lyDo.isEmpty()) lyDo = "Khớp két 100%";
+        if ("DA_DUYET".equals(bgc.getTrangThai())) {
+            String tenQuanLy = bgc.getQuanLyDuyet() != null && bgc.getQuanLyDuyet().getHoTen() != null
+                    ? bgc.getQuanLyDuyet().getHoTen() : "Không rõ";
+            return "✓ Đã duyệt (QL: " + tenQuanLy + ") | " + lyDo;
+        }
+        if ("CHO_DUYET".equals(bgc.getTrangThai())) return "⏳ Chờ Quản lý duyệt | " + lyDo;
+        return "Đang mở | " + lyDo;
     }
 
     public void thucHienGiaoCa() {
@@ -652,9 +664,7 @@ public class BanGiaoCaPanel extends JPanel {
         String maCa = caSelected.split("-")[0].trim();
         String maNV = UserSession.getUserId() != null ? UserSession.getUserId() : "NV002";
         String tenNV = UserSession.getFullName() != null ? UserSession.getFullName() : "Lê Anh Minh";
-        String ghiChuCho = "⏳ Chờ Quản lý duyệt" + (lyDoNhap.isEmpty() ? "" : " | " + lyDoNhap);
-
-        String maGC = luuBienBanGiaoCaXuongCSDL(maNV, tenNV, maCa, tienDauCa, lyThuyet, thucTe, chenhLech, ghiChuCho);
+        String maGC = luuBienBanGiaoCaXuongCSDL(maNV, tenNV, maCa, tienDauCa, lyThuyet, thucTe, chenhLech, lyDoNhap);
         if (maGC == null) {
             return;
         }
@@ -711,6 +721,10 @@ public class BanGiaoCaPanel extends JPanel {
                     BigDecimal.valueOf(chenhLech),
                     ghiChu, nowDt
             );
+            bgc.setTienThuTienMat(BigDecimal.valueOf(tienHeThongGhiNhan));
+            bgc.setTienChuyenKhoan(BigDecimal.valueOf(tienChuyenKhoanGhiNhan));
+            bgc.setTienHoanTra(BigDecimal.valueOf(tienHoanTraKhach));
+            bgc.setTrangThai("CHO_DUYET");
             if (!dao.insertBangGiaoCa(bgc)) {
                 throw new SQLException("Không có bản ghi bàn giao ca nào được lưu.");
             }
@@ -725,7 +739,8 @@ public class BanGiaoCaPanel extends JPanel {
         modelLichSu.insertRow(0, new Object[]{
                 maGC, maCa, tenNV,
                 df.format(dauCa), df.format(lyThuyet),
-                df.format(thucTe), df.format(chenhLech), nowStr, ghiChu
+                df.format(thucTe), df.format(chenhLech), nowStr,
+                "⏳ Chờ Quản lý duyệt | " + (ghiChu.isEmpty() ? "Khớp két 100%" : ghiChu)
         });
         if (tblLichSu != null && modelLichSu.getRowCount() > 0) {
             tblLichSu.setRowSelectionInterval(0, 0);
@@ -936,20 +951,16 @@ public class BanGiaoCaPanel extends JPanel {
             long chenhLech = caDangDuyet.getTienChenhLech() != null ? caDangDuyet.getTienChenhLech().longValue() : 0L;
             String thoiDiem = caDangDuyet.getGioKetThucThucTe() != null ? caDangDuyet.getGioKetThucThucTe().format(dtf) : LocalDateTime.now().format(dtf);
 
-            String ghiChuCu = caDangDuyet.getLyDoChenhLech() != null ? caDangDuyet.getLyDoChenhLech() : "";
-            String lyDoGoc = ghiChuCu
-                    .replace("⏳ Chờ Quản lý duyệt |", "")
-                    .replace("⏳ Chờ Quản lý duyệt", "")
-                    .replace("⏳ Chờ QL duyệt |", "")
-                    .replace("⏳ Chờ QL duyệt", "")
-                    .trim();
+            String lyDoGoc = caDangDuyet.getLyDoChenhLech() != null
+                    ? caDangDuyet.getLyDoChenhLech().trim() : "";
             if (lyDoGoc.isEmpty()) lyDoGoc = "Khớp két 100%";
 
             String tenQuanLyDuyet = UserSession.getFullName();
+            LocalDateTime thoiGianDuyet = LocalDateTime.now();
             String ghiChuMoi = "✓ Đã duyệt (QL: " + tenQuanLyDuyet + ") | " + lyDoGoc;
 
             BangGiaoCaDAO daoGiaoCa = new BangGiaoCaDAO();
-            boolean ok = daoGiaoCa.capNhatGhiChuDuyetCa(maGC, ghiChuMoi);
+            boolean ok = daoGiaoCa.duyetGiaoCa(maGC, UserSession.getUserId(), thoiGianDuyet);
             if (!ok) {
                 JOptionPane.showMessageDialog(dlg, "Lỗi khi cập nhật cơ sở dữ liệu!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
@@ -959,8 +970,10 @@ public class BanGiaoCaPanel extends JPanel {
             dlg.dispose();
 
             hienThiBienBanGiaoCaK80(maGC, maCa, tenNV, tenQuanLyDuyet, dauCa,
-                    Math.max(0, lyThuyet - dauCa), tienChuyenKhoanGhiNhan, 0L,
-                    lyThuyet, thucTe, chenhLech, ghiChuMoi, thoiDiem);
+                    caDangDuyet.getTienThuTienMat().longValue(),
+                    caDangDuyet.getTienChuyenKhoan().longValue(),
+                    caDangDuyet.getTienHoanTra().longValue(),
+                    lyThuyet, thucTe, chenhLech, ghiChuMoi, thoiDiem, thoiGianDuyet.format(dtf));
         });
 
         pnlActions.add(btnDong);
@@ -976,24 +989,30 @@ public class BanGiaoCaPanel extends JPanel {
         if (row < 0) row = 0;
 
         String maGC = String.valueOf(modelLichSu.getValueAt(row, 0));
-        String maCa = String.valueOf(modelLichSu.getValueAt(row, 1));
-        String thuNganGiao = String.valueOf(modelLichSu.getValueAt(row, 2));
-        long dauCa = parseSoTien(String.valueOf(modelLichSu.getValueAt(row, 3)), 1000000L);
-        long lyThuyet = parseSoTien(String.valueOf(modelLichSu.getValueAt(row, 4)), 0L);
-        long thucTe = parseSoTien(String.valueOf(modelLichSu.getValueAt(row, 5)), 0L);
-        long chenhLech = thucTe - lyThuyet;
-        String thoiDiem = String.valueOf(modelLichSu.getValueAt(row, 7));
-        String ghiChu = String.valueOf(modelLichSu.getValueAt(row, 8));
-
-        String nguoiNhan = ghiChu.contains("Đã duyệt") ? "Lê Khải Minh (Quản lý)" : "Đang chờ Quản lý ký nhận";
-        hienThiBienBanGiaoCaK80(maGC, maCa, thuNganGiao, nguoiNhan, dauCa,
-                Math.max(0, lyThuyet - dauCa), tienChuyenKhoanGhiNhan, tienHoanTraKhach,
-                lyThuyet, thucTe, chenhLech, ghiChu, thoiDiem);
+        try {
+            BangGiaoCa bgc = new BangGiaoCaDAO().getBangGiaoCaTheoMa(maGC);
+            if (bgc == null) throw new SQLException("Không tìm thấy biên bản " + maGC);
+            String maCa = bgc.getCaLamViec() != null ? bgc.getCaLamViec().getMaCa() : "";
+            String thuNganGiao = bgc.getNhanVien() != null ? bgc.getNhanVien().getHoTen() : "";
+            String nguoiNhan = bgc.getQuanLyDuyet() != null && bgc.getQuanLyDuyet().getHoTen() != null
+                    ? bgc.getQuanLyDuyet().getHoTen() : "Đang chờ Quản lý ký nhận";
+            String thoiDiem = bgc.getGioKetThucThucTe() != null ? bgc.getGioKetThucThucTe().format(dtf) : "Chưa chốt";
+            String thoiGianDuyet = bgc.getThoiGianDuyet() != null ? bgc.getThoiGianDuyet().format(dtf) : "Chưa duyệt";
+            hienThiBienBanGiaoCaK80(maGC, maCa, thuNganGiao, nguoiNhan,
+                    bgc.getTienDauCa().longValue(), bgc.getTienThuTienMat().longValue(),
+                    bgc.getTienChuyenKhoan().longValue(), bgc.getTienHoanTra().longValue(),
+                    bgc.getTienCuoiCaHeThong().longValue(), bgc.getTienCuoiCaThucTe().longValue(),
+                    bgc.getTienChenhLech().longValue(), taoMoTaTrangThai(bgc), thoiDiem, thoiGianDuyet);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Không thể tải dữ liệu lịch sử K80:\n" + ex.getMessage(),
+                    "Lỗi dữ liệu", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void hienThiBienBanGiaoCaK80(String maGC, String maCa, String nguoiGiao, String nguoiNhan,
                                          long dauCa, long thuTienMat, long thuChuyenKhoan, long chiHoanTra,
-                                         long lyThuyet, long thucTe, long chenhLech, String ghiChu, String thoiDiem) {
+                                         long lyThuyet, long thucTe, long chenhLech, String ghiChu,
+                                         String thoiDiem, String thoiGianDuyet) {
         StringBuilder sb = new StringBuilder();
         sb.append("====================================================\n");
         sb.append("        PET SHOP MANAGEMENT - HỆ THỐNG CỬA HÀNG      \n");
@@ -1002,6 +1021,7 @@ public class BanGiaoCaPanel extends JPanel {
         sb.append("Mã biên bản:        ").append(maGC).append("\n");
         sb.append("Ca làm việc:        ").append(maCa).append("\n");
         sb.append("Thời điểm chốt:     ").append(thoiDiem).append("\n");
+        sb.append("Thời điểm duyệt:    ").append(thoiGianDuyet).append("\n");
         sb.append("Thu ngân giao ca:   ").append(nguoiGiao).append("\n");
         sb.append("Quản lý / Nhận ca:  ").append(nguoiNhan).append("\n");
         sb.append("----------------------------------------------------\n");

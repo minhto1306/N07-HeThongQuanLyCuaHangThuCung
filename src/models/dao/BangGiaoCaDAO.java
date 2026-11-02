@@ -7,6 +7,7 @@ import utils.DBConnection;
 
 import java.sql.*;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,8 +25,9 @@ public class BangGiaoCaDAO {
     }
 
     public boolean insertBangGiaoCa(BangGiaoCa giaoCa) throws SQLException {
-        String sql = "INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, lyDoChenhLech, gioKetThucThucTe) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, " +
+                     "tienThuTienMat, tienChuyenKhoan, tienHoanTra, lyDoChenhLech, gioKetThucThucTe, trangThai, maQuanLyDuyet, thoiGianDuyet) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, giaoCa.getMaGiaoCa());
@@ -35,12 +37,20 @@ public class BangGiaoCaDAO {
             ps.setBigDecimal(5, giaoCa.getTienCuoiCaHeThong());
             ps.setBigDecimal(6, giaoCa.getTienCuoiCaThucTe());
             ps.setBigDecimal(7, giaoCa.getTienChenhLech());
-            ps.setString(8, giaoCa.getLyDoChenhLech());
+            ps.setBigDecimal(8, giaoCa.getTienThuTienMat());
+            ps.setBigDecimal(9, giaoCa.getTienChuyenKhoan());
+            ps.setBigDecimal(10, giaoCa.getTienHoanTra());
+            ps.setString(11, giaoCa.getLyDoChenhLech());
             if (giaoCa.getGioKetThucThucTe() != null) {
-                ps.setTimestamp(9, Timestamp.valueOf(giaoCa.getGioKetThucThucTe()));
+                ps.setTimestamp(12, Timestamp.valueOf(giaoCa.getGioKetThucThucTe()));
             } else {
-                ps.setNull(9, Types.TIMESTAMP);
+                ps.setNull(12, Types.TIMESTAMP);
             }
+            ps.setString(13, giaoCa.getTrangThai() != null ? giaoCa.getTrangThai() : "CHO_DUYET");
+            if (giaoCa.getQuanLyDuyet() != null) ps.setString(14, giaoCa.getQuanLyDuyet().getMaNhanVien());
+            else ps.setNull(14, Types.NVARCHAR);
+            if (giaoCa.getThoiGianDuyet() != null) ps.setTimestamp(15, Timestamp.valueOf(giaoCa.getThoiGianDuyet()));
+            else ps.setNull(15, Types.TIMESTAMP);
             return ps.executeUpdate() > 0;
         }
     }
@@ -49,16 +59,20 @@ public class BangGiaoCaDAO {
      * Chốt kết ca và ghi nhận đối soát chênh lệch tiền mặt
      */
     public boolean chotKetCa(BangGiaoCa giaoCa) throws SQLException {
-        String sql = "UPDATE BangGiaoCa SET tienCuoiCaHeThong = ?, tienCuoiCaThucTe = ?, tienChenhLech = ?, lyDoChenhLech = ?, gioKetThucThucTe = ? " +
-                     "WHERE maGiaoCa = ?";
+        String sql = "UPDATE BangGiaoCa SET tienCuoiCaHeThong=?, tienCuoiCaThucTe=?, tienChenhLech=?, tienThuTienMat=?, " +
+                     "tienChuyenKhoan=?, tienHoanTra=?, lyDoChenhLech=?, gioKetThucThucTe=?, trangThai=? WHERE maGiaoCa=?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setBigDecimal(1, giaoCa.getTienCuoiCaHeThong());
             ps.setBigDecimal(2, giaoCa.getTienCuoiCaThucTe());
             ps.setBigDecimal(3, giaoCa.getTienChenhLech());
-            ps.setString(4, giaoCa.getLyDoChenhLech());
-            ps.setTimestamp(5, Timestamp.valueOf(giaoCa.getGioKetThucThucTe() != null ? giaoCa.getGioKetThucThucTe() : LocalDateTime.now()));
-            ps.setString(6, giaoCa.getMaGiaoCa());
+            ps.setBigDecimal(4, giaoCa.getTienThuTienMat());
+            ps.setBigDecimal(5, giaoCa.getTienChuyenKhoan());
+            ps.setBigDecimal(6, giaoCa.getTienHoanTra());
+            ps.setString(7, giaoCa.getLyDoChenhLech());
+            ps.setTimestamp(8, Timestamp.valueOf(giaoCa.getGioKetThucThucTe() != null ? giaoCa.getGioKetThucThucTe() : LocalDateTime.now()));
+            ps.setString(9, giaoCa.getTrangThai() != null ? giaoCa.getTrangThai() : "CHO_DUYET");
+            ps.setString(10, giaoCa.getMaGiaoCa());
             return ps.executeUpdate() > 0;
         }
     }
@@ -68,10 +82,11 @@ public class BangGiaoCaDAO {
      */
     public List<BangGiaoCa> getAllBangGiaoCa() throws SQLException {
         List<BangGiaoCa> list = new ArrayList<>();
-        String sql = "SELECT bgc.*, nv.hoTen AS tenNhanVien, c.tenCa " +
+        String sql = "SELECT bgc.*, nv.hoTen AS tenNhanVien, c.tenCa, ql.hoTen AS tenQuanLyDuyet " +
                      "FROM BangGiaoCa bgc " +
                      "LEFT JOIN NhanVien nv ON bgc.maNhanVien = nv.maNhanVien " +
                      "LEFT JOIN CaLamViec c ON bgc.maCa = c.maCa " +
+                      "LEFT JOIN NhanVien ql ON bgc.maQuanLyDuyet = ql.maNhanVien " +
                      "ORDER BY bgc.gioKetThucThucTe DESC, bgc.maGiaoCa DESC";
 
         try (Connection conn = DBConnection.getConnection();
@@ -100,6 +115,7 @@ public class BangGiaoCaDAO {
                         rs.getString("lyDoChenhLech"),
                         gioKT
                 );
+                boSungThongTinK80(bgc, rs);
                 list.add(bgc);
             }
         }
@@ -124,10 +140,11 @@ public class BangGiaoCaDAO {
      * tính doanh thu cho ca kế tiếp.
      */
     public BangGiaoCa getCaBanGiaoGanNhat() throws SQLException {
-        String sql = "SELECT TOP 1 bgc.*, nv.hoTen AS tenNhanVien, c.tenCa " +
+        String sql = "SELECT TOP 1 bgc.*, nv.hoTen AS tenNhanVien, c.tenCa, ql.hoTen AS tenQuanLyDuyet " +
                      "FROM BangGiaoCa " +
                      "bgc LEFT JOIN NhanVien nv ON bgc.maNhanVien = nv.maNhanVien " +
                      "LEFT JOIN CaLamViec c ON bgc.maCa = c.maCa " +
+                      "LEFT JOIN NhanVien ql ON bgc.maQuanLyDuyet = ql.maNhanVien " +
                      "WHERE bgc.gioKetThucThucTe IS NOT NULL " +
                      "ORDER BY bgc.gioKetThucThucTe DESC, bgc.maGiaoCa DESC";
 
@@ -144,7 +161,7 @@ public class BangGiaoCaDAO {
                 ca.setTenCa(rs.getString("tenCa"));
 
                 Timestamp kt = rs.getTimestamp("gioKetThucThucTe");
-                return new BangGiaoCa(
+                BangGiaoCa bgc = new BangGiaoCa(
                         rs.getString("maGiaoCa"), nv, ca,
                         rs.getBigDecimal("tienDauCa"),
                         rs.getBigDecimal("tienCuoiCaHeThong"),
@@ -153,6 +170,8 @@ public class BangGiaoCaDAO {
                         rs.getString("lyDoChenhLech"),
                         kt != null ? kt.toLocalDateTime() : null
                 );
+                boSungThongTinK80(bgc, rs);
+                return bgc;
             }
         }
         return null;
@@ -204,10 +223,11 @@ public class BangGiaoCaDAO {
      * Lấy ca làm việc đang mở (chưa kết ca) của một nhân viên
      */
     public BangGiaoCa getCaHienTai(String maNhanVien) throws SQLException {
-        String sql = "SELECT TOP 1 bgc.*, nv.hoTen AS tenNhanVien, c.tenCa " +
+        String sql = "SELECT TOP 1 bgc.*, nv.hoTen AS tenNhanVien, c.tenCa, ql.hoTen AS tenQuanLyDuyet " +
                      "FROM BangGiaoCa bgc " +
                      "LEFT JOIN NhanVien nv ON bgc.maNhanVien = nv.maNhanVien " +
                      "LEFT JOIN CaLamViec c ON bgc.maCa = c.maCa " +
+                      "LEFT JOIN NhanVien ql ON bgc.maQuanLyDuyet = ql.maNhanVien " +
                      "WHERE bgc.maNhanVien = ? AND bgc.gioKetThucThucTe IS NULL " +
                      "ORDER BY bgc.maGiaoCa DESC";
 
@@ -224,7 +244,7 @@ public class BangGiaoCaDAO {
                     ca.setMaCa(rs.getString("maCa"));
                     ca.setTenCa(rs.getString("tenCa"));
 
-                    return new BangGiaoCa(
+                    BangGiaoCa bgc = new BangGiaoCa(
                             rs.getString("maGiaoCa"),
                             nv,
                             ca,
@@ -235,6 +255,8 @@ public class BangGiaoCaDAO {
                             rs.getString("lyDoChenhLech"),
                             null
                     );
+                    boSungThongTinK80(bgc, rs);
+                    return bgc;
                 }
             }
         }
@@ -306,12 +328,14 @@ public class BangGiaoCaDAO {
     /**
      * Cập nhật trạng thái Quản lý duyệt đối soát ca vào cột lyDoChenhLech của BangGiaoCa
      */
-    public boolean capNhatGhiChuDuyetCa(String maGiaoCa, String ghiChuMoi) {
-        String sql = "UPDATE BangGiaoCa SET lyDoChenhLech = ? WHERE maGiaoCa = ?";
+    public boolean duyetGiaoCa(String maGiaoCa, String maQuanLy, LocalDateTime thoiGianDuyet) {
+        String sql = "UPDATE BangGiaoCa SET trangThai='DA_DUYET', maQuanLyDuyet=?, thoiGianDuyet=? " +
+                     "WHERE maGiaoCa=? AND trangThai='CHO_DUYET'";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, ghiChuMoi);
-            ps.setString(2, maGiaoCa);
+            ps.setString(1, maQuanLy);
+            ps.setTimestamp(2, Timestamp.valueOf(thoiGianDuyet != null ? thoiGianDuyet : LocalDateTime.now()));
+            ps.setString(3, maGiaoCa);
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             System.err.println("[BangGiaoCaDAO] Lỗi cập nhật duyệt ca: " + e.getMessage());
@@ -324,11 +348,12 @@ public class BangGiaoCaDAO {
      */
     public List<BangGiaoCa> getDanhSachCaChoDuyet() {
         List<BangGiaoCa> list = new ArrayList<>();
-        String sql = "SELECT bgc.*, nv.hoTen AS tenNhanVien, c.tenCa " +
+        String sql = "SELECT bgc.*, nv.hoTen AS tenNhanVien, c.tenCa, ql.hoTen AS tenQuanLyDuyet " +
                      "FROM BangGiaoCa bgc " +
                      "LEFT JOIN NhanVien nv ON bgc.maNhanVien = nv.maNhanVien " +
                      "LEFT JOIN CaLamViec c ON bgc.maCa = c.maCa " +
-                     "WHERE bgc.lyDoChenhLech LIKE N'%Chờ%duyệt%' " +
+                      "LEFT JOIN NhanVien ql ON bgc.maQuanLyDuyet = ql.maNhanVien " +
+                     "WHERE bgc.trangThai = 'CHO_DUYET' " +
                      "ORDER BY bgc.maGiaoCa DESC";
 
         try (Connection conn = DBConnection.getConnection();
@@ -357,12 +382,65 @@ public class BangGiaoCaDAO {
                         rs.getString("lyDoChenhLech"),
                         gioKT
                 );
+                boSungThongTinK80(bgc, rs);
                 list.add(bgc);
             }
         } catch (Exception e) {
             System.err.println("[BangGiaoCaDAO] Lỗi lấy danh sách ca chờ duyệt: " + e.getMessage());
         }
         return list;
+    }
+
+    /** Lấy đầy đủ dữ liệu lịch sử của một biên bản để xem/in lại K80. */
+    public BangGiaoCa getBangGiaoCaTheoMa(String maGiaoCa) throws SQLException {
+        String sql = "SELECT bgc.*, nv.hoTen AS tenNhanVien, c.tenCa, ql.hoTen AS tenQuanLyDuyet " +
+                     "FROM BangGiaoCa bgc " +
+                     "LEFT JOIN NhanVien nv ON bgc.maNhanVien = nv.maNhanVien " +
+                     "LEFT JOIN CaLamViec c ON bgc.maCa = c.maCa " +
+                     "LEFT JOIN NhanVien ql ON bgc.maQuanLyDuyet = ql.maNhanVien " +
+                     "WHERE bgc.maGiaoCa = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maGiaoCa);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+
+                NhanVien nv = new NhanVien();
+                nv.setMaNhanVien(rs.getString("maNhanVien"));
+                nv.setHoTen(rs.getString("tenNhanVien"));
+                CaLamViec ca = new CaLamViec();
+                ca.setMaCa(rs.getString("maCa"));
+                ca.setTenCa(rs.getString("tenCa"));
+                Timestamp kt = rs.getTimestamp("gioKetThucThucTe");
+                BangGiaoCa bgc = new BangGiaoCa(
+                        rs.getString("maGiaoCa"), nv, ca,
+                        rs.getBigDecimal("tienDauCa"), rs.getBigDecimal("tienCuoiCaHeThong"),
+                        rs.getBigDecimal("tienCuoiCaThucTe"), rs.getBigDecimal("tienChenhLech"),
+                        rs.getString("lyDoChenhLech"), kt != null ? kt.toLocalDateTime() : null);
+                boSungThongTinK80(bgc, rs);
+                return bgc;
+            }
+        }
+    }
+
+    private void boSungThongTinK80(BangGiaoCa bgc, ResultSet rs) throws SQLException {
+        BigDecimal tienMat = rs.getBigDecimal("tienThuTienMat");
+        BigDecimal chuyenKhoan = rs.getBigDecimal("tienChuyenKhoan");
+        BigDecimal hoanTra = rs.getBigDecimal("tienHoanTra");
+        bgc.setTienThuTienMat(tienMat != null ? tienMat : BigDecimal.ZERO);
+        bgc.setTienChuyenKhoan(chuyenKhoan != null ? chuyenKhoan : BigDecimal.ZERO);
+        bgc.setTienHoanTra(hoanTra != null ? hoanTra : BigDecimal.ZERO);
+        bgc.setTrangThai(rs.getString("trangThai"));
+
+        String maQuanLy = rs.getString("maQuanLyDuyet");
+        if (maQuanLy != null && !maQuanLy.trim().isEmpty()) {
+            NhanVien quanLy = new NhanVien();
+            quanLy.setMaNhanVien(maQuanLy);
+            quanLy.setHoTen(rs.getString("tenQuanLyDuyet"));
+            bgc.setQuanLyDuyet(quanLy);
+        }
+        Timestamp thoiGianDuyet = rs.getTimestamp("thoiGianDuyet");
+        bgc.setThoiGianDuyet(thoiGianDuyet != null ? thoiGianDuyet.toLocalDateTime() : null);
     }
 
     /**
