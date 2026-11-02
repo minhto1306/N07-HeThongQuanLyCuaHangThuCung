@@ -22,6 +22,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -35,6 +36,8 @@ import java.util.List;
  * 2. Bàn giao chờ duyệt (Async Handover): Thu ngân gửi phiếu "⏳ Chờ QL duyệt" rồi đăng xuất -> Quản lý (admin) đăng nhập vào sau và bấm "✅ Quản lý Duyệt & Xác nhận Két".
  */
 public class BanGiaoCaPanel extends JPanel {
+
+    private static final long TIEN_BAN_GIAO_MAU = 6_500_000L;
 
     private final DecimalFormat df = new DecimalFormat("#,### đ");
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -56,7 +59,7 @@ public class BanGiaoCaPanel extends JPanel {
     private JButton btnQuanLyDuyet;
     private JButton btnChotCa;
 
-    private long tienDauCa = 1000000L;
+    private long tienDauCa = TIEN_BAN_GIAO_MAU;
     private long tienHeThongGhiNhan = 0L;
     private long tienChuyenKhoanGhiNhan = 0L;
     private long tienHoanTraKhach = 0L;
@@ -83,7 +86,10 @@ public class BanGiaoCaPanel extends JPanel {
         pnl.setBackground(ThemeColors.SURFACE);
         pnl.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
 
-        JPanel pnlHeader = new JPanel(new BorderLayout(8, 0));
+        // Xếp tiêu đề và badge theo chiều dọc để nội dung dài không đè lên nhau
+        // khi panel bên trái bị thu hẹp hoặc Windows đang dùng display scaling.
+        JPanel pnlHeader = new JPanel();
+        pnlHeader.setLayout(new BoxLayout(pnlHeader, BoxLayout.Y_AXIS));
         pnlHeader.setOpaque(false);
 
         JLabel lblTitle = new JLabel("BIÊN BẢN ĐỐI SOÁT & BÀN GIAO KÉT TIỀN",
@@ -91,10 +97,17 @@ public class BanGiaoCaPanel extends JPanel {
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblTitle.setForeground(ThemeColors.TEXT_PRIMARY);
         lblTitle.setIconTextGap(8);
+        lblTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         lblVaiTroHienTai = ThemeColors.createBadge(UserSession.getRoleCode(), ThemeColors.PRIMARY_SOFT, ThemeColors.PRIMARY_ACTIVE);
-        pnlHeader.add(lblTitle, BorderLayout.WEST);
-        pnlHeader.add(lblVaiTroHienTai, BorderLayout.EAST);
+        JPanel pnlRoleBadge = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        pnlRoleBadge.setOpaque(false);
+        pnlRoleBadge.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlRoleBadge.add(lblVaiTroHienTai);
+
+        pnlHeader.add(lblTitle);
+        pnlHeader.add(Box.createVerticalStrut(6));
+        pnlHeader.add(pnlRoleBadge);
         pnl.add(pnlHeader, BorderLayout.NORTH);
 
         JPanel pnlForm = new JPanel(new GridBagLayout());
@@ -128,21 +141,19 @@ public class BanGiaoCaPanel extends JPanel {
         lblThuNganHienTai.setForeground(ThemeColors.TEXT_PRIMARY);
         pnlForm.add(lblThuNganHienTai, gbc);
 
-        // Dòng 2: Tiền đầu ca
+        // Dòng 2: Tiền đầu ca kế thừa từ ca vừa bàn giao
         gbc.gridx = 0; gbc.gridy = 2;
-        pnlForm.add(taoLabelForm("(1) Tiền lẻ đầu ca trong két:"), gbc);
+        pnlForm.add(taoLabelForm("(1) Tiền đầu ca kế thừa:"), gbc);
 
         gbc.gridx = 1;
-        txtTienDauCa = new JTextField("1000000");
+        txtTienDauCa = new JTextField(String.valueOf(TIEN_BAN_GIAO_MAU));
         txtTienDauCa.setFont(new Font("Segoe UI", Font.BOLD, 13));
         txtTienDauCa.setPreferredSize(new Dimension(160, 30));
         txtTienDauCa.setBorder(ThemeColors.createInputBorder());
-        txtTienDauCa.setToolTipText("Tiền mặt định mức đầu ca (Mặc định: 1.000.000 đ, có thể điều chỉnh)");
-        txtTienDauCa.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { capNhatSoLieuLyThuyetTuInputDauCa(); }
-            @Override public void removeUpdate(DocumentEvent e) { capNhatSoLieuLyThuyetTuInputDauCa(); }
-            @Override public void changedUpdate(DocumentEvent e) { capNhatSoLieuLyThuyetTuInputDauCa(); }
-        });
+        txtTienDauCa.setEditable(false);
+        txtTienDauCa.setFocusable(false);
+        txtTienDauCa.setBackground(ThemeColors.PRIMARY_TINT);
+        txtTienDauCa.setToolTipText("Tự động lấy từ tiền thực tế của ca vừa bàn giao gần nhất");
         pnlForm.add(txtTienDauCa, gbc);
 
         // Dòng 3: Doanh thu tiền mặt hệ thống
@@ -188,52 +199,36 @@ public class BanGiaoCaPanel extends JPanel {
         lblTienDuKien.setForeground(ThemeColors.SUCCESS_TEXT);
         pnlForm.add(lblTienDuKien, gbc);
 
-        // Dòng 7: Tiền thực tế kiểm đếm + Nút điền nhanh
+        // Dòng 7: Tiền thực tế do thu ngân tự kiểm đếm
         gbc.gridx = 0; gbc.gridy = 7;
         JLabel lblTtTitle = new JLabel("Tiền mặt thực tế kiểm đếm (*):");
         lblTtTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
         lblTtTitle.setForeground(ThemeColors.TEXT_PRIMARY);
+        lblTtTitle.setPreferredSize(new Dimension(210, 24));
+        lblTtTitle.setMinimumSize(new Dimension(210, 24));
         pnlForm.add(lblTtTitle, gbc);
 
         gbc.gridx = 1;
-        JPanel pnlThucTeBox = new JPanel(new BorderLayout(4, 0));
-        pnlThucTeBox.setOpaque(false);
-        txtTienThucTe = new JTextField("1000000");
+        txtTienThucTe = new JTextField("");
         txtTienThucTe.setFont(new Font("Segoe UI", Font.BOLD, 14));
         txtTienThucTe.setPreferredSize(new Dimension(135, 32));
         txtTienThucTe.setBorder(ThemeColors.createInputBorder());
+        txtTienThucTe.setToolTipText("Nhập tổng số tiền mặt thực tế vừa kiểm đếm trong két");
         txtTienThucTe.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { tinhChenhLech(); }
             @Override public void removeUpdate(DocumentEvent e) { tinhChenhLech(); }
             @Override public void changedUpdate(DocumentEvent e) { tinhChenhLech(); }
         });
-
-        JButton btnKhopKet = new JButton("Đúng bằng LT");
-        btnKhopKet.setFont(new Font("Segoe UI", Font.BOLD, 10));
-        btnKhopKet.setMargin(new Insets(2, 6, 2, 6));
-        btnKhopKet.setBackground(ThemeColors.PRIMARY_TINT);
-        btnKhopKet.setForeground(ThemeColors.PRIMARY_ACTIVE);
-        btnKhopKet.setFocusPainted(false);
-        btnKhopKet.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnKhopKet.setToolTipText("Điền nhanh số tiền thực tế khớp 100% với lý thuyết két");
-        btnKhopKet.addActionListener(e -> {
-            long lt = tinhTongLyThuyetHienTai();
-            txtTienThucTe.setText(String.valueOf(lt));
-            tinhChenhLech();
-        });
-
-        pnlThucTeBox.add(txtTienThucTe, BorderLayout.CENTER);
-        pnlThucTeBox.add(btnKhopKet, BorderLayout.EAST);
-        pnlForm.add(pnlThucTeBox, gbc);
+        pnlForm.add(txtTienThucTe, gbc);
 
         // Dòng 8: Chênh lệch
         gbc.gridx = 0; gbc.gridy = 8;
         pnlForm.add(taoLabelForm("Chênh lệch (Thực tế - Lý thuyết):"), gbc);
 
         gbc.gridx = 1;
-        lblChenhLech = new JLabel("0 đ (Khớp két 100%)");
+        lblChenhLech = new JLabel("Chưa kiểm đếm tiền mặt");
         lblChenhLech.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        lblChenhLech.setForeground(ThemeColors.SUCCESS);
+        lblChenhLech.setForeground(ThemeColors.TEXT_MUTED);
         pnlForm.add(lblChenhLech, gbc);
 
         // Dòng 9: Lý do giải trình / Ghi chú bàn giao
@@ -268,7 +263,7 @@ public class BanGiaoCaPanel extends JPanel {
         JPanel pnlButtons = new JPanel(new GridLayout(2, 1, 0, 6));
         pnlButtons.setOpaque(false);
 
-        btnChotCa = new JButton("CHỐT CA & BÀN GIAO KÉT TIỀN...",
+        btnChotCa = new JButton("CHỐT CA & BÀN GIAO KÉT TIỀN",
                 IconHelper.getIcon(IconHelper.CLIPBOARD_CHECK, 16, Color.WHITE));
         btnChotCa.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnChotCa.setBackground(ThemeColors.PRIMARY);
@@ -312,6 +307,9 @@ public class BanGiaoCaPanel extends JPanel {
         JLabel lbl = new JLabel(text);
         lbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lbl.setForeground(ThemeColors.TEXT_SECONDARY);
+        // Giữ đủ chỗ cho các nhãn dài khi Windows dùng display scaling lớn.
+        lbl.setPreferredSize(new Dimension(210, 24));
+        lbl.setMinimumSize(new Dimension(210, 24));
         return lbl;
     }
 
@@ -339,7 +337,10 @@ public class BanGiaoCaPanel extends JPanel {
         pnl.setBackground(ThemeColors.SURFACE);
         pnl.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
 
-        JPanel pnlTop = new JPanel(new BorderLayout(8, 0));
+        // Đặt dòng hướng dẫn dưới tiêu đề thay vì ép sang mép phải. Cách này
+        // tránh hai label chồng nhau ở cửa sổ nhỏ hoặc khi font được scale lớn.
+        JPanel pnlTop = new JPanel();
+        pnlTop.setLayout(new BoxLayout(pnlTop, BoxLayout.Y_AXIS));
         pnlTop.setOpaque(false);
 
         JLabel lblTitle = new JLabel("LỊCH SỬ BÀN GIAO & XÁC NHẬN ĐỐI SOÁT CA",
@@ -347,13 +348,16 @@ public class BanGiaoCaPanel extends JPanel {
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblTitle.setForeground(ThemeColors.TEXT_PRIMARY);
         lblTitle.setIconTextGap(8);
+        lblTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel lblHint = new JLabel("Chọn 1 dòng bên dưới để Quản lý duyệt hoặc In biên bản K80", SwingConstants.RIGHT);
+        JLabel lblHint = new JLabel("Chọn một dòng bên dưới để Quản lý duyệt hoặc in biên bản K80", SwingConstants.LEFT);
         lblHint.setFont(new Font("Segoe UI", Font.ITALIC, 11));
         lblHint.setForeground(ThemeColors.TEXT_MUTED);
+        lblHint.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        pnlTop.add(lblTitle, BorderLayout.WEST);
-        pnlTop.add(lblHint, BorderLayout.EAST);
+        pnlTop.add(lblTitle);
+        pnlTop.add(Box.createVerticalStrut(4));
+        pnlTop.add(lblHint);
         pnl.add(pnlTop, BorderLayout.NORTH);
 
         String[] cols = {"Mã GC", "Ca", "Thu ngân giao", "Đầu ca", "Lý thuyết két", "Thực tế đếm", "Chênh lệch", "Thời điểm chốt", "Trạng thái & Ghi chú đối soát"};
@@ -371,6 +375,9 @@ public class BanGiaoCaPanel extends JPanel {
         tblLichSu.setSelectionBackground(ThemeColors.PRIMARY_SOFT);
         tblLichSu.setSelectionForeground(ThemeColors.TEXT_PRIMARY);
         tblLichSu.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        // Không ép co các cột đến mức mất nội dung. Khi cửa sổ hẹp, bảng sẽ
+        // xuất hiện thanh cuộn ngang thay vì cắt tiêu đề và ghi chú đối soát.
+        tblLichSu.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
         tblLichSu.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
         tblLichSu.getTableHeader().setBackground(ThemeColors.PRIMARY_TINT);
@@ -383,7 +390,13 @@ public class BanGiaoCaPanel extends JPanel {
         tblLichSu.getColumnModel().getColumn(0).setCellRenderer(center);
         tblLichSu.getColumnModel().getColumn(1).setPreferredWidth(65);
         tblLichSu.getColumnModel().getColumn(1).setCellRenderer(center);
-        tblLichSu.getColumnModel().getColumn(8).setPreferredWidth(210);
+        tblLichSu.getColumnModel().getColumn(2).setPreferredWidth(115);
+        tblLichSu.getColumnModel().getColumn(3).setPreferredWidth(105);
+        tblLichSu.getColumnModel().getColumn(4).setPreferredWidth(120);
+        tblLichSu.getColumnModel().getColumn(5).setPreferredWidth(115);
+        tblLichSu.getColumnModel().getColumn(6).setPreferredWidth(105);
+        tblLichSu.getColumnModel().getColumn(7).setPreferredWidth(135);
+        tblLichSu.getColumnModel().getColumn(8).setPreferredWidth(310);
         tblLichSu.getColumnModel().getColumn(8).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
@@ -411,14 +424,15 @@ public class BanGiaoCaPanel extends JPanel {
         JPanel pnlRightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         pnlRightActions.setOpaque(false);
 
-        btnQuanLyDuyet = new JButton("✓ QUẢN LÝ DUYỆT & XÁC NHẬN KÉT CA ĐANG CHỌN",
+        btnQuanLyDuyet = new JButton("DUYỆT & XÁC NHẬN CA ĐANG CHỌN",
                 IconHelper.getIcon(IconHelper.SHIELD, 15, Color.WHITE));
         btnQuanLyDuyet.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnQuanLyDuyet.setBackground(new Color(0x05, 0x96, 0x69));
         btnQuanLyDuyet.setForeground(Color.WHITE);
         btnQuanLyDuyet.setFocusPainted(false);
         btnQuanLyDuyet.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnQuanLyDuyet.setPreferredSize(new Dimension(330, 38));
+        btnQuanLyDuyet.setPreferredSize(new Dimension(310, 38));
+        btnQuanLyDuyet.setToolTipText("Quản lý duyệt và xác nhận két của ca đang chọn");
         btnQuanLyDuyet.setBorder(new CompoundBorder(
                 new LineBorder(new Color(0x04, 0x78, 0x57), 1, true),
                 new EmptyBorder(6, 12, 6, 12)
@@ -456,14 +470,36 @@ public class BanGiaoCaPanel extends JPanel {
             }
 
             BangGiaoCaDAO dao = new BangGiaoCaDAO();
-            tienHeThongGhiNhan = dao.tinhDoanhThuTienMatTrongNgay();
-            tienChuyenKhoanGhiNhan = dao.tinhDoanhThuChuyenKhoanTrongNgay();
-            tienHoanTraKhach = dao.tinhTongTienHoanTraTrongNgay();
-
-            long dauCaVal = parseSoTien(txtTienDauCa != null ? txtTienDauCa.getText() : "1000000", 1000000L);
-            tienDauCa = dauCaVal;
+            try {
+                BangGiaoCa caBanGiaoGanNhat = dao.getCaBanGiaoGanNhat();
+                if (caBanGiaoGanNhat != null) {
+                    tienDauCa = caBanGiaoGanNhat.getTienCuoiCaThucTe() != null
+                            ? caBanGiaoGanNhat.getTienCuoiCaThucTe().longValue()
+                            : TIEN_BAN_GIAO_MAU;
+                    LocalDateTime mocBatDauCa = caBanGiaoGanNhat.getGioKetThucThucTe();
+                    tienHeThongGhiNhan = dao.tinhDoanhThuTienMatTuThoiDiem(mocBatDauCa);
+                    tienChuyenKhoanGhiNhan = dao.tinhDoanhThuChuyenKhoanTuThoiDiem(mocBatDauCa);
+                    tienHoanTraKhach = dao.tinhTongTienHoanTraTuThoiDiem(mocBatDauCa);
+                } else {
+                    tienDauCa = TIEN_BAN_GIAO_MAU;
+                    LocalDateTime dauNgay = java.time.LocalDate.now().atStartOfDay();
+                    tienHeThongGhiNhan = dao.tinhDoanhThuTienMatTuThoiDiem(dauNgay);
+                    tienChuyenKhoanGhiNhan = dao.tinhDoanhThuChuyenKhoanTuThoiDiem(dauNgay);
+                    tienHoanTraKhach = dao.tinhTongTienHoanTraTuThoiDiem(dauNgay);
+                }
+            } catch (Exception e) {
+                // Dữ liệu mẫu giữ cho màn hình demo nhất quán khi CSDL chưa sẵn sàng.
+                tienDauCa = TIEN_BAN_GIAO_MAU;
+                tienHeThongGhiNhan = 0L;
+                tienChuyenKhoanGhiNhan = 0L;
+                tienHoanTraKhach = 0L;
+                System.err.println("[BanGiaoCaPanel] Không lấy được tiền bàn giao ca gần nhất: " + e.getMessage());
+            }
             long tongLyThuyet = tinhTongLyThuyetHienTai();
 
+            if (txtTienDauCa != null) {
+                txtTienDauCa.setText(String.valueOf(tienDauCa));
+            }
             if (lblTienHeThong != null) {
                 lblTienHeThong.setText("+" + df.format(tienHeThongGhiNhan));
             }
@@ -476,23 +512,10 @@ public class BanGiaoCaPanel extends JPanel {
             if (lblTienDuKien != null) {
                 lblTienDuKien.setText(df.format(tongLyThuyet));
             }
-            if (txtTienThucTe != null) {
-                txtTienThucTe.setText(String.valueOf(tongLyThuyet));
-            }
 
             dongBoLichSuGiaoCaTuDatabase();
         } finally {
             dangCapNhatTuDong = false;
-        }
-        tinhChenhLech();
-    }
-
-    private void capNhatSoLieuLyThuyetTuInputDauCa() {
-        if (dangCapNhatTuDong) return;
-        tienDauCa = parseSoTien(txtTienDauCa != null ? txtTienDauCa.getText() : "1000000", 0L);
-        long tongLyThuyet = tinhTongLyThuyetHienTai();
-        if (lblTienDuKien != null) {
-            lblTienDuKien.setText(df.format(tongLyThuyet));
         }
         tinhChenhLech();
     }
@@ -517,7 +540,12 @@ public class BanGiaoCaPanel extends JPanel {
         try {
             long lyThuyet = tinhTongLyThuyetHienTai();
             String text = txtTienThucTe.getText().replaceAll("[^0-9]", "").trim();
-            long thucTe = text.isEmpty() ? 0 : Long.parseLong(text);
+            if (text.isEmpty()) {
+                lblChenhLech.setText("Chưa kiểm đếm tiền mặt");
+                lblChenhLech.setForeground(ThemeColors.TEXT_MUTED);
+                return;
+            }
+            long thucTe = Long.parseLong(text);
             long chenhLech = thucTe - lyThuyet;
 
             if (chenhLech == 0) {
@@ -566,9 +594,13 @@ public class BanGiaoCaPanel extends JPanel {
         } catch (Exception e) {
             System.err.println("[BanGiaoCaPanel] Lỗi tải lịch sử giao ca CSDL: " + e.getMessage());
         }
-        modelLichSu.addRow(new Object[]{"GC001", "CA03", "Lê Anh Minh", "1,000,000 đ", "7,850,000 đ", "7,850,000 đ", "0 đ", "09/10/2026 22:05", "✓ Đã duyệt (QL: Lê Khải Minh) | Khớp số liệu"});
-        modelLichSu.addRow(new Object[]{"GC002", "CA02", "Tô Thanh Đạt", "1,000,000 đ", "6,120,000 đ", "6,100,000 đ", "-20,000 đ", "09/10/2026 17:35", "✓ Đã duyệt (QL: Lê Khải Minh) | Lệch tiền thối"});
-        modelLichSu.addRow(new Object[]{"GC003", "CA01", "Lê Anh Minh", "1,000,000 đ", "5,200,000 đ", "5,200,000 đ", "0 đ", "09/10/2026 12:02", "✓ Đã duyệt (QL: Lê Khải Minh) | Khớp két"});
+        // Dữ liệu demo theo chuỗi bàn giao liên tục, mới nhất luôn nằm trên cùng.
+        modelLichSu.addRow(new Object[]{"GC003", "CA03", "Lê Khải Minh", "4,580,000 đ", "6,500,000 đ", "6,500,000 đ", "0 đ", "02/11/2026 22:00", "✓ Đã duyệt (QL: Trần Quản Lý) | Khớp két 100%"});
+        modelLichSu.addRow(new Object[]{"GC002", "CA02", "Trần Thị Thu Hà", "3,500,000 đ", "4,600,000 đ", "4,580,000 đ", "-20,000 đ", "02/11/2026 17:30", "✓ Đã duyệt (QL: Trần Quản Lý) | Thối nhầm 20.000 đ"});
+        modelLichSu.addRow(new Object[]{"GC001", "CA01", "Lê Anh Minh", "1,000,000 đ", "3,500,000 đ", "3,500,000 đ", "0 đ", "02/11/2026 12:00", "✓ Đã duyệt (QL: Trần Quản Lý) | Khớp két 100%"});
+        if (tblLichSu != null) {
+            tblLichSu.setRowSelectionInterval(0, 0);
+        }
     }
 
     public void thucHienGiaoCa() {
@@ -582,7 +614,27 @@ public class BanGiaoCaPanel extends JPanel {
     private void xacNhanBanGiaoCa() {
         tinhChenhLech();
         long lyThuyet = tinhTongLyThuyetHienTai();
-        long thucTe = parseSoTien(txtTienThucTe.getText(), 0L);
+        String tienThucTeRaw = txtTienThucTe.getText() != null
+                ? txtTienThucTe.getText().replaceAll("[^0-9]", "").trim()
+                : "";
+        if (tienThucTeRaw.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Vui lòng kiểm đếm và nhập tổng tiền mặt thực tế trong két trước khi chốt ca!",
+                    "Chưa nhập tiền thực tế", JOptionPane.WARNING_MESSAGE);
+            txtTienThucTe.requestFocus();
+            return;
+        }
+
+        long thucTe;
+        try {
+            thucTe = Long.parseLong(tienThucTeRaw);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Số tiền thực tế không hợp lệ. Vui lòng kiểm tra lại!",
+                    "Dữ liệu không hợp lệ", JOptionPane.WARNING_MESSAGE);
+            txtTienThucTe.requestFocus();
+            return;
+        }
         long chenhLech = thucTe - lyThuyet;
 
         String lyDoNhap = txtLyDoChenhLech.getText().trim();
@@ -603,6 +655,13 @@ public class BanGiaoCaPanel extends JPanel {
         String ghiChuCho = "⏳ Chờ Quản lý duyệt" + (lyDoNhap.isEmpty() ? "" : " | " + lyDoNhap);
 
         String maGC = luuBienBanGiaoCaXuongCSDL(maNV, tenNV, maCa, tienDauCa, lyThuyet, thucTe, chenhLech, ghiChuCho);
+        if (maGC == null) {
+            return;
+        }
+
+        btnChotCa.setEnabled(false);
+        txtTienThucTe.setEditable(false);
+        txtLyDoChenhLech.setEditable(false);
 
         int askLogout = JOptionPane.showConfirmDialog(this,
                 "ĐÃ GỬI BIÊN BẢN KẾT CA [" + maGC + "] LÊN HỆ THỐNG!\n" +
@@ -652,9 +711,15 @@ public class BanGiaoCaPanel extends JPanel {
                     BigDecimal.valueOf(chenhLech),
                     ghiChu, nowDt
             );
-            dao.insertBangGiaoCa(bgc);
+            if (!dao.insertBangGiaoCa(bgc)) {
+                throw new SQLException("Không có bản ghi bàn giao ca nào được lưu.");
+            }
         } catch (Exception e) {
             System.err.println("[BanGiaoCaPanel] Lỗi lưu giao ca CSDL: " + e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Không thể lưu biên bản giao ca xuống CSDL. Dữ liệu chưa được chốt!\n" + e.getMessage(),
+                    "Lỗi lưu bàn giao ca", JOptionPane.ERROR_MESSAGE);
+            return null;
         }
 
         modelLichSu.insertRow(0, new Object[]{
@@ -840,12 +905,13 @@ public class BanGiaoCaPanel extends JPanel {
         JPanel pnlActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         pnlActions.setOpaque(false);
 
-        JButton btnDuyet = new JButton("✓ PHÊ DUYỆT ĐỐI SOÁT & KÝ NHẬN KÉT (IN K80)",
+        JButton btnDuyet = new JButton("PHÊ DUYỆT & KÝ NHẬN KÉT",
                 IconHelper.getIcon(IconHelper.CHECK, 15, Color.WHITE));
         btnDuyet.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnDuyet.setBackground(new Color(0x05, 0x96, 0x69));
         btnDuyet.setForeground(Color.WHITE);
-        btnDuyet.setPreferredSize(new Dimension(320, 38));
+        btnDuyet.setPreferredSize(new Dimension(250, 38));
+        btnDuyet.setToolTipText("Phê duyệt đối soát, ký nhận két và in biên bản K80");
         btnDuyet.setFocusPainted(false);
         btnDuyet.setCursor(new Cursor(Cursor.HAND_CURSOR));
 

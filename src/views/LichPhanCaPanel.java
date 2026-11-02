@@ -534,6 +534,113 @@ public class LichPhanCaPanel extends JPanel {
     // ==========================================
     // DIALOG ĐIỀU PHỐI & PHÂN CÔNG CA LÀM VIỆC
     // ==========================================
+    private boolean xuLyLuuPhanCong(NhanVien nv, CaLamViec ca, LocalDate targetDate, String nhiemVuMoi) {
+        if (!UserSession.isQuanLy()) {
+            JOptionPane.showMessageDialog(this,
+                    "Chỉ Quản lý (NVQL) mới có quyền phân công và xác nhận tăng ca!",
+                    "Không đủ quyền", JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        if (nv == null || ca == null || targetDate == null) return false;
+
+        String noteMoi = nhiemVuMoi != null ? nhiemVuMoi.trim() : "";
+        BangPhanCong trungCa = controller.timPhanCong(
+                nv.getMaNhanVien(), targetDate, ca.getMaCa());
+
+        // Cùng nhân viên + cùng ngày + cùng ca: không tạo thẻ trùng.
+        if (trungCa != null) {
+            String noteCu = trungCa.getGhiChu() != null ? trungCa.getGhiChu().trim() : "";
+            Object[] options = {"Bổ sung nhiệm vụ", "Thay nhiệm vụ cũ", "Hủy"};
+            int choice = JOptionPane.showOptionDialog(this,
+                    "Nhân viên [" + nv.getHoTen() + "] đã được phân công "
+                            + ca.getTenCa() + " ngày " + targetDate.format(dtfFull) + ".\n\n"
+                            + "Nhiệm vụ hiện tại: " + (noteCu.isEmpty() ? "(Chưa có)" : noteCu) + "\n"
+                            + "Nhiệm vụ mới: " + (noteMoi.isEmpty() ? "(Để trống)" : noteMoi) + "\n\n"
+                            + "Bạn muốn xử lý nhiệm vụ như thế nào?",
+                    "Phân công đã tồn tại",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    options,
+                    options[0]);
+
+            if (choice == 2 || choice == JOptionPane.CLOSED_OPTION) return false;
+
+            String noteCanLuu;
+            if (choice == 0) {
+                if (noteMoi.isEmpty()) {
+                    JOptionPane.showMessageDialog(this,
+                            "Vui lòng nhập nhiệm vụ mới cần bổ sung!",
+                            "Nhiệm vụ đang trống", JOptionPane.WARNING_MESSAGE);
+                    return false;
+                }
+                if (noteCu.isEmpty()) {
+                    noteCanLuu = noteMoi;
+                } else if (noteCu.toLowerCase().contains(noteMoi.toLowerCase())) {
+                    noteCanLuu = noteCu;
+                } else {
+                    noteCanLuu = noteCu + "; " + noteMoi;
+                }
+            } else {
+                noteCanLuu = noteMoi;
+            }
+
+            if (!controller.xepCaLamViec(nv, ca, targetDate, noteCanLuu)) {
+                hienThiLoiLuuPhanCong();
+                return false;
+            }
+            return true;
+        }
+
+        List<BangPhanCong> cacCaTrongNgay = controller.layPhanCongTheoNhanVienVaNgay(
+                nv.getMaNhanVien(), targetDate);
+
+        // Quản lý được xếp tăng ca tối đa 2 ca, và hai ca phải nằm liền nhau.
+        if (!cacCaTrongNgay.isEmpty()) {
+            if (cacCaTrongNgay.size() >= 2) {
+                JOptionPane.showMessageDialog(this,
+                        "Nhân viên [" + nv.getHoTen() + "] đã được xếp đủ 2 ca trong ngày.\n"
+                                + "Không thể phân công thêm ca thứ ba!",
+                        "Vượt giới hạn tăng ca", JOptionPane.WARNING_MESSAGE);
+                return false;
+            }
+
+            CaLamViec caDaCo = cacCaTrongNgay.get(0).getCaLamViec();
+            if (!controller.laHaiCaLienTiep(caDaCo, ca)) {
+                JOptionPane.showMessageDialog(this,
+                        "Chỉ được tăng ca ở hai ca liền nhau.\n"
+                                + "Ca hiện có: " + caDaCo.getTenCa() + "\n"
+                                + "Ca đang chọn: " + ca.getTenCa(),
+                        "Hai ca không liền nhau", JOptionPane.WARNING_MESSAGE);
+                return false;
+            }
+
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "XÁC NHẬN PHÂN CÔNG TĂNG CA\n\n"
+                            + "Nhân viên: " + nv.getHoTen() + "\n"
+                            + "Ngày: " + targetDate.format(dtfFull) + "\n"
+                            + "Ca đã có: " + caDaCo.getTenCa() + "\n"
+                            + "Ca tăng thêm: " + ca.getTenCa() + "\n\n"
+                            + "Hai ca liền nhau và sẽ được lưu thành hai phân công riêng. Tiếp tục?",
+                    "Quản lý xác nhận tăng ca",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (confirm != JOptionPane.YES_OPTION) return false;
+        }
+
+        if (!controller.xepCaLamViec(nv, ca, targetDate, noteMoi)) {
+            hienThiLoiLuuPhanCong();
+            return false;
+        }
+        return true;
+    }
+
+    private void hienThiLoiLuuPhanCong() {
+        JOptionPane.showMessageDialog(this,
+                "Không thể lưu phân công xuống CSDL. Vui lòng kiểm tra lại dữ liệu hoặc kết nối!",
+                "Lưu phân công thất bại", JOptionPane.ERROR_MESSAGE);
+    }
+
     private void moDialogThemNhanVienVaoCa(String maCa, LocalDate targetDate) {
         CaLamViec ca = controller.timCaTheoMa(maCa);
         List<NhanVien> allNV = controller.getNhanVienController().layDanhSachNhanVien();
@@ -585,10 +692,13 @@ public class LichPhanCaPanel extends JPanel {
             int idx = cboNv.getSelectedIndex();
             if (idx >= 0 && idx < allNV.size()) {
                 NhanVien nv = allNV.get(idx);
-                controller.xepCaLamViec(nv, ca, targetDate, txtNote.getText().trim());
-                dialog.dispose();
-                taiDuLieuMaTran();
-                JOptionPane.showMessageDialog(this, "Đã phân công thành công nhân viên " + nv.getHoTen() + " vào ca!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                if (xuLyLuuPhanCong(nv, ca, targetDate, txtNote.getText())) {
+                    dialog.dispose();
+                    taiDuLieuMaTran();
+                    JOptionPane.showMessageDialog(this,
+                            "Đã lưu phân công cho nhân viên " + nv.getHoTen() + "!",
+                            "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                }
             }
         });
 
@@ -632,9 +742,16 @@ public class LichPhanCaPanel extends JPanel {
             if (sel != null) {
                 String maCaMoi = sel.substring(0, 4);
                 CaLamViec caMoi = controller.timCaTheoMa(maCaMoi);
-                controller.doiCaPhanCong(pc.getMaPhanCong(), caMoi);
-                taiDuLieuMaTran();
-                JOptionPane.showMessageDialog(this, "Đã chuyển sang " + caMoi.getTenCa() + " thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                if (controller.doiCaPhanCong(pc.getMaPhanCong(), caMoi)) {
+                    taiDuLieuMaTran();
+                    JOptionPane.showMessageDialog(this,
+                            "Đã chuyển sang " + caMoi.getTenCa() + " thành công!",
+                            "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "Không thể đổi ca. Nếu nhân viên đang tăng ca, hai ca phải liền nhau và không được trùng nhau.",
+                            "Đổi ca không hợp lệ", JOptionPane.WARNING_MESSAGE);
+                }
             }
         }
     }
@@ -743,10 +860,13 @@ public class LichPhanCaPanel extends JPanel {
                 String maCa = selCa.substring(0, 4);
                 CaLamViec ca = controller.timCaTheoMa(maCa);
 
-                controller.xepCaLamViec(nv, ca, targetDate, txtNote.getText().trim());
-                dialog.dispose();
-                taiDuLieuMaTran();
-                JOptionPane.showMessageDialog(this, "Xếp ca thành công cho nhân viên " + nv.getHoTen() + "!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                if (xuLyLuuPhanCong(nv, ca, targetDate, txtNote.getText())) {
+                    dialog.dispose();
+                    taiDuLieuMaTran();
+                    JOptionPane.showMessageDialog(this,
+                            "Đã lưu phân công cho nhân viên " + nv.getHoTen() + "!",
+                            "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                }
             }
         });
 

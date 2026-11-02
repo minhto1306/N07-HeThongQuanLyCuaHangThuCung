@@ -3,6 +3,7 @@ package controllers;
 import models.entity.BangPhanCong;
 import models.entity.CaLamViec;
 import models.entity.NhanVien;
+import utils.UserSession;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -163,34 +164,94 @@ public class PhanCaController {
         return null;
     }
 
+    /** Tìm đúng phân công của một nhân viên trong một ngày và một ca cụ thể. */
+    public BangPhanCong timPhanCong(String maNV, LocalDate ngay, String maCa) {
+        for (BangPhanCong pc : danhSachPhanCong) {
+            if (pc.getNhanVien() != null && pc.getCaLamViec() != null
+                    && pc.getNhanVien().getMaNhanVien().equalsIgnoreCase(maNV)
+                    && pc.getNgayLamViec().equals(ngay)
+                    && pc.getCaLamViec().getMaCa().equalsIgnoreCase(maCa)) {
+                return pc;
+            }
+        }
+        return null;
+    }
+
+    /** Lấy toàn bộ ca của một nhân viên trong một ngày (tối đa 2 khi tăng ca). */
+    public List<BangPhanCong> layPhanCongTheoNhanVienVaNgay(String maNV, LocalDate ngay) {
+        List<BangPhanCong> result = new ArrayList<>();
+        for (BangPhanCong pc : danhSachPhanCong) {
+            if (pc.getNhanVien() != null
+                    && pc.getNhanVien().getMaNhanVien().equalsIgnoreCase(maNV)
+                    && pc.getNgayLamViec().equals(ngay)) {
+                result.add(pc);
+            }
+        }
+        return result;
+    }
+
+    /** Chỉ cho phép tăng ca khi hai ca nằm liền nhau trong danh mục CA01..CA04. */
+    public boolean laHaiCaLienTiep(CaLamViec caA, CaLamViec caB) {
+        if (caA == null || caB == null) return false;
+        int idxA = -1;
+        int idxB = -1;
+        for (int i = 0; i < danhSachCa.size(); i++) {
+            String maCa = danhSachCa.get(i).getMaCa();
+            if (maCa.equalsIgnoreCase(caA.getMaCa())) idxA = i;
+            if (maCa.equalsIgnoreCase(caB.getMaCa())) idxB = i;
+        }
+        return idxA >= 0 && idxB >= 0 && Math.abs(idxA - idxB) == 1;
+    }
+
     /**
      * Xếp ca mới hoặc đổi ca cho nhân viên tại một ngày cụ thể
      */
     public boolean xepCaLamViec(NhanVien nv, CaLamViec ca, LocalDate ngay, String ghiChu) {
-        BangPhanCong tonTai = timPhanCong(nv.getMaNhanVien(), ngay);
-        if (tonTai != null) {
-            if (ca == null) {
-                try { phanCaDAO.deletePhanCong(tonTai.getMaPhanCong()); } catch (Exception ignored) {}
-                danhSachPhanCong.remove(tonTai);
-                return true;
-            }
-            tonTai.setCaLamViec(ca);
-            tonTai.setGhiChu(ghiChu != null ? ghiChu : "");
+        if (!UserSession.isQuanLy() || nv == null || ngay == null) return false;
+
+        if (ca == null) {
+            BangPhanCong tonTai = timPhanCong(nv.getMaNhanVien(), ngay);
+            if (tonTai == null) return false;
             try {
-                phanCaDAO.updateCaPhanCong(tonTai.getMaPhanCong(), ca.getMaCa());
-                phanCaDAO.updateGhiChu(tonTai.getMaPhanCong(), tonTai.getGhiChu());
-            } catch (Exception ignored) {}
-            return true;
+                if (!phanCaDAO.deletePhanCong(tonTai.getMaPhanCong())) return false;
+                return danhSachPhanCong.remove(tonTai);
+            } catch (Exception e) {
+                System.err.println("[PhanCaController] Lỗi xóa phân công: " + e.getMessage());
+                return false;
+            }
         }
 
-        if (ca != null) {
-            String maPC = "PC" + (System.currentTimeMillis() % 1000000);
-            BangPhanCong pcMoi = new BangPhanCong(maPC, nv, ca, ngay, "Chưa bắt đầu", ghiChu != null ? ghiChu : "");
-            try { phanCaDAO.insertPhanCong(pcMoi); } catch (Exception ignored) {}
+        BangPhanCong trungCa = timPhanCong(nv.getMaNhanVien(), ngay, ca.getMaCa());
+        if (trungCa != null) {
+            String ghiChuMoi = ghiChu != null ? ghiChu : "";
+            try {
+                if (!phanCaDAO.updateGhiChu(trungCa.getMaPhanCong(), ghiChuMoi)) return false;
+                trungCa.setGhiChu(ghiChuMoi);
+                return true;
+            } catch (Exception e) {
+                System.err.println("[PhanCaController] Lỗi cập nhật nhiệm vụ: " + e.getMessage());
+                return false;
+            }
+        }
+
+        List<BangPhanCong> cacCaTrongNgay = layPhanCongTheoNhanVienVaNgay(nv.getMaNhanVien(), ngay);
+        if (!cacCaTrongNgay.isEmpty()) {
+            if (!UserSession.isQuanLy() || cacCaTrongNgay.size() >= 2
+                    || !laHaiCaLienTiep(cacCaTrongNgay.get(0).getCaLamViec(), ca)) {
+                return false;
+            }
+        }
+
+        String maPC = "PC" + System.currentTimeMillis();
+        BangPhanCong pcMoi = new BangPhanCong(maPC, nv, ca, ngay, "Chưa bắt đầu", ghiChu != null ? ghiChu : "");
+        try {
+            if (!phanCaDAO.insertPhanCong(pcMoi)) return false;
             danhSachPhanCong.add(pcMoi);
             return true;
+        } catch (Exception e) {
+            System.err.println("[PhanCaController] Lỗi thêm phân công: " + e.getMessage());
+            return false;
         }
-        return false;
     }
 
     public List<BangPhanCong> layPhanCongTheoCaVaNgay(String maCa, LocalDate ngay) {
@@ -225,9 +286,24 @@ public class PhanCaController {
     public boolean doiCaPhanCong(String maPC, CaLamViec caMoi) {
         BangPhanCong pc = timPhanCongTheoMa(maPC);
         if (pc != null && caMoi != null) {
-            pc.setCaLamViec(caMoi);
-            try { phanCaDAO.updateCaPhanCong(maPC, caMoi.getMaCa()); } catch (Exception ignored) {}
-            return true;
+            List<BangPhanCong> cacCaTrongNgay = layPhanCongTheoNhanVienVaNgay(
+                    pc.getNhanVien().getMaNhanVien(), pc.getNgayLamViec());
+            for (BangPhanCong caKhac : cacCaTrongNgay) {
+                if (caKhac.getMaPhanCong().equalsIgnoreCase(maPC)) continue;
+                if (caKhac.getCaLamViec() != null
+                        && (caKhac.getCaLamViec().getMaCa().equalsIgnoreCase(caMoi.getMaCa())
+                        || !laHaiCaLienTiep(caKhac.getCaLamViec(), caMoi))) {
+                    return false;
+                }
+            }
+            try {
+                if (!phanCaDAO.updateCaPhanCong(maPC, caMoi.getMaCa())) return false;
+                pc.setCaLamViec(caMoi);
+                return true;
+            } catch (Exception e) {
+                System.err.println("[PhanCaController] Lỗi đổi ca: " + e.getMessage());
+                return false;
+            }
         }
         return false;
     }

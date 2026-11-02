@@ -72,7 +72,7 @@ public class BangGiaoCaDAO {
                      "FROM BangGiaoCa bgc " +
                      "LEFT JOIN NhanVien nv ON bgc.maNhanVien = nv.maNhanVien " +
                      "LEFT JOIN CaLamViec c ON bgc.maCa = c.maCa " +
-                     "ORDER BY bgc.maGiaoCa DESC";
+                     "ORDER BY bgc.gioKetThucThucTe DESC, bgc.maGiaoCa DESC";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -104,6 +104,100 @@ public class BangGiaoCaDAO {
             }
         }
         return list;
+    }
+
+    /**
+     * Lấy số tiền mặt thực tế của ca vừa bàn giao gần nhất để làm tiền đầu ca
+     * kế tiếp. Chỉ các ca đã chốt (có giờ kết thúc) mới được sử dụng.
+     *
+     * @return số tiền bàn giao gần nhất; null nếu chưa từng có ca nào được chốt
+     */
+    public Long getTienThucTeCaBanGiaoGanNhat() throws SQLException {
+        BangGiaoCa caGanNhat = getCaBanGiaoGanNhat();
+        return caGanNhat != null && caGanNhat.getTienCuoiCaThucTe() != null
+                ? caGanNhat.getTienCuoiCaThucTe().longValue()
+                : null;
+    }
+
+    /**
+     * Lấy ca đã chốt gần nhất để xác định cả số tiền bàn giao và mốc bắt đầu
+     * tính doanh thu cho ca kế tiếp.
+     */
+    public BangGiaoCa getCaBanGiaoGanNhat() throws SQLException {
+        String sql = "SELECT TOP 1 bgc.*, nv.hoTen AS tenNhanVien, c.tenCa " +
+                     "FROM BangGiaoCa " +
+                     "bgc LEFT JOIN NhanVien nv ON bgc.maNhanVien = nv.maNhanVien " +
+                     "LEFT JOIN CaLamViec c ON bgc.maCa = c.maCa " +
+                     "WHERE bgc.gioKetThucThucTe IS NOT NULL " +
+                     "ORDER BY bgc.gioKetThucThucTe DESC, bgc.maGiaoCa DESC";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                NhanVien nv = new NhanVien();
+                nv.setMaNhanVien(rs.getString("maNhanVien"));
+                nv.setHoTen(rs.getString("tenNhanVien"));
+
+                CaLamViec ca = new CaLamViec();
+                ca.setMaCa(rs.getString("maCa"));
+                ca.setTenCa(rs.getString("tenCa"));
+
+                Timestamp kt = rs.getTimestamp("gioKetThucThucTe");
+                return new BangGiaoCa(
+                        rs.getString("maGiaoCa"), nv, ca,
+                        rs.getBigDecimal("tienDauCa"),
+                        rs.getBigDecimal("tienCuoiCaHeThong"),
+                        rs.getBigDecimal("tienCuoiCaThucTe"),
+                        rs.getBigDecimal("tienChenhLech"),
+                        rs.getString("lyDoChenhLech"),
+                        kt != null ? kt.toLocalDateTime() : null
+                );
+            }
+        }
+        return null;
+    }
+
+    /** Tổng hóa đơn tiền mặt phát sinh sau lần bàn giao gần nhất. */
+    public long tinhDoanhThuTienMatTuThoiDiem(LocalDateTime tuThoiDiem) {
+        String sql = "SELECT ISNULL(SUM(thanhTien), 0) AS tongTienMat FROM HoaDon " +
+                     "WHERE thoiGianThanhToan > ? " +
+                     "AND (trangThaiHoaDon = N'Đã thanh toán' OR trangThaiHoaDon IS NULL) " +
+                     "AND (phuongThucThanhToan LIKE N'%Tiền mặt%' OR phuongThucThanhToan IS NULL)";
+        return tinhTongTheoThoiDiem(sql, "tongTienMat", tuThoiDiem, "doanh thu tiền mặt theo ca");
+    }
+
+    /** Tổng hóa đơn chuyển khoản phát sinh sau lần bàn giao gần nhất (chỉ tham khảo). */
+    public long tinhDoanhThuChuyenKhoanTuThoiDiem(LocalDateTime tuThoiDiem) {
+        String sql = "SELECT ISNULL(SUM(thanhTien), 0) AS tongCK FROM HoaDon " +
+                     "WHERE thoiGianThanhToan > ? " +
+                     "AND (trangThaiHoaDon = N'Đã thanh toán' OR trangThaiHoaDon IS NULL) " +
+                     "AND phuongThucThanhToan IS NOT NULL " +
+                     "AND phuongThucThanhToan NOT LIKE N'%Tiền mặt%'";
+        return tinhTongTheoThoiDiem(sql, "tongCK", tuThoiDiem, "doanh thu chuyển khoản theo ca");
+    }
+
+    /** Tổng tiền đổi/trả phát sinh sau lần bàn giao gần nhất. */
+    public long tinhTongTienHoanTraTuThoiDiem(LocalDateTime tuThoiDiem) {
+        String sql = "SELECT ISNULL(SUM(tongTienHoan), 0) AS tongHoan FROM PhieuDoiTra " +
+                     "WHERE ngayDoiTra > ?";
+        return tinhTongTheoThoiDiem(sql, "tongHoan", tuThoiDiem, "tiền hoàn trả theo ca");
+    }
+
+    private long tinhTongTheoThoiDiem(String sql, String columnName, LocalDateTime tuThoiDiem, String logName) {
+        LocalDateTime mocTinh = tuThoiDiem != null
+                ? tuThoiDiem
+                : java.time.LocalDate.now().atStartOfDay();
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.valueOf(mocTinh));
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getLong(columnName) : 0L;
+            }
+        } catch (Exception e) {
+            System.err.println("[BangGiaoCaDAO] Lỗi tính " + logName + ": " + e.getMessage());
+            return 0L;
+        }
     }
 
     /**

@@ -238,6 +238,7 @@ CREATE TABLE LoHang (
     soLo NVARCHAR(50) PRIMARY KEY,
     maSanPham NVARCHAR(20) NOT NULL,
     maNhaCungCap NVARCHAR(20) NOT NULL,
+    ngayNhap DATETIME2 NOT NULL CONSTRAINT DF_LoHang_NgayNhap DEFAULT SYSDATETIME(),
     ngaySanXuat DATE,
     hanSuDung DATE NOT NULL,
     donGiaNhapCoSo DECIMAL(18,2) NOT NULL,
@@ -596,13 +597,13 @@ END
 -- 9. Biên bản Bàn giao ca mẫu
 IF NOT EXISTS (SELECT 1 FROM BangGiaoCa WHERE maGiaoCa = 'GC001')
     INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, lyDoChenhLech, gioKetThucThucTe)
-    VALUES ('GC001', 'NV002', 'CA01', 2000000, 6850000, 6850000, 0, N'Khớp 100% — Đã nộp quỹ cho Quản lý', DATEADD(day, -2, GETDATE()));
+    VALUES ('GC001', 'NV002', 'CA01', 1000000, 3500000, 3500000, 0, N'✓ Đã duyệt (QL: Trần Quản Lý) | Khớp két 100%', DATEADD(day, -3, DATEADD(hour, 12, CAST(CAST(GETDATE() AS DATE) AS DATETIME2))));
 IF NOT EXISTS (SELECT 1 FROM BangGiaoCa WHERE maGiaoCa = 'GC002')
     INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, lyDoChenhLech, gioKetThucThucTe)
-    VALUES ('GC002', 'NV004', 'CA02', 2000000, 5420000, 5400000, -20000, N'Lệch -20,000 đ (Thối nhầm tiền lẻ khách vãng lai)', DATEADD(day, -1, GETDATE()));
+    VALUES ('GC002', 'NV004', 'CA02', 3500000, 4600000, 4580000, -20000, N'✓ Đã duyệt (QL: Trần Quản Lý) | Thối nhầm 20.000 đ', DATEADD(day, -2, DATEADD(minute, 30, DATEADD(hour, 17, CAST(CAST(GETDATE() AS DATE) AS DATETIME2)))));
 IF NOT EXISTS (SELECT 1 FROM BangGiaoCa WHERE maGiaoCa = 'GC003')
     INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, lyDoChenhLech, gioKetThucThucTe)
-    VALUES ('GC003', 'NV001', 'CA03', 2000000, 4190000, 4190000, 0, N'Khớp 100% — Chốt két cuối ngày an toàn', DATEADD(hour, -12, GETDATE()));
+    VALUES ('GC003', 'NV001', 'CA03', 4580000, 6500000, 6500000, 0, N'✓ Đã duyệt (QL: Trần Quản Lý) | Khớp két 100%', DATEADD(day, -1, DATEADD(hour, 22, CAST(CAST(GETDATE() AS DATE) AS DATETIME2))));
 
 -- 10. Phòng Lưu Trú Pet Hotel mẫu (12 phòng)
 IF NOT EXISTS (SELECT 1 FROM PhongLuuTru WHERE maPhong = 'P101')
