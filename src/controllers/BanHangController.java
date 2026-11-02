@@ -22,7 +22,7 @@ public class BanHangController {
     private static final List<KhachHang> DANH_SACH_KHACH_HANG = new ArrayList<>();
     private static final KhachHangDAO STATIC_KH_DAO = new KhachHangDAO();
 
-    // Đồng bộ danh sách khách hàng lên bộ nhớ tạm để hỗ trợ tìm kiếm và gợi ý nhanh trên giao diện POS
+    // Kéo hết danh bạ khách hàng từ SQL Server lên RAM sẵn, để lát thu ngân gõ SĐT hay tên là gợi ý tức thì, không bị khựng giao diện Swing
     public static synchronized void dongBoKhachHangTuDatabase() {
         try {
             List<KhachHang> dbList = STATIC_KH_DAO.getAllKhachHang();
@@ -50,7 +50,7 @@ public class BanHangController {
     /**
      * Khởi tạo một phiên hóa đơn mới tại quầy
      */
-    // Khởi tạo phiên hóa đơn mới tại quầy, tự sinh mã hóa đơn theo quy chuẩn nếu chưa có
+    // Tạo phiên hóa đơn mới tại quầy, nếu chưa có mã thì tự sinh mã theo ngày với ca trực cho chuẩn
     public void khoiTaoHoaDonMoi(String maHoaDon, NhanVien nhanVien) {
         if (maHoaDon == null || maHoaDon.trim().isEmpty()) {
             maHoaDon = utils.MaTuSinhHelper.sinhMaHoaDon(nhanVien != null ? nhanVien.getMaNhanVien() : utils.UserSession.getUserId());
@@ -73,7 +73,7 @@ public class BanHangController {
     /**
      * Tra cứu khách hàng thành viên theo số điện thoại, mã KH hoặc tên trực tiếp từ CSDL
      */
-    // Tìm kiếm khách hàng theo SĐT, mã khách hàng hoặc tìm kiếm tương đối theo họ tên
+    // Tìm nhanh thông tin khách khi nhập SĐT hoặc mã KH, từ 3 ký tự trở lên thì cho tìm mờ theo tên luôn cho tiện
     public KhachHang timKhachHang(String tuKhoa) {
         if (tuKhoa == null || tuKhoa.trim().isEmpty()) {
             return null;
@@ -102,9 +102,7 @@ public class BanHangController {
         return null;
     }
 
-    /**
-     * Tìm danh sách khách hàng gợi ý khi gõ SĐT, Mã KH hoặc Họ tên
-     */
+    // Lọc danh sách gợi ý tức thì khi thu ngân gõ vào ô tìm kiếm, gõ tới đâu lọc mờ tới đó theo SĐT hoặc tên
     public static List<KhachHang> timKiemGoiYKhachHang(String tuKhoa) {
         if (DANH_SACH_KHACH_HANG.isEmpty()) {
             dongBoKhachHangTuDatabase();
@@ -125,9 +123,7 @@ public class BanHangController {
         return kq;
     }
 
-    /**
-     * Lưu hoặc cập nhật khách hàng và điểm tích lũy xuống SQL Server
-     */
+    // Khách quen thì cập nhật lại tên với điểm, còn số mới toanh thì tự sinh mã KH rồi lưu thẳng vào CSDL luôn
     public static KhachHang luuHoacCapNhatKhachHang(String soDienThoai, String hoTen, int diemMoi) {
         if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
             return null;
@@ -167,10 +163,12 @@ public class BanHangController {
         return khMoi;
     }
 
+    // Gọi qua MaTuSinhHelper để lấy mã khách hàng tự tăng dạng KH0001, khỏi lo trùng mã
     public static String sinhMaKhachHangMoi() {
         return utils.MaTuSinhHelper.sinhMaKhachHang();
     }
 
+    // Cập nhật lại thông tin khách, nhớ trim khoảng trắng với chặn điểm âm trước khi bắn xuống DB
     public static boolean capNhatThongTinKhachHang(String maKH, String hoTenMoi, String sdtMoi, int diemMoi) {
         dongBoKhachHangTuDatabase();
         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
@@ -190,6 +188,7 @@ public class BanHangController {
         return false;
     }
 
+    // Xóa khách dưới CSDL xong thì nhớ xóa luôn trong danh sách tạm trên RAM để không bị lệch dữ liệu
     public static boolean xoaKhachHang(String maKH) {
         try {
             STATIC_KH_DAO.delete(maKH);
@@ -200,6 +199,7 @@ public class BanHangController {
         return DANH_SACH_KHACH_HANG.removeIf(kh -> kh.getMaKhachHang().equalsIgnoreCase(maKH));
     }
 
+    // Tự động xếp hạng thành viên theo điểm tích lũy: mốc 100 điểm là Kim Cương, 50 điểm Vàng, 20 điểm Bạc
     public static String xepHangThanhVien(int diem) {
         if (diem >= 100) return "VIP Kim Cương";
         if (diem >= 50) return "Hạng Vàng";
@@ -207,6 +207,7 @@ public class BanHangController {
         return "Thành viên Mới";
     }
 
+    // Lấy toàn bộ danh sách khách hàng (đã đồng bộ với CSDL) để đổ lên bảng quản lý hoặc combobox
     public static List<KhachHang> getDanhSachKhachHang() {
         dongBoKhachHangTuDatabase();
         return DANH_SACH_KHACH_HANG;
@@ -215,7 +216,7 @@ public class BanHangController {
     /**
      * Thêm sản phẩm vào giỏ hàng: Tự động tìm Lô hàng có hạn sử dụng gần nhất (FEFO)
      */
-    // Xuất kho theo chiến lược FEFO (First Expired, First Out): kiểm tra tồn kho và ưu tiên lô có hạn dùng gần nhất
+    // Xuất kho theo chuẩn FEFO: tự động bốc lô nào cận date nhất trước, quy đổi ra đơn vị cơ sở rồi mới trừ tồn kho
     public boolean themSanPhamXuatLo(SanPham sp, QuyDoiDonVi qd, int soLuong) throws Exception {
         if (sp == null || qd == null || soLuong <= 0) {
             throw new IllegalArgumentException("Thông tin sản phẩm hoặc số lượng không hợp lệ!");
@@ -260,7 +261,7 @@ public class BanHangController {
     /**
      * Thêm dịch vụ thú cưng vào hóa đơn
      */
-    // Thêm dịch vụ chăm sóc thú cưng vào hóa đơn và tính hoa hồng 10% cho kỹ thuật viên
+    // Thêm dịch vụ spa / chăm sóc bé cưng vào hóa đơn, tự tính sẵn 10% hoa hồng cho kỹ thuật viên
     public boolean themDichVu(DichVu dv, ThuCung tc, NhanVien ktv) {
         if (dv == null || tc == null) {
             throw new IllegalArgumentException("Vui lòng chọn dịch vụ và thú cưng hợp lệ!");
@@ -284,9 +285,7 @@ public class BanHangController {
         return true;
     }
 
-    /**
-     * Áp dụng giảm giá (Voucher hoặc chiết khấu điểm)
-     */
+    // Áp voucher giảm giá hoặc chiết khấu điểm tích lũy trực tiếp vào tổng tiền hóa đơn
     public void apDungGiamGia(BigDecimal giamGia) {
         this.hoaDonHienTai.setGiamGia(giamGia);
     }
@@ -294,7 +293,7 @@ public class BanHangController {
     /**
      * Xác nhận thanh toán hóa đơn
      */
-    // Ghi nhận phương thức thanh toán và gọi DAO thực thi giao dịch lưu hóa đơn
+    // Chốt đơn: cập nhật giờ thanh toán rồi gọi HoaDonDAO chạy giao dịch ACID lưu an toàn tuyệt đối vào CSDL
     public boolean thanhToan(String phuongThucThanhToan) throws SQLException {
         this.hoaDonHienTai.setPhuongThucThanhToan(phuongThucThanhToan);
         this.hoaDonHienTai.setThoiGianThanhToan(LocalDateTime.now());
