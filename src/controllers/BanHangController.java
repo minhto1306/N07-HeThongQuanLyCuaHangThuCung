@@ -17,17 +17,12 @@ import java.util.List;
  * 2. Thêm sản phẩm xuất từ lô hàng theo FEFO (First Expired, First Out).
  * 3. Gọi HoaDonDAO thực thi ACID Transaction.
  */
-// =========================================================================
-// PHÂN HỆ QUẢN LÝ BÁN HÀNG POS & HÓA ĐƠN - LÊ KHẢI MINH PHỤ TRÁCH
-// Vừa làm vừa ghi chú lại luồng xử lý tại quầy cho nhóm và báo cáo đồ án
-// =========================================================================
 public class BanHangController {
 
     private static final List<KhachHang> DANH_SACH_KHACH_HANG = new ArrayList<>();
     private static final KhachHangDAO STATIC_KH_DAO = new KhachHangDAO();
 
-    // Note của Minh: Hàm này kéo toàn bộ danh bạ khách hàng từ SQL Server lên RAM
-    // Để mỗi lần thu ngân gõ SĐT hay tên khách ở quầy là gợi ý tức thì, không bị khựng giao diện Swing
+    // Đồng bộ danh sách khách hàng lên bộ nhớ tạm để hỗ trợ tìm kiếm và gợi ý nhanh trên giao diện POS
     public static synchronized void dongBoKhachHangTuDatabase() {
         try {
             List<KhachHang> dbList = STATIC_KH_DAO.getAllKhachHang();
@@ -55,8 +50,7 @@ public class BanHangController {
     /**
      * Khởi tạo một phiên hóa đơn mới tại quầy
      */
-    // Tạo mới một phiên hóa đơn trắng tại quầy
-    // Nếu chưa truyền mã thì tự sinh mã theo ngày và mã nhân viên thu ngân (format chuẩn HD261102-01-xxx)
+    // Khởi tạo phiên hóa đơn mới tại quầy, tự sinh mã hóa đơn theo quy chuẩn nếu chưa có
     public void khoiTaoHoaDonMoi(String maHoaDon, NhanVien nhanVien) {
         if (maHoaDon == null || maHoaDon.trim().isEmpty()) {
             maHoaDon = utils.MaTuSinhHelper.sinhMaHoaDon(nhanVien != null ? nhanVien.getMaNhanVien() : utils.UserSession.getUserId());
@@ -79,8 +73,7 @@ public class BanHangController {
     /**
      * Tra cứu khách hàng thành viên theo số điện thoại, mã KH hoặc tên trực tiếp từ CSDL
      */
-    // Tìm nhanh thông tin khách VIP khi nhập SĐT hoặc mã KH
-    // Nếu khách gõ từ 3 ký tự trở lên thì cho tìm kiếm mờ theo tên luôn cho tiện
+    // Tìm kiếm khách hàng theo SĐT, mã khách hàng hoặc tìm kiếm tương đối theo họ tên
     public KhachHang timKhachHang(String tuKhoa) {
         if (tuKhoa == null || tuKhoa.trim().isEmpty()) {
             return null;
@@ -222,8 +215,7 @@ public class BanHangController {
     /**
      * Thêm sản phẩm vào giỏ hàng: Tự động tìm Lô hàng có hạn sử dụng gần nhất (FEFO)
      */
-    // Thêm món vào giỏ hàng và tự động gán Lô hàng theo chiến lược FEFO (First Expired, First Out)
-    // Chỗ này phải quy đổi số lượng bán sang đơn vị cơ sở rồi kiểm tra tồn kho cẩn thận, không bao giờ để âm kho!
+    // Xuất kho theo chiến lược FEFO (First Expired, First Out): kiểm tra tồn kho và ưu tiên lô có hạn dùng gần nhất
     public boolean themSanPhamXuatLo(SanPham sp, QuyDoiDonVi qd, int soLuong) throws Exception {
         if (sp == null || qd == null || soLuong <= 0) {
             throw new IllegalArgumentException("Thông tin sản phẩm hoặc số lượng không hợp lệ!");
@@ -268,8 +260,7 @@ public class BanHangController {
     /**
      * Thêm dịch vụ thú cưng vào hóa đơn
      */
-    // Khách dắt bé cưng vào làm đẹp / spa / tắm sấy
-    // Trích 10% hoa hồng trực tiếp cho kỹ thuật viên chăm sóc để sau này tính lương thưởng
+    // Thêm dịch vụ chăm sóc thú cưng vào hóa đơn và tính hoa hồng 10% cho kỹ thuật viên
     public boolean themDichVu(DichVu dv, ThuCung tc, NhanVien ktv) {
         if (dv == null || tc == null) {
             throw new IllegalArgumentException("Vui lòng chọn dịch vụ và thú cưng hợp lệ!");
@@ -303,8 +294,7 @@ public class BanHangController {
     /**
      * Xác nhận thanh toán hóa đơn
      */
-    // Chốt đơn hàng: Ghi nhận hình thức thanh toán (Tiền mặt, VietQR, VNPay)
-    // Rồi đẩy xuống HoaDonDAO để kích hoạt ACID transaction lưu CSDL an toàn tuyệt đối
+    // Ghi nhận phương thức thanh toán và gọi DAO thực thi giao dịch lưu hóa đơn
     public boolean thanhToan(String phuongThucThanhToan) throws SQLException {
         this.hoaDonHienTai.setPhuongThucThanhToan(phuongThucThanhToan);
         this.hoaDonHienTai.setThoiGianThanhToan(LocalDateTime.now());

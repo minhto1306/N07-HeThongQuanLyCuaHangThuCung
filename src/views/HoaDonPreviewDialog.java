@@ -23,10 +23,6 @@ import java.text.DecimalFormat;
  * Biểu mẫu Hóa đơn bán hàng chuẩn siêu thị / Pet Shop hiện đại (Thermal Receipt / A5 Invoice).
  * Hiển thị ngay sau khi thanh toán tại quầy POS hoặc khi Xem lại / In lại hóa đơn trong Lịch sử.
  */
-// =========================================================================
-// XEM TRƯỚC VÀ IN HÓA ĐƠN K80 (THERMAL RECEIPT) - LÊ KHẢI MINH PHỤ TRÁCH
-// Biểu mẫu hóa đơn nhiệt 80mm chuẩn siêu thị hiện đại, hỗ trợ xuất HTML & Text
-// =========================================================================
 public class HoaDonPreviewDialog extends JDialog {
 
     private final DecimalFormat df = new DecimalFormat("#,### đ");
@@ -55,8 +51,7 @@ public class HoaDonPreviewDialog extends JDialog {
         dlg.setVisible(true);
     }
 
-    // Note của Minh: Căn chỉnh kích thước popup chuẩn tỷ lệ phiếu in nhiệt K80
-    // Thu ngân có thể bấm nút In hoặc bấm phím tắt ESC để đóng cửa sổ
+    // Khởi tạo giao diện xem trước phiếu in nhiệt K80
     private void khoiTaoGiaoDien() {
         setSize(520, 720);
         setLocationRelativeTo(getParent());

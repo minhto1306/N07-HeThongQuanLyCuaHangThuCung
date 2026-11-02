@@ -35,10 +35,6 @@ import java.util.regex.Pattern;
  * 2. Tab 2: Hóa đơn chờ / Đang thao tác trong ngày (Lưới thẻ Grid Cards 1 chạm khôi phục).
  * 3. Tab 3: Lịch sử Hóa đơn đã thanh toán (Bảng JTable đối soát, bộ lọc ngày, In lại HĐ, Xuất Excel).
  */
-// =========================================================================
-// MÀN HÌNH BÁN HÀNG POS & THU NGÂN TẠI QUẦY - LÊ KHẢI MINH PHỤ TRÁCH
-// Tích hợp phím tắt nhanh, giỏ hàng, tra cứu VIP, thanh toán VietQR và in hóa đơn K80
-// =========================================================================
 public class BanHangPOSPanel extends JPanel {
 
     private final DecimalFormat df = new DecimalFormat("#,### đ");
@@ -2391,8 +2387,7 @@ public class BanHangPOSPanel extends JPanel {
         }
     }
 
-    // Note của Minh: Hàm cốt lõi xử lý thanh toán đơn hàng (sự kiện click nút hoặc phím F12)
-    // Đoạn này kiểm tra kỹ giỏ hàng, tính toán tiền thối, gọi VietQR hoặc lưu tiền mặt rồi in hóa đơn K80
+    // Xử lý thanh toán đơn hàng: kiểm tra giỏ hàng, xác nhận hình thức thanh toán và cập nhật CSDL
     private void thucHienThanhToan() {
         if (modelGioHang.getRowCount() == 0) {
             JOptionPane.showMessageDialog(this, "Giỏ hàng đang trống! Vui lòng chọn sản phẩm hoặc dịch vụ trước khi thanh toán.", "Thông báo", JOptionPane.WARNING_MESSAGE);
@@ -2404,7 +2399,7 @@ public class BanHangPOSPanel extends JPanel {
             tblGioHang.getCellEditor().stopCellEditing();
         }
 
-        // Note của Minh: Chốt chặn cảnh báo an toàn - Nếu trong đơn có dịch vụ Spa/Tắm sấy mà kỹ thuật viên chưa bấm 'Hoàn tất' thì cảnh báo thu ngân ngay
+        // Kiểm tra tiến độ dịch vụ thú cưng trước khi hoàn tất thanh toán
         boolean conDichVuChuaXong = false;
         StringBuilder sbChuaXong = new StringBuilder();
         for (int i = 0; i < modelGioHang.getRowCount(); i++) {
@@ -2454,7 +2449,7 @@ public class BanHangPOSPanel extends JPanel {
         long tienThoiVal = 0;
         if (tienHoanThua > 0) {
             tienThoiVal = tienHoanThua;
-        // Xử lý phương thức TIỀN MẶT: Kiểm tra tiền khách đưa có đủ trả không, tính tiền thối lại chuẩn xác
+        // Kiểm tra tiền khách đưa đối với phương thức thanh toán tiền mặt
         } else if ("Tiền mặt".equals(pttt)) {
             if (canTra > 0 && tienKhachDuaVal < canTra) {
                 long thieu = canTra - tienKhachDuaVal;

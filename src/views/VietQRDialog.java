@@ -28,10 +28,6 @@ import java.util.Properties;
  * - Hỗ trợ nạp cấu hình từ `config/vietqr.properties`.
  * - Tích hợp cơ chế kép (Direct PNG API & Base64 v2 API) tải mã cực nhanh và bảo đảm độ nét tối đa.
  */
-// =========================================================================
-// TÍCH HỢP THANH TOÁN CHUYỂN KHOẢN VIETQR NAPAS 24/7 - LÊ KHẢI MINH PHỤ TRÁCH
-// Tự động sinh mã QR động khóa cứng số tiền đơn hàng, khách quét là chuẩn tiền 100%
-// =========================================================================
 public class VietQRDialog extends JDialog {
 
     private static final DecimalFormat df = new DecimalFormat("#,### đ");
@@ -84,8 +80,7 @@ public class VietQRDialog extends JDialog {
     /**
      * Nạp thông tin tài khoản từ file `config/vietqr.properties`
      */
-    // Note của Minh: Nạp thông tin số tài khoản MB Bank, mã ngân hàng từ config/vietqr.properties
-    // Để sau này đổi số tài khoản hay tên chủ shop thì chỉ cần sửa file config, không phải build lại code
+    // Đọc thông tin cấu hình tài khoản và ngân hàng từ file cấu hình
     private void napCauHinhVietQR() {
         File propFile = new File("config/vietqr.properties");
         if (propFile.exists()) {
