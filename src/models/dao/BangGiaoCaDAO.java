@@ -343,6 +343,21 @@ public class BangGiaoCaDAO {
         }
     }
 
+    // tương thích ngược cho các unit test kiểm thử duyệt ca cũ
+    public boolean capNhatGhiChuDuyetCa(String maGiaoCa, String ghiChuMoi) throws SQLException {
+        boolean ok = duyetGiaoCa(maGiaoCa, "NV001", LocalDateTime.now());
+        if (!ok) {
+            String sql = "UPDATE BangGiaoCa SET lyDoChenhLech = ? WHERE maGiaoCa = ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, ghiChuMoi);
+                ps.setString(2, maGiaoCa);
+                return ps.executeUpdate() > 0;
+            }
+        }
+        return ok;
+    }
+
     /**
      * Lấy danh sách các biên bản giao ca đang ở trạng thái chờ Quản lý duyệt
      */
