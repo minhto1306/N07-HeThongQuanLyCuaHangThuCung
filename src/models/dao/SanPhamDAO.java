@@ -277,4 +277,31 @@ public class SanPhamDAO {
             return ps.executeUpdate() > 0;
         }
     }
+    /**
+     * Tự động sinh mã sản phẩm 
+     */
+    public String phatSinhMaSanPham() {
+        int maxId = 0;
+        String sql = "SELECT maSanPham FROM SanPham";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                String ma = rs.getString("maSanPham");
+                if (ma != null && ma.trim().toUpperCase().startsWith("SP")) {
+                    try {
+                        // Trích xuất phần số đằng sau chữ SP
+                        int num = Integer.parseInt(ma.trim().substring(2).replaceAll("[^0-9]", ""));
+                        if (num > maxId) {
+                            maxId = num;
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[SanPhamDAO] Lỗi phát sinh mã sản phẩm: " + e.getMessage());
+        }
+        // Trả về mã kế tiếp 
+        return String.format("SP%03d", maxId + 1);
+    }
 }

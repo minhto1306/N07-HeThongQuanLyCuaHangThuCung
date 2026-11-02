@@ -130,9 +130,15 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.35;
         card.add(new JLabel("Mã sản phẩm:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
-        txtMaSP = new JTextField("SP" + (System.currentTimeMillis() % 1000));
+     //  Tự động lấy mã tiếp theo từ Database
+        models.dao.SanPhamDAO spDao = new models.dao.SanPhamDAO();
+        txtMaSP = new JTextField(spDao.phatSinhMaSanPham());
         txtMaSP.setPreferredSize(new Dimension(0, 32));
         txtMaSP.setBorder(ThemeColors.createInputBorder());
+
+        //  KHÓA CỨNG không cho người dùng tự gõ tay sửa mã (tránh trùng khóa chính)
+        txtMaSP.setEditable(false);
+        txtMaSP.setBackground(new Color(241, 245, 249)); // Màu xám nhạt báo hiệu 
         card.add(txtMaSP, gbc);
 
         gbc.gridx = 0; gbc.gridy = 2;
@@ -220,9 +226,11 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.35;
         card.add(new JLabel("Số lô hàng:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
-        txtSoLo = new JTextField("LO_2026_" + (System.currentTimeMillis() % 1000));
+        models.dao.LoHangDAO loDao = new models.dao.LoHangDAO();
+        txtSoLo = new JTextField(loDao.phatSinhSoLoTuDong()); 
         txtSoLo.setPreferredSize(new Dimension(0, 32));
         txtSoLo.setBorder(ThemeColors.createInputBorder());
+        txtSoLo.setToolTipText("Số lô gợi ý tự động. Bạn có thể sửa lại theo số lô thực tế trên bao bì sản phẩm.");
         card.add(txtSoLo, gbc);
 
         // Ngày sản xuất (Kèm nút chọn lịch)
@@ -239,8 +247,7 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         btnChonNSX.setPreferredSize(new Dimension(34, 32));
         btnChonNSX.setFocusPainted(false);
         btnChonNSX.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnChonNSX.addActionListener(e -> hienThiCalendarPopup(btnChonNSX, txtNgaySX, null));
-
+        btnChonNSX.addActionListener(e -> hienThiCalendarPopup(btnChonNSX, txtNgaySX, this::capNhatDanhGiaFefo));
         JPanel pnlNgaySX = new JPanel(new BorderLayout(4, 0));
         pnlNgaySX.setOpaque(false);
         pnlNgaySX.add(txtNgaySX, BorderLayout.CENTER);
@@ -301,8 +308,18 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
 
     private void capNhatDanhGiaFefo() {
         try {
+            LocalDate nsx = LocalDate.parse(txtNgaySX.getText().trim(), dtf);
             LocalDate hsd = LocalDate.parse(txtHanSD.getText().trim(), dtf);
             LocalDate now = LocalDate.now();
+
+            // Nếu HSD trước hoặc trùng NSX -> Báo lỗi logic ngay trên Badge
+            if (!hsd.isAfter(nsx)) {
+                lblFefoBadge.setText("LỖI: HSD PHẢI SAU NGÀY SX");
+                lblFefoBadge.setBackground(ThemeColors.DANGER_BG);
+                lblFefoBadge.setForeground(ThemeColors.DANGER_TEXT);
+                return;
+            }
+
             long days = ChronoUnit.DAYS.between(now, hsd);
 
             if (days <= 0) {
@@ -349,6 +366,29 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
             String soLo = txtSoLo.getText().trim();
             String nsx = txtNgaySX.getText().trim();
             String hsd = txtHanSD.getText().trim();
+
+            // --- BỔ SUNG CHỐT CHẶN KIỂM TRA NGÀY THÁNG VÀ GIÁ BÁN TẠI ĐÂY ---
+            LocalDate dNgaySX = LocalDate.parse(nsx, dtf);
+            LocalDate dHanSD = LocalDate.parse(hsd, dtf);
+
+            //  Chặn Hạn sử dụng không được trước hoặc bằng Ngày sản xuất
+            if (!dHanSD.isAfter(dNgaySX)) {
+                JOptionPane.showMessageDialog(this, 
+                        "Lỗi logic thời gian:\nHạn sử dụng (" + hsd + ") phải diễn ra SAU Ngày sản xuất (" + nsx + ")!", 
+                        "Lỗi ngày tháng", JOptionPane.WARNING_MESSAGE);
+                return; // Dừng lại, không cho lưu
+            }
+
+            //  Chặn giá bán nhỏ hơn giá nhập (chống bán lỗ)
+            if (giaBan < giaNhap) {
+                JOptionPane.showMessageDialog(this, 
+                        "Giá bán lẻ cơ sở không được nhỏ hơn giá nhập cơ sở!", 
+                        "Lỗi nghiệp vụ giá", JOptionPane.WARNING_MESSAGE);
+                txtGiaBan.requestFocus();
+                return;
+            }
+            // -----------------------------------------------------------------
+
             String fefo = lblFefoBadge.getText();
 
             if (listener != null) {
@@ -365,6 +405,8 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
             dispose();
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Đơn giá nhập và giá bán phải là số hợp lệ!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Lỗi định dạng ngày tháng (dd/MM/yyyy)!", "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 //   ----thêm 

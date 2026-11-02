@@ -644,24 +644,34 @@ public class DoiTraHangPanel extends JPanel {
             lblKetQuaKho.setText("Tồn kho hoàn lại: +" + tongSlNguyenTem + " món nguyên tem");
 
             if (radKichBanB.isSelected()) {
-                BanHangPOSPanel.SanPhamDoiTra spMoi = (BanHangPOSPanel.SanPhamDoiTra) cboSanPhamMoi.getSelectedItem();
-                int slMoi = (Integer) spnSoLuongMoi.getValue();
-                long giaTriMonMoi = spMoi != null ? spMoi.donGia * slMoi : 0;
-                long chenhLech = giaTriMonMoi - tongTienTra;
-
-                if (chenhLech > 0) {
-                    lblKetQuaChenhLech.setText("<html>Khách cần thanh toán thêm: <b style='color:#33272A; font-size:14px;'>+" + df.format(chenhLech) + "</b></html>");
-                } else if (chenhLech < 0) {
-                    lblKetQuaChenhLech.setText("<html>Cửa hàng hoàn lại cho khách: <b style='color:#E53E3E; font-size:14px;'>-" + df.format(Math.abs(chenhLech)) + "</b></html>");
+                // Nếu chưa tích chọn món nào ở bảng trên thì không tính tiền bù
+                if (tongTienTra == 0) {
+                    lblKetQuaChenhLech.setText("<html><span style='color:#D97706; font-style:italic;'>Vui lòng tích chọn món cần đổi/trả ở bảng trên</span></html>");
+                    if (btnXacNhanInPhieu != null) {
+                        btnXacNhanInPhieu.setEnabled(false); // Khóa nút chuyển sang POS
+                    }
                 } else {
-                    lblKetQuaChenhLech.setText("Đổi ngang giá (Chênh lệch: 0 đ)");
+                    if (btnXacNhanInPhieu != null) {
+                        btnXacNhanInPhieu.setEnabled(true);
+                    }
+                    BanHangPOSPanel.SanPhamDoiTra spMoi = (BanHangPOSPanel.SanPhamDoiTra) cboSanPhamMoi.getSelectedItem();
+                    int slMoi = (Integer) spnSoLuongMoi.getValue();
+                    long giaTriMonMoi = spMoi != null ? spMoi.donGia * slMoi : 0;
+                    long chenhLech = giaTriMonMoi - tongTienTra;
+
+                    if (chenhLech > 0) {
+                        lblKetQuaChenhLech.setText("<html>Khách cần thanh toán thêm: <b style='color:#33272A; font-size:14px;'>+" + df.format(chenhLech) + "</b></html>");
+                    } else if (chenhLech < 0) {
+                        lblKetQuaChenhLech.setText("<html>Cửa hàng hoàn lại cho khách: <b style='color:#E53E3E; font-size:14px;'>-" + df.format(Math.abs(chenhLech)) + "</b></html>");
+                    } else {
+                        lblKetQuaChenhLech.setText("Đổi ngang giá (Chênh lệch: 0 đ)");
+                    }
                 }
             }
         } finally {
             dangCapNhatBang = false;
         }
     }
-
     private long parseGia(Object obj) {
         if (obj == null) return 0;
         String s = obj.toString().replaceAll("[^0-9]", "");
