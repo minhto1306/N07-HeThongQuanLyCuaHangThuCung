@@ -502,21 +502,21 @@ public class BanHangPOSPanel extends JPanel {
 
     public void dongBoTonKhoCatalogTuDatabase() {
         allItems.clear();
+        // nạp tất cả quy cách bán hàng (cả đvt cơ sở và đvt quy đổi như khay, lốc, thùng)
         String sqlSP = "SELECT sp.maSanPham, sp.tenSanPham, sp.moTa, " +
                 "       ISNULL(qd.giaBan, 50000) AS giaBan, " +
                 "       ISNULL(dvt.tenDonVi, N'Đơn vị') AS tenDonVi, " +
-                "       ISNULL(SUM(lh.soLuongTon), 0) AS tonKho " +
+                "       ISNULL(qd.tyLeQuyDoi, 1) AS tyLe, " +
+                "       ISNULL((SELECT SUM(soLuongTon) FROM LoHang WHERE maSanPham = sp.maSanPham AND soLuongTon > 0), 0) AS tonKhoCoSo " +
                 "FROM SanPham sp " +
-                "LEFT JOIN QuyDoiDonVi qd ON sp.maSanPham = qd.maSanPham AND qd.tyLeQuyDoi = 1 " +
-                "LEFT JOIN DonViTinh dvt ON qd.maDonVi = dvt.maDonVi " +
-                "LEFT JOIN LoHang lh ON sp.maSanPham = lh.maSanPham AND lh.soLuongTon > 0 AND lh.hanSuDung >= CAST(GETDATE() AS DATE) " +
-                "GROUP BY sp.maSanPham, sp.tenSanPham, sp.moTa, qd.giaBan, dvt.tenDonVi " +
-                "ORDER BY sp.maSanPham ASC";
+                "INNER JOIN QuyDoiDonVi qd ON sp.maSanPham = qd.maSanPham " +
+                "INNER JOIN DonViTinh dvt ON qd.maDonVi = dvt.maDonVi " +
+                "ORDER BY sp.maSanPham ASC, qd.tyLeQuyDoi ASC";
 
         String sqlDV = "SELECT maDichVu, tenDichVu, giaDichVu, thoiLuongPhut FROM DichVu ORDER BY maDichVu ASC";
 
         try (java.sql.Connection conn = utils.DBConnection.getConnection()) {
-            // 1. Nạp toàn bộ Hàng hóa từ CSDL SQL Server (Đảm bảo lấy chuẩn số lượng tồn kho thực tế từ bảng LoHang)
+            // nạp sản phẩm và các quy cách đóng gói
             try (java.sql.PreparedStatement ps = conn.prepareStatement(sqlSP);
                  java.sql.ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -525,15 +525,21 @@ public class BanHangPOSPanel extends JPanel {
                     String moTa = rs.getString("moTa");
                     long gia = (long) rs.getDouble("giaBan");
                     String dvt = rs.getString("tenDonVi");
-                    int ton = rs.getInt("tonKho"); // Lấy chính xác số tồn từ Database
+                    int tyLe = rs.getInt("tyLe");
+                    int tonCoSo = rs.getInt("tonKhoCoSo");
+
+                    // tính tồn khả dụng theo quy cách này (vd còn 24 lon cơ sở -> còn 2 khay 12)
+                    int tonTheoQuyCach = tyLe > 0 ? (tonCoSo / tyLe) : tonCoSo;
+
+                    String tenHienThi = tyLe > 1 ? (ten + " (" + dvt + ")") : ten;
+
                     allItems.add(new CatalogItem(
-                            ma, ten, "Hàng hóa", dvt, "Kho chính",
-                            ton, gia, IconHelper.BOXES, (moTa != null && !moTa.isEmpty()) ? moTa : "Sản phẩm chính hãng"
+                            ma, tenHienThi, "Hàng hóa", dvt, "Kho chính",
+                            tonTheoQuyCach, gia, IconHelper.BOXES, (moTa != null && !moTa.isEmpty()) ? moTa : "Sản phẩm chính hãng"
                     ));
                 }
             }
-
-            // 2. Nạp toàn bộ Dịch vụ chăm sóc từ CSDL SQL Server
+            // nạp toàn bộ dịch vụ chăm sóc từ csdl
             try (java.sql.PreparedStatement ps = conn.prepareStatement(sqlDV);
                  java.sql.ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -2390,7 +2396,7 @@ public class BanHangPOSPanel extends JPanel {
     // xử lý bấm nút thanh toán
     private void thucHienThanhToan() {
         if (modelGioHang.getRowCount() == 0) {
-            JOptionPane.showMessageDialog(this, "Chưa chọn món nào hết á!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Giỏ hàng đang trống! Vui lòng chọn sản phẩm hoặc dịch vụ trước khi thanh toán.", "Thông báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
