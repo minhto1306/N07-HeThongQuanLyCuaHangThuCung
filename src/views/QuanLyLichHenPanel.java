@@ -318,6 +318,11 @@ public class QuanLyLichHenPanel extends JPanel {
         if (UserSession.isQuanLy() || UserSession.isThuNgan()) {
             pnlActions.add(btnHuyLich);
             pnlActions.add(btnChuyenHoaDon);
+        // nút gửi email nhắc khách đưa thú cưng đến đúng giờ hẹn
+        JButton btnGuiEmailNhac = ThemeColors.createSecondaryButton("Gửi Email Nhắc Lịch",
+                IconHelper.getIcon(IconHelper.CLOCK, 13, ThemeColors.PRIMARY_ACTIVE));
+        btnGuiEmailNhac.addActionListener(e -> guiEmailNhacLichHen());
+        pnlActions.add(btnGuiEmailNhac);
         }
 
         pnl.add(lblRoleHint, BorderLayout.WEST);
@@ -465,4 +470,41 @@ public class QuanLyLichHenPanel extends JPanel {
             JOptionPane.showMessageDialog(this, msg, "Chuyển Hóa đơn thành công", JOptionPane.INFORMATION_MESSAGE);
         }
     }
+
+    // gửi email nhắc khách đưa thú cưng đến đúng giờ hẹn để tránh bị quên lịch
+    private void guiEmailNhacLichHen() {
+        int row = tblLichHen.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn 1 lịch hẹn trên bảng để gửi email nhắc!", "Nhắc nhở", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        String maLH = (String) modelLichHen.getValueAt(row, 0);
+        String ngayHenStr = (String) modelLichHen.getValueAt(row, 1);
+        String tenKhach = (String) modelLichHen.getValueAt(row, 2);
+        String sdt = (String) modelLichHen.getValueAt(row, 3);
+        String tenThuCung = (String) modelLichHen.getValueAt(row, 4);
+        String tenDichVu = (String) modelLichHen.getValueAt(row, 5);
+        String tenKtv = (String) modelLichHen.getValueAt(row, 6);
+        String ghiChu = (String) modelLichHen.getValueAt(row, 8);
+
+        String email = "";
+        try {
+            models.entity.KhachHang kh = new models.dao.KhachHangDAO().findBySoDienThoai(sdt);
+            if (kh != null && kh.getEmail() != null && !kh.getEmail().isEmpty()) {
+                email = kh.getEmail();
+            } else {
+                email = "khachhang.an@gmail.com";
+            }
+        } catch (Exception ignored) {
+            email = "khachhang.an@gmail.com";
+        }
+
+        String tieuDe = "[Mio Spa] Nhắc Hẹn Chăm Sóc Bé " + tenThuCung + " (" + ngayHenStr + ")";
+        String html = utils.EmailThongBaoHelper.taoEmailXacNhanLichHen(
+                tenKhach, sdt, maLH, tenDichVu, tenThuCung, tenKtv, ngayHenStr, ghiChu);
+
+        utils.EmailThongBaoHelper.moHopThoaiGuiEmail(SwingUtilities.getWindowAncestor(this), email, tieuDe, html);
+    }
+
 }

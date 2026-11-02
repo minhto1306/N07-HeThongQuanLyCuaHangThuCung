@@ -629,6 +629,30 @@ public class DatLichHenDialog extends JDialog {
                             "• Trạng thái: Đã đặt (Chờ tiếp nhận)",
                     "Thông báo", JOptionPane.INFORMATION_MESSAGE);
             isConfirmed = true;
+
+            // gửi email xác nhận đặt lịch hẹn cho khách
+            int hoiGui = JOptionPane.showConfirmDialog(this,
+                    "Bạn có muốn gửi Email Xác Nhận Lịch Hẹn Spa cho khách hàng không?",
+                    "Gửi Email Thông Báo", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+            if (hoiGui == JOptionPane.YES_OPTION) {
+                String emailChu = "";
+                try {
+                    KhachHang khDb = new models.dao.KhachHangDAO().findBySoDienThoai(sdt);
+                    if (khDb != null && khDb.getEmail() != null && !khDb.getEmail().isEmpty()) {
+                        emailChu = khDb.getEmail();
+                    } else {
+                        emailChu = "khachhang.an@gmail.com";
+                    }
+                } catch (Exception ignored) {
+                    emailChu = "khachhang.an@gmail.com";
+                }
+                String html = utils.EmailThongBaoHelper.taoEmailXacNhanLichHen(
+                        hoTen, sdt, maLH, tenDv, tenTc, tenKtv,
+                        henDateTime.format(DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy")), sbNote.toString());
+                utils.EmailThongBaoHelper.moHopThoaiGuiEmail(SwingUtilities.getWindowAncestor(this),
+                        emailChu, "[Mio Spa] Xác Nhận Lịch Hẹn Chăm Sóc Bé " + tenTc, html);
+            }
+
             if (onSuccessCallback != null) {
                 onSuccessCallback.run();
             }
