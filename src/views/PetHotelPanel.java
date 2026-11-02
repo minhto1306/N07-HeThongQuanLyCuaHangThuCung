@@ -597,6 +597,29 @@ public class PetHotelPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, "Đã lưu cập nhật thông tin lưu trú phòng " + p.maPhong + "!", "Đã lưu", JOptionPane.INFORMATION_MESSAGE);
             });
             pnl.add(btnLuuCapNhat, gbc);
+            // nút gửi email báo cáo chăm sóc & dinh dưỡng trong ngày cho chủ nuôi
+            gbc.gridy++;
+            gbc.insets = new Insets(0, 0, 6, 0);
+            JButton btnGuiBaoCao = ThemeColors.createSecondaryButton("Gửi Email Báo Cáo Chăm Sóc Cho Chủ", IconHelper.getIcon(IconHelper.CLIPBOARD_CHECK, 14, ThemeColors.PRIMARY_ACTIVE));
+            btnGuiBaoCao.setPreferredSize(new Dimension(0, 32));
+            btnGuiBaoCao.addActionListener(e -> {
+                String emailChu = "";
+                try {
+                    models.entity.KhachHang kh = new models.dao.KhachHangDAO().findBySoDienThoai(p.sdtChu);
+                    if (kh != null && kh.getEmail() != null && !kh.getEmail().isEmpty()) {
+                        emailChu = kh.getEmail();
+                    } else {
+                        emailChu = "khachhang.an@gmail.com";
+                    }
+                } catch (Exception ignored) {
+                    emailChu = "khachhang.an@gmail.com";
+                }
+                String tieuDe = "[Mio Pet Hotel] Nhật Ký Chăm Sóc Hàng Ngày Cho Bé " + (p.tenThuCung.isEmpty() ? "Cưng" : p.tenThuCung);
+                String html = utils.EmailThongBaoHelper.taoEmailBaoCaoDinhDuong(
+                        p.tenChu, p.maPhong, p.tenThuCung, p.daChoAnSang, p.daChoAnToi, p.daDiDaoVeSinh, p.phiDichVuPhatSinh, p.ghiChuChamSoc);
+                utils.EmailThongBaoHelper.moHopThoaiGuiEmail(SwingUtilities.getWindowAncestor(this), emailChu, tieuDe, html);
+            });
+            pnl.add(btnGuiBaoCao, gbc);
 
             gbc.gridy++;
             gbc.insets = new Insets(0, 0, 4, 0);
@@ -909,6 +932,29 @@ public class PetHotelPanel extends JPanel {
                             "• Dự kiến đón: " + pChon.duKienCheckOut.format(dtfDisplay) + " (" + soNgay + " ngày)\n" +
                             "• Đơn giá: " + dfMoney.format(pChon.donGiaNgay) + "/ngày",
                     "Check-in thành công", JOptionPane.INFORMATION_MESSAGE);
+            // hỏi nhân viên có muốn gửi email xác nhận check-in lưu trú cho chủ nuôi không
+            int hoiGui = JOptionPane.showConfirmDialog(this,
+                    "Bạn có muốn gửi Email Xác Nhận Tiếp Nhận Thú Cưng cho chủ nuôi không?",
+                    "Gửi Email Thông Báo", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+            if (hoiGui == JOptionPane.YES_OPTION) {
+                String emailChu = "";
+                try {
+                    models.entity.KhachHang kh = new models.dao.KhachHangDAO().findBySoDienThoai(pChon.sdtChu);
+                    if (kh != null && kh.getEmail() != null && !kh.getEmail().isEmpty()) {
+                        emailChu = kh.getEmail();
+                    } else {
+                        emailChu = "khachhang.an@gmail.com";
+                    }
+                } catch (Exception ignored) {
+                    emailChu = "khachhang.an@gmail.com";
+                }
+                String html = utils.EmailThongBaoHelper.taoEmailCheckInHotel(
+                        pChon.tenChu, pChon.sdtChu, pChon.maPhong, pChon.loaiPhong, pChon.donGiaNgay,
+                        pChon.tenThuCung, pChon.giongLoai, pChon.thoiGianCheckIn.format(dtfDisplay),
+                        pChon.duKienCheckOut.format(dtfDisplay), pChon.ghiChuChamSoc);
+                utils.EmailThongBaoHelper.moHopThoaiGuiEmail(SwingUtilities.getWindowAncestor(this),
+                        emailChu, "[Mio Pet Hotel] Xác Nhận Tiếp Nhận Bé " + pChon.tenThuCung + " Lưu Trú", html);
+            }
         });
 
         pnlFooter.add(btnHuy);
