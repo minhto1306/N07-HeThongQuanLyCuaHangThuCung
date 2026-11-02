@@ -367,19 +367,17 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
             String nsx = txtNgaySX.getText().trim();
             String hsd = txtHanSD.getText().trim();
 
-            // --- BỔ SUNG CHỐT CHẶN KIỂM TRA NGÀY THÁNG VÀ GIÁ BÁN TẠI ĐÂY ---
+            //  Kiểm tra logic HSD phải sau NSX
             LocalDate dNgaySX = LocalDate.parse(nsx, dtf);
             LocalDate dHanSD = LocalDate.parse(hsd, dtf);
-
-            //  Chặn Hạn sử dụng không được trước hoặc bằng Ngày sản xuất
             if (!dHanSD.isAfter(dNgaySX)) {
                 JOptionPane.showMessageDialog(this, 
                         "Lỗi logic thời gian:\nHạn sử dụng (" + hsd + ") phải diễn ra SAU Ngày sản xuất (" + nsx + ")!", 
                         "Lỗi ngày tháng", JOptionPane.WARNING_MESSAGE);
-                return; // Dừng lại, không cho lưu
+                return;
             }
 
-            //  Chặn giá bán nhỏ hơn giá nhập (chống bán lỗ)
+            // 2. Kiểm tra giá bán không được thấp hơn giá nhập
             if (giaBan < giaNhap) {
                 JOptionPane.showMessageDialog(this, 
                         "Giá bán lẻ cơ sở không được nhỏ hơn giá nhập cơ sở!", 
@@ -387,10 +385,10 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
                 txtGiaBan.requestFocus();
                 return;
             }
-            // -----------------------------------------------------------------
 
             String fefo = lblFefoBadge.getText();
 
+            // CHỈ GỌI LISTENER 1 LẦN DUY NHẤT
             if (listener != null) {
                 listener.onNhapHang(maSP, ten, danhMuc, dvt, soLo, ncc, nsx, hsd, giaNhap, giaBan, sl, fefo);
             }
@@ -408,40 +406,7 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Lỗi định dạng ngày tháng (dd/MM/yyyy)!", "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
-    
-
-        try {
-            long giaNhap = Long.parseLong(txtGiaNhap.getText().replace(",", "").replace(".", "").trim());
-            long giaBan = Long.parseLong(txtGiaBan.getText().replace(",", "").replace(".", "").trim());
-            int sl = (int) spnSoLuongNhap.getValue();
-
-            String maSP = txtMaSP.getText().trim();
-            String danhMuc = (String) cboDanhMuc.getSelectedItem();
-            String ncc = (String) cboNhaCungCap.getSelectedItem();
-            String dvt = (String) cboDvtCoSo.getSelectedItem();
-            String soLo = txtSoLo.getText().trim();
-            String nsx = txtNgaySX.getText().trim();
-            String hsd = txtHanSD.getText().trim();
-            String fefo = lblFefoBadge.getText();
-
-            if (listener != null) {
-                listener.onNhapHang(maSP, ten, danhMuc, dvt, soLo, ncc, nsx, hsd, giaNhap, giaBan, sl, fefo);
-            }
-
-            JOptionPane.showMessageDialog(this,
-                    "Nhập kho sản phẩm & lô hàng thành công!\n" +
-                            "• Sản phẩm: " + ten + " [" + maSP + "]\n" +
-                            "• Lô: " + soLo + " (" + sl + " " + dvt + ")\n" +
-                            "• Trạng thái FEFO: " + fefo,
-                    "Nhập hàng thành công", JOptionPane.INFORMATION_MESSAGE);
-
-            dispose();
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Đơn giá nhập và giá bán phải là số hợp lệ!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-//   ----thêm 
-//    Bật Popup bảng lịch chọn ngày tháng trực quan chống gõ sai
+    }//    Bật Popup bảng lịch chọn ngày tháng trực quan chống gõ sai
 
     private void hienThiCalendarPopup(JComponent invoker, JTextField targetField, Runnable onDatePicked) {
         LocalDate initialDate;
