@@ -130,9 +130,15 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.35;
         card.add(new JLabel("Mã sản phẩm:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
-        txtMaSP = new JTextField("SP" + (System.currentTimeMillis() % 1000));
+     //  Tự động lấy mã tiếp theo từ Database
+        models.dao.SanPhamDAO spDao = new models.dao.SanPhamDAO();
+        txtMaSP = new JTextField(spDao.phatSinhMaSanPham());
         txtMaSP.setPreferredSize(new Dimension(0, 32));
         txtMaSP.setBorder(ThemeColors.createInputBorder());
+
+        //  KHÓA CỨNG không cho người dùng tự gõ tay sửa mã (tránh trùng khóa chính)
+        txtMaSP.setEditable(false);
+        txtMaSP.setBackground(new Color(241, 245, 249)); // Màu xám nhạt báo hiệu 
         card.add(txtMaSP, gbc);
 
         gbc.gridx = 0; gbc.gridy = 2;
