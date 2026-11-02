@@ -4,12 +4,19 @@ import models.entity.NhanVien;
 import models.entity.TaiKhoan;
 
 /**
- * Quản lý phiên làm việc tập trung (User Session) cho toàn bộ ứng dụng.
- * Hỗ trợ phân quyền truy cập nghiêm ngặt theo 4 vai trò nghiệp vụ:
- * 1. NVQL (Nhân viên Quản lý / Quản trị hệ thống)
- * 2. NVBH (Nhân viên Bán hàng tại quầy)
- * 3. NVCS (Nhân viên Chăm sóc thú cưng / Kỹ thuật viên)
- * 4. NVTN (Nhân viên Thu ngân)
+ * =============================================================================
+ * LỚP QUẢN LÝ PHIÊN LÀM VIỆC TẬP TRUNG & PHÂN QUYỀN (RBAC USER SESSION)
+ * Dự án: Hệ Thống Quản Lý Cửa Hàng Thú Cưng Mio (Pet Shop Management System)
+ * Đơn vị: Khoa CNTT - Đại học Công nghiệp TP.HCM (IUH) - Nhóm 07
+ * =============================================================================
+ * Nhiệm vụ và kiến trúc:
+ * 1. Lưu trữ trạng thái phiên người dùng đăng nhập hiện tại (Current User Session).
+ * 2. Ma trận phân quyền theo vai trò (Role-Based Access Control - RBAC 4 vai trò):
+ *    - NVQL: Quản lý hệ thống (Toàn quyền quản trị, phân ca, duyệt ca, cấu hình)
+ *    - NVBH: Nhân viên Bán hàng tại quầy (POS, tra cứu kho, đổi trả hàng)
+ *    - NVCS: Nhân viên Chăm sóc thú cưng / Kỹ thuật viên Spa & Pet Hotel
+ *    - NVTN: Nhân viên Thu ngân (POS, bàn giao két tiền, in hóa đơn)
+ * 3. Ngăn chặn triệt để hành vi truy cập trái phép vào các màn hình nghiệp vụ nhạy cảm.
  */
 public final class UserSession {
 
@@ -36,7 +43,8 @@ public final class UserSession {
         }
 
         /**
-         * Chuyển đổi linh hoạt từ chuỗi vai trò lưu trong DB / tài khoản sang Enum Role.
+         * Chuyển đổi linh hoạt từ chuỗi văn bản vai trò lưu trong CSDL sang đối tượng Enum Role.
+         * Tự động chuẩn hóa chữ hoa/thường và lọc từ khóa (chống lỗi sai lệch định dạng chuỗi).
          */
         public static Role fromString(String roleStr) {
             if (roleStr == null) return NVTN;
@@ -115,7 +123,8 @@ public final class UserSession {
     }
 
     /**
-     * Kiểm tra thẩm quyền truy cập thẻ chức năng (Card Name) trong MainDashboard theo ma trận RBAC.
+     * Kiểm tra thẩm quyền truy cập màn hình nghiệp vụ (Card Name) trong MainDashboard theo ma trận RBAC.
+     * Quản lý (NVQL) được cấp toàn quyền; các vai trò khác bị giới hạn nghiêm ngặt theo chức năng được giao.
      */
     public static boolean canAccess(String cardName) {
         if (isQuanLy()) {
