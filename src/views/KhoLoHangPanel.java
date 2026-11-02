@@ -476,10 +476,13 @@ public class KhoLoHangPanel extends JPanel {
     private void moDialogQuyDoi() {
         Frame topFrame = (Frame) SwingUtilities.getWindowAncestor(this);
         ThietLapQuyDoiDialog dialog = new ThietLapQuyDoiDialog(topFrame, (maSP, tenSP, donViMoi, tyLe, giaBan) -> {
-            // Thêm quy cách quy đổi mới vào bảng sản phẩm
+            //  Thêm dòng quy đổi mới vào bảng hiển thị của Tab Kho
             modelSanPham.addRow(new Object[]{
                     maSP, tenSP, "Thức ăn thú cưng", donViMoi, String.valueOf(tyLe), "Không", df.format(giaBan), "Quy cách đóng gói mới"
             });
+
+            //  Đẩy thẳng món quy cách này sang bộ nhớ của quầy POS
+            BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
         });
         dialog.setVisible(true);
     }
