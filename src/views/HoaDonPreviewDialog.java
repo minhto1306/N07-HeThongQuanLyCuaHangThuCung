@@ -51,8 +51,7 @@ public class HoaDonPreviewDialog extends JDialog {
         dlg.setVisible(true);
     }
 
-    // Khởi tạo giao diện xem trước phiếu in nhiệt K80 (chuẩn kích thước giấy 80mm ~ 520px)
-    // Thiết kế tỉ mỉ để thu ngân xem trước trực quan và có thể in ngay hoặc xuất file đối soát
+    // tạo giao diện popup xem bill k80
     private void khoiTaoGiaoDien() {
         setSize(520, 720);
         setLocationRelativeTo(getParent());
@@ -384,7 +383,7 @@ public class HoaDonPreviewDialog extends JDialog {
         return lbl;
     }
 
-    // Xuất hóa đơn dạng văn bản (.txt) lưu vào thư mục export/ phục vụ in trực tiếp ra máy in kim / máy in nhiệt quầy
+    // xuất bill ra file text lưu trong thư mục export
     private void luuPhieuRaFileTxt() {
         try {
             File dir = new File("export");
@@ -420,7 +419,7 @@ public class HoaDonPreviewDialog extends JDialog {
         }
     }
 
-    // Xuất hóa đơn định dạng HTML chuẩn responsive in nhiệt 80mm, nhúng mã VietQR động và hỗ trợ in PDF trực tiếp từ trình duyệt
+    // xuất file html để bấm in bill trên trình duyệt cho tiện
     private void luuPhieuRaFileHtml() {
         try {
             File dir = new File("export");

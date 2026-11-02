@@ -3,21 +3,7 @@ package utils;
 import models.entity.NhanVien;
 import models.entity.TaiKhoan;
 
-/**
- * =============================================================================
- * LỚP QUẢN LÝ PHIÊN LÀM VIỆC TẬP TRUNG & PHÂN QUYỀN (RBAC USER SESSION)
- * Dự án: Hệ Thống Quản Lý Cửa Hàng Thú Cưng Mio (Pet Shop Management System)
- * Đơn vị: Khoa CNTT - Đại học Công nghiệp TP.HCM (IUH) - Nhóm 07
- * =============================================================================
- * Nhiệm vụ và kiến trúc:
- * 1. Lưu trữ trạng thái phiên người dùng đăng nhập hiện tại (Current User Session).
- * 2. Ma trận phân quyền theo vai trò (Role-Based Access Control - RBAC 4 vai trò):
- *    - NVQL: Quản lý hệ thống (Toàn quyền quản trị, phân ca, duyệt ca, cấu hình)
- *    - NVBH: Nhân viên Bán hàng tại quầy (POS, tra cứu kho, đổi trả hàng)
- *    - NVCS: Nhân viên Chăm sóc thú cưng / Kỹ thuật viên Spa & Pet Hotel
- *    - NVTN: Nhân viên Thu ngân (POS, bàn giao két tiền, in hóa đơn)
- * 3. Ngăn chặn triệt để hành vi truy cập trái phép vào các màn hình nghiệp vụ nhạy cảm.
- */
+// lưu thông tin người đang đăng nhập và check quyền
 public final class UserSession {
 
     public enum Role {
@@ -42,10 +28,7 @@ public final class UserSession {
             return description;
         }
 
-        /**
-         * Chuyển đổi linh hoạt từ chuỗi văn bản vai trò lưu trong CSDL sang đối tượng Enum Role.
-         * Tự động chuẩn hóa chữ hoa/thường và lọc từ khóa (chống lỗi sai lệch định dạng chuỗi).
-         */
+        // đổi từ chữ vai trò trong db sang enum
         public static Role fromString(String roleStr) {
             if (roleStr == null) return NVTN;
             String normalized = roleStr.trim().toUpperCase();
@@ -122,10 +105,7 @@ public final class UserSession {
         return currentRole == Role.NVTN;
     }
 
-    /**
-     * Kiểm tra thẩm quyền truy cập màn hình nghiệp vụ (Card Name) trong MainDashboard theo ma trận RBAC.
-     * Quản lý (NVQL) được cấp toàn quyền; các vai trò khác bị giới hạn nghiêm ngặt theo chức năng được giao.
-     */
+    // hàm check xem tài khoản này có dc bấm vào card này ko
     public static boolean canAccess(String cardName) {
         if (isQuanLy()) {
             return true; // Quản lý (NVQL) có toàn quyền truy cập tất cả phân hệ

@@ -11,30 +11,23 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Controller điều phối toàn bộ nghiệp vụ Bán hàng POS và Khách hàng Thành viên:
- * 1. Đồng bộ 100% danh sách khách hàng và điểm tích lũy với SQL Server qua KhachHangDAO.
- * 2. Thêm sản phẩm xuất từ lô hàng theo FEFO (First Expired, First Out).
- * 3. Gọi HoaDonDAO thực thi ACID Transaction.
- */
+// controller xử lý bán hàng và khách hàng
 public class BanHangController {
 
-    // Bộ nhớ đệm danh sách khách hàng trên RAM để phục vụ tìm kiếm / gợi ý tức thì
+    // list tạm lưu khách trên ram để tìm cho nhanh đỡ lag
     private static final List<KhachHang> DANH_SACH_KHACH_HANG = new ArrayList<>();
     private static final KhachHangDAO STATIC_KH_DAO = new KhachHangDAO();
 
-    // Đồng bộ danh bạ khách hàng từ SQL Server lên bộ nhớ đệm (RAM)
-    // Dùng synchronized để đảm bảo an toàn đa luồng (Thread-safe) khi nhiều phiên POS cùng truy cập
+    // kéo danh sách khách từ db lên
     public static synchronized void dongBoKhachHangTuDatabase() {
         try {
             List<KhachHang> dbList = STATIC_KH_DAO.getAllKhachHang();
             if (dbList != null) {
-                // Xóa danh sách cũ và nạp mới dữ liệu mới nhất từ CSDL
                 DANH_SACH_KHACH_HANG.clear();
                 DANH_SACH_KHACH_HANG.addAll(dbList);
             }
         } catch (SQLException e) {
-            System.err.println("[BanHangController] Lỗi đọc KhachHang từ CSDL: " + e.getMessage());
+            System.err.println("Lỗi đọc khách hàng: " + e.getMessage());
         }
     }
 
@@ -56,11 +49,11 @@ public class BanHangController {
      */
     // Khởi tạo phiên hóa đơn mới tại quầy: gán mã chuẩn, thời gian tạo và nhân viên thu ngân trực ca
     public void khoiTaoHoaDonMoi(String maHoaDon, NhanVien nhanVien) {
-        // Bước 1: Nếu chưa có mã HĐ thì gọi hàm sinh mã tự động theo quy chuẩn HDyyMMdd-NV-xxx
+        // chưa có mã thì tự sinh mã theo ngày
         if (maHoaDon == null || maHoaDon.trim().isEmpty()) {
             maHoaDon = utils.MaTuSinhHelper.sinhMaHoaDon(nhanVien != null ? nhanVien.getMaNhanVien() : utils.UserSession.getUserId());
         }
-        // Bước 2: Thiết lập thông tin ban đầu của hóa đơn ở trạng thái "Chờ thanh toán"
+        // khởi tạo hóa đơn mới
         this.hoaDonHienTai = new HoaDon(
                 maHoaDon,
                 null,
@@ -89,7 +82,7 @@ public class BanHangController {
         String kw = tuKhoa.trim();
         String kwLower = kw.toLowerCase();
 
-        // Bước 1: Ưu tiên tìm kiếm chính xác tuyệt đối theo Số điện thoại hoặc Mã khách hàng
+        // tìm theo sdt hoặc mã trước
         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
             if (kh.getSoDienThoai().equals(kw) || kh.getMaKhachHang().equalsIgnoreCase(kw)) {
                 if (this.hoaDonHienTai != null) {
@@ -99,7 +92,7 @@ public class BanHangController {
             }
         }
 
-        // Bước 2: Nếu nhập từ 3 ký tự trở lên thì mở rộng tìm kiếm tương đối (chứa chuỗi SĐT hoặc Tên)
+        // gõ trên 3 ký tự thì tìm mờ theo tên
         if (kw.length() >= 3) {
             for (KhachHang kh : DANH_SACH_KHACH_HANG) {
                 if (kh.getSoDienThoai().contains(kw) || kh.getHoTen().toLowerCase().contains(kwLower)) {
@@ -237,21 +230,21 @@ public class BanHangController {
      */
     // Xuất kho theo chiến lược FEFO (First Expired, First Out): kiểm tra tồn kho và ưu tiên lô có hạn dùng gần nhất
     public boolean themSanPhamXuatLo(SanPham sp, QuyDoiDonVi qd, int soLuong) throws Exception {
-        // Bước 1: Kiểm tra tính hợp lệ của tham số đầu vào
+        // kiểm tra dữ liệu truyền vào
         if (sp == null || qd == null || soLuong <= 0) {
             throw new IllegalArgumentException("Thông tin sản phẩm hoặc số lượng không hợp lệ!");
         }
 
-        // Bước 2: Quy đổi số lượng bán ra số lượng cơ sở (ví dụ: bán 2 hộp x tỷ lệ 10 = 20 gói cơ sở)
+        // đổi ra số lượng cơ sở
         int soLuongCoSoCanXuat = soLuong * qd.getTyLeQuyDoi();
 
-        // Bước 3: Truy vấn danh sách các lô hàng còn tồn kho của sản phẩm, sắp xếp tăng dần theo Hạn sử dụng (FEFO)
+        // lấy mấy lô còn hạn theo thứ tự fefo
         List<LoHang> dsLoHang = loHangDAO.getAvailableLotsFEFO(sp.getMaSanPham());
         if (dsLoHang.isEmpty()) {
-            throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] hiện đã hết hàng hoặc các lô hàng đều đã quá hạn sử dụng!");
+            throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] hết hàng hoặc hết date rồi");
         }
 
-        // Bước 4: Tìm kiếm lô hàng ưu tiên có hạn sử dụng gần nhất và đủ số lượng tồn khả dụng
+        // chọn lô cận date nhất mà còn đủ hàng
         LoHang loChon = null;
         for (LoHang lo : dsLoHang) {
             if (lo.getSoLuongTon() >= soLuongCoSoCanXuat) {
@@ -260,15 +253,14 @@ public class BanHangController {
             }
         }
 
-        // Bước 5: Nếu không có lô đơn lẻ nào đủ, chọn lô cận date nhất và kiểm tra tồn kho
         if (loChon == null) {
             loChon = dsLoHang.get(0);
             if (loChon.getSoLuongTon() < soLuongCoSoCanXuat) {
-                throw new IllegalStateException("Lô hàng [" + loChon.getSoLo() + "] chỉ còn tồn " + loChon.getSoLuongTon() + " đơn vị, không đủ để xuất!");
+                throw new IllegalStateException("Lô [" + loChon.getSoLo() + "] còn có " + loChon.getSoLuongTon() + ", ko đủ xuất");
             }
         }
 
-        // Bước 6: Khởi tạo chi tiết xuất lô và gán vào giỏ hàng của hóa đơn hiện tại
+        // tạo dòng chi tiết xuất lô
         String maCT = hoaDonHienTai.getMaHoaDon() + "_SP" + (hoaDonHienTai.getDsChiTiet().size() + 1);
         ChiTietXuatLo ctXuatLo = new ChiTietXuatLo(
                 maCT,
@@ -292,13 +284,12 @@ public class BanHangController {
             throw new IllegalArgumentException("Vui lòng chọn dịch vụ và thú cưng hợp lệ!");
         }
 
-        // Bước 1: Sinh mã chi tiết dịch vụ duy nhất trong hóa đơn
         String maCT = hoaDonHienTai.getMaHoaDon() + "_DV" + (hoaDonHienTai.getDsChiTiet().size() + 1);
 
-        // Bước 2: Tự động tính 10% hoa hồng trên đơn giá dịch vụ để sau này phục vụ tính KPI/lương nhân sự
+        // trích 10% hoa hồng cho bạn làm spa
         BigDecimal hoaHong = dv.getGiaDichVu().multiply(BigDecimal.valueOf(0.10));
 
-        // Bước 3: Đóng gói đối tượng ChiTietDichVu và lưu vào danh sách chi tiết hóa đơn
+        // thêm vào bill
         ChiTietDichVu ctDv = new ChiTietDichVu(
                 maCT,
                 hoaDonHienTai,
@@ -324,14 +315,13 @@ public class BanHangController {
      */
     // Xác nhận thanh toán: ghi nhận phương thức, cập nhật thời gian và kích hoạt ACID transaction lưu CSDL
     public boolean thanhToan(String phuongThucThanhToan) throws SQLException {
-        // Bước 1: Cập nhật phương thức thanh toán (Tiền mặt, Chuyển khoản VietQR, VNPay) và mốc thời gian chốt đơn
+        // lưu phương thức thanh toán với giờ
         this.hoaDonHienTai.setPhuongThucThanhToan(phuongThucThanhToan);
         this.hoaDonHienTai.setThoiGianThanhToan(LocalDateTime.now());
 
-        // Bước 2: Kích hoạt giao dịch thanh toán ACID trong HoaDonDAO (lưu HĐ, trừ tồn kho lô hàng, cộng điểm khách)
+        // gọi dao lưu xuống db
         boolean ok = hoaDonDAO.thanhToanHoaDon(this.hoaDonHienTai);
 
-        // Bước 3: Sau khi lưu thành công, đồng bộ lại danh sách khách hàng để cập nhật điểm tích lũy mới
         if (ok) {
             dongBoKhachHangTuDatabase();
         }

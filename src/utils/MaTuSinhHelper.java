@@ -26,13 +26,11 @@ public final class MaTuSinhHelper {
      * Sinh mã Hóa Đơn theo quy luật: HD + yyMMdd + "-" + MãNV(2 số) + "-" + STT(3 số)
      * Đảm bảo tổng độ dài luôn <= 15 ký tự (phù hợp với bảng HoaDon và ChiTietHoaDon NVARCHAR(20)).
      */
-    // Sinh mã hóa đơn theo quy chuẩn: HD + yyMMdd + '-' + MãNV(2 số) + '-' + STT(3 số)
-    // Đảm bảo độ dài luôn <= 15 ký tự, không bao giờ tràn cột maHoaDon NVARCHAR(20) trong CSDL
+    // sinh mã hóa đơn kiểu: HD + ngày + mã nv + số thứ tự
     public static synchronized String sinhMaHoaDon(String maNhanVien) {
-        // Bước 1: Lấy mốc ngày hiện tại theo định dạng yyMMdd (ví dụ: 261102)
         String today = LocalDate.now().format(DATE_FMT);
 
-        // Bước 2: Tách 2 chữ số cuối của mã nhân viên thu ngân trực ca (ví dụ: NV001 -> 01)
+        // lấy 2 số cuối của mã nv
         String nvPart = "00";
         if (maNhanVien != null && !maNhanVien.trim().isEmpty()) {
             String digits = maNhanVien.replaceAll("[^0-9]", "");
@@ -43,11 +41,10 @@ public final class MaTuSinhHelper {
             }
         }
 
-        // Bước 3: Tạo tiền tố định danh hóa đơn trong ngày của nhân viên: HD261102-01-
         String prefix = "HD" + today + "-" + nvPart + "-";
         int seq = 1;
 
-        // Bước 4: Đếm số lượng hóa đơn nhân viên này đã lập trong ngày để tăng số thứ tự (STT)
+        // đếm xem hôm nay nv này bán dc mấy đơn rồi để tăng stt lên
         String sql = "SELECT COUNT(*) FROM HoaDon WHERE maHoaDon LIKE ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -58,11 +55,10 @@ public final class MaTuSinhHelper {
                 }
             }
         } catch (Exception e) {
-            // Cơ chế dự phòng khi lỗi kết nối: sinh số thứ tự ngẫu nhiên từ 100-999
+            // lỡ lỗi thì random đại 1 số tránh trùng
             seq = (int) (System.currentTimeMillis() % 900) + 100;
         }
 
-        // Bước 5: Ghép STT dạng 3 chữ số: HD261102-01-001
         return String.format("%s%03d", prefix, seq);
     }
 
@@ -113,10 +109,9 @@ public final class MaTuSinhHelper {
     /**
      * Sinh mã Khách Hàng mới theo quy luật tự tăng: KH + 4 chữ số (ví dụ KH0006)
      */
-    // Sinh mã khách hàng tự tăng dạng KH0001: quét mã lớn nhất hiện có trong CSDL để tránh trùng lặp
+    // sinh mã khách hàng tự tăng KH0001
     public static synchronized String sinhMaKhachHang() {
         int max = 0;
-        // Bước 1: Quét toàn bộ mã khách hàng có tiền tố 'KH' từ bảng KhachHang
         String sql = "SELECT maKhachHang FROM KhachHang WHERE maKhachHang LIKE 'KH%'";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -124,7 +119,6 @@ public final class MaTuSinhHelper {
             while (rs.next()) {
                 String code = rs.getString(1);
                 if (code != null) {
-                    // Bước 2: Tách lấy phần số và tìm giá trị lớn nhất hiện có
                     String num = code.replaceAll("[^0-9]", "");
                     if (!num.isEmpty()) {
                         try {
@@ -135,7 +129,6 @@ public final class MaTuSinhHelper {
                 }
             }
         } catch (Exception ignored) {}
-        // Bước 3: Định dạng mã mới tăng thêm 1 đơn vị với 4 chữ số (ví dụ: KH0001, KH0002)
         return String.format("KH%04d", max + 1);
     }
 
