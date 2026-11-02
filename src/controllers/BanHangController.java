@@ -181,13 +181,19 @@ public class BanHangController {
 
     // Cập nhật thông tin chi tiết khách hàng: chuẩn hóa dữ liệu đầu vào và lưu xuống CSDL
     public static boolean capNhatThongTinKhachHang(String maKH, String hoTenMoi, String sdtMoi, int diemMoi) {
+        return capNhatThongTinKhachHang(maKH, hoTenMoi, sdtMoi, diemMoi, "", "");
+    }
+
+    // overload cập nhật thông tin khách hàng có cả email và địa chỉ để gửi mail thông báo
+    public static boolean capNhatThongTinKhachHang(String maKH, String hoTenMoi, String sdtMoi, int diemMoi, String emailMoi, String diaChiMoi) {
         dongBoKhachHangTuDatabase();
         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
             if (kh.getMaKhachHang().equalsIgnoreCase(maKH)) {
-                // Trim khoảng trắng thừa và chặn điểm tích lũy âm
                 kh.setHoTen(hoTenMoi.trim());
                 kh.setSoDienThoai(sdtMoi.trim());
                 kh.setDiemTichLuy(Math.max(0, diemMoi));
+                kh.setEmail(emailMoi != null ? emailMoi.trim() : "");
+                kh.setDiaChi(diaChiMoi != null ? diaChiMoi.trim() : "");
                 try {
                     STATIC_KH_DAO.update(kh);
                     return true;
@@ -198,6 +204,48 @@ public class BanHangController {
             }
         }
         return false;
+    }
+
+    // thêm khách hàng mới hoặc cập nhật kèm cả email và địa chỉ nhà
+    public static KhachHang luuHoacCapNhatKhachHang(String soDienThoai, String hoTen, int diemMoi, String email, String diaChi) {
+        if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
+            return null;
+        }
+        dongBoKhachHangTuDatabase();
+        String sdt = soDienThoai.trim();
+        if (sdt.length() > 15) {
+            sdt = sdt.substring(0, 15);
+        }
+
+        for (KhachHang kh : DANH_SACH_KHACH_HANG) {
+            if (kh.getSoDienThoai().equalsIgnoreCase(sdt)) {
+                if (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai")) {
+                    kh.setHoTen(hoTen.trim());
+                }
+                kh.setDiemTichLuy(Math.max(0, diemMoi));
+                if (email != null && !email.trim().isEmpty()) kh.setEmail(email.trim());
+                if (diaChi != null && !diaChi.trim().isEmpty()) kh.setDiaChi(diaChi.trim());
+                try {
+                    STATIC_KH_DAO.update(kh);
+                } catch (SQLException e) {
+                    System.err.println("[BanHangController] Lỗi update KhachHang CSDL: " + e.getMessage());
+                }
+                return kh;
+            }
+        }
+
+        String tenMoi = (hoTen == null || hoTen.trim().isEmpty() || hoTen.trim().equalsIgnoreCase("Khách vãng lai"))
+                ? "Khách hàng mới"
+                : hoTen.trim();
+        String maMoi = sinhMaKhachHangMoi();
+        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi), email, diaChi);
+        try {
+            STATIC_KH_DAO.insert(khMoi);
+        } catch (SQLException e) {
+            System.err.println("[BanHangController] Lỗi insert KhachHang CSDL: " + e.getMessage());
+        }
+        DANH_SACH_KHACH_HANG.add(khMoi);
+        return khMoi;
     }
 
     // Xóa khách hàng khỏi CSDL và loại bỏ luôn khỏi danh sách tạm trên RAM để tránh sai lệch dữ liệu

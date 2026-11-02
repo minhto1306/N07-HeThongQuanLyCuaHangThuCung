@@ -1,4 +1,4 @@
-﻿-- ======================================================================================
+-- ======================================================================================
 -- DỰ ÁN MÔN HỌC: PHÁT TRIỂN ỨNG DỤNG (APPLICATION DEVELOPMENT - AD)
 -- HỌC KỲ: HK1 / 2026-2027 | NHÓM: 07 (N07)
 -- ĐỀ TÀI: XÂY DỰNG HỆ THỐNG QUẢN LÝ CỬA HÀNG THÚ CƯNG (Pet Shop Management System)
@@ -111,7 +111,9 @@ CREATE TABLE KhachHang (
     maKhachHang NVARCHAR(20) PRIMARY KEY,
     hoTen NVARCHAR(100) NOT NULL,
     soDienThoai NVARCHAR(15) NOT NULL UNIQUE,
-    diemTichLuy INT NOT NULL DEFAULT 0
+    diemTichLuy INT NOT NULL DEFAULT 0,
+    email NVARCHAR(100),
+    diaChi NVARCHAR(255)
 );
 GO
 

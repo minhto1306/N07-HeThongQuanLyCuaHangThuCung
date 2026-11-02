@@ -23,3 +23,8 @@ obj/
 phan_chia_code_4_thanh_vien/
 *.ps1
 
+
+# Tệp xuất tạm thời khi chạy test
+export/*.txt
+export/*.csv
+export/*.html
