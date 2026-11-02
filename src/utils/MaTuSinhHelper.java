@@ -16,6 +16,10 @@ import java.time.format.DateTimeFormatter;
  * - Mã Thú Cưng: TC{4 chữ số tự tăng} (Ví dụ: TC0005)
  * - Mã Thẻ Spa Pass: PASS-{SĐT}-{Số thứ tự 2 số} (Ví dụ: PASS-0988111222-01)
  */
+// =========================================================================
+// BỘ SINH MÃ TỰ ĐỘNG CHUẨN HÓA DỰ ÁN MIO - LÊ KHẢI MINH THIẾT KẾ & CODE
+// Đảm bảo mã hóa đơn, mã khách hàng, mã thú cưng luôn ngắn gọn <= 15 ký tự, không bao giờ tràn cột CSDL
+// =========================================================================
 public final class MaTuSinhHelper {
 
     private MaTuSinhHelper() {}
@@ -26,6 +30,8 @@ public final class MaTuSinhHelper {
      * Sinh mã Hóa Đơn theo quy luật: HD + yyMMdd + "-" + MãNV(2 số) + "-" + STT(3 số)
      * Đảm bảo tổng độ dài luôn <= 15 ký tự (phù hợp với bảng HoaDon và ChiTietHoaDon NVARCHAR(20)).
      */
+    // Note của Minh: Sinh mã HĐ theo chuẩn: HD + NgàyThángNăm + MãNV + SốThứTự
+    // Ví dụ: HD261102-01-001 -> Vừa nhìn vào là biết ngày lập, ai lập và là hóa đơn số mấy trong ngày
     public static synchronized String sinhMaHoaDon(String maNhanVien) {
         String today = LocalDate.now().format(DATE_FMT);
         String nvPart = "00";
@@ -103,6 +109,8 @@ public final class MaTuSinhHelper {
     /**
      * Sinh mã Khách Hàng mới theo quy luật tự tăng: KH + 4 chữ số (ví dụ KH0006)
      */
+    // Tự động sinh mã khách hàng mới dạng KH0001, KH0002... tăng dần
+    // Quét mã lớn nhất hiện có trong CSDL để tránh trùng lặp
     public static synchronized String sinhMaKhachHang() {
         int max = 0;
         String sql = "SELECT maKhachHang FROM KhachHang WHERE maKhachHang LIKE 'KH%'";

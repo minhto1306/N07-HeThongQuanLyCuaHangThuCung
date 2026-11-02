@@ -14,6 +14,10 @@ import java.util.List;
  * Data Access Object cho Hóa Đơn và các Chi Tiết Đa Hình.
  * Áp dụng nghiêm ngặt JDBC Transaction (ACID) đảm bảo an toàn tuyệt đối khi thanh toán và trừ kho.
  */
+// =========================================================================
+// DAO HÓA ĐƠN & CHI TIẾT THANH TOÁN - LÊ KHẢI MINH PHỤ TRÁCH
+// Chỗ này bắt buộc phải xài JDBC Transaction (ACID) để không bị rác CSDL lúc bán hàng
+// =========================================================================
 public class HoaDonDAO {
 
     /**
@@ -25,6 +29,11 @@ public class HoaDonDAO {
      * 3. Tích điểm cho khách hàng (100.000đ = 1 điểm).
      * Bắt buộc rollback nếu có bất kỳ lỗi nào hoặc kho không đủ tồn.
      */
+    // Note của Minh: Hàm thanh toán cực kỳ quan trọng, gom nhiều bảng vào 1 giao dịch duy nhất
+    // 1. Thêm bản ghi HoaDon
+    // 2. Lưu từng chi tiết (XuatLo hoặc DichVu) và TRỪ KHO LÔ HÀNG ngay lập tức
+    // 3. Tích điểm cho khách hàng VIP (cứ 100k = 1 điểm)
+    // Nếu có bất kỳ lỗi nào giữa chừng là rollback() sạch sẽ, không lo mất mát dữ liệu
     public boolean thanhToanHoaDon(HoaDon hoaDon) throws SQLException {
         if (hoaDon == null || hoaDon.getDsChiTiet() == null || hoaDon.getDsChiTiet().isEmpty()) {
             throw new IllegalArgumentException("Hóa đơn phải có ít nhất một khoản mục chi tiết để thanh toán!");
@@ -54,10 +63,10 @@ public class HoaDonDAO {
 
         try {
             conn = DBConnection.getNewConnection();
-            // BẮT ĐẦU GIAO DỊCH JDBC
+            // BẮT ĐẦU GIAO DỊCH JDBC: Tắt tự động commit để Minh kiểm soát toàn bộ luồng
             conn.setAutoCommit(false);
 
-            // 1. Thêm Hóa đơn
+            // Bước 1: Lưu thông tin đầu phiếu hóa đơn (Mã HĐ, nhân viên lập, thời gian, phương thức...)
             psHoaDon = conn.prepareStatement(sqlHoaDon);
             psHoaDon.setString(1, hoaDon.getMaHoaDon());
             if (hoaDon.getKhachHang() != null && hoaDon.getKhachHang().getMaKhachHang() != null) {
@@ -74,7 +83,7 @@ public class HoaDonDAO {
             psHoaDon.setString(9, "Đã thanh toán");
             psHoaDon.executeUpdate();
 
-            // 2. Chuẩn bị các PreparedStatement cho chi tiết
+            // Bước 2: Chuẩn bị lưu các dòng hàng trong giỏ (mô hình quan hệ kế thừa đa hình ChiTietHoaDon)
             psCTHoaDon = conn.prepareStatement(sqlCTHoaDon);
             psCTXuatLo = conn.prepareStatement(sqlCTXuatLo);
             psTruKho = conn.prepareStatement(sqlTruKho);
@@ -104,7 +113,8 @@ public class HoaDonDAO {
                     psCTXuatLo.setInt(4, xuatLo.getSoLuongXuatCoSo());
                     psCTXuatLo.executeUpdate();
 
-                    // TRỪ TỒN KHO LÔ HÀNG VỚI KHÓA RÀNG BUỘC
+                    // Chốt chặn trừ kho: Chỉ trừ nếu số lượng tồn còn đủ (soLuongTon >= xuất)
+                    // Tránh tuyệt đối trường hợp 2 máy thu ngân bán cùng lúc gây âm kho
                     psTruKho.setInt(1, xuatLo.getSoLuongXuatCoSo());
                     psTruKho.setString(2, xuatLo.getLoHang().getSoLo());
                     psTruKho.setInt(3, xuatLo.getSoLuongXuatCoSo());
@@ -142,6 +152,7 @@ public class HoaDonDAO {
             return true;
 
         } catch (SQLException e) {
+            // Có lỗi phát sinh -> Rollback ngay lập tức để giữ an toàn dữ liệu!
             if (conn != null) {
                 try {
                     conn.rollback();
@@ -407,6 +418,7 @@ public class HoaDonDAO {
             conn.commit();
             return true;
         } catch (SQLException e) {
+            // Có lỗi phát sinh -> Rollback ngay lập tức để giữ an toàn dữ liệu!
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException ignored) {}
             }
