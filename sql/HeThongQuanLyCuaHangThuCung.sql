@@ -84,7 +84,8 @@ CREATE TABLE BangPhanCong (
     trangThaiCa NVARCHAR(50) DEFAULT N'Chưa bắt đầu',
     ghiChu NVARCHAR(255) NULL,
     CONSTRAINT FK_PhanCong_NhanVien FOREIGN KEY (maNhanVien) REFERENCES NhanVien(maNhanVien),
-    CONSTRAINT FK_PhanCong_CaLamViec FOREIGN KEY (maCa) REFERENCES CaLamViec(maCa)
+    CONSTRAINT FK_PhanCong_CaLamViec FOREIGN KEY (maCa) REFERENCES CaLamViec(maCa),
+    CONSTRAINT UQ_BangPhanCong_NhanVien_Ngay_Ca UNIQUE (maNhanVien, ngayLamViec, maCa)
 );
 GO
 
@@ -96,10 +97,18 @@ CREATE TABLE BangGiaoCa (
     tienCuoiCaHeThong DECIMAL(18,2) NOT NULL DEFAULT 0,
     tienCuoiCaThucTe DECIMAL(18,2) NOT NULL DEFAULT 0,
     tienChenhLech DECIMAL(18,2) NOT NULL DEFAULT 0,
+    tienThuTienMat DECIMAL(18,2) NOT NULL DEFAULT 0,
+    tienChuyenKhoan DECIMAL(18,2) NOT NULL DEFAULT 0,
+    tienHoanTra DECIMAL(18,2) NOT NULL DEFAULT 0,
     lyDoChenhLech NVARCHAR(255),
     gioKetThucThucTe DATETIME2,
+    trangThai NVARCHAR(20) NOT NULL DEFAULT 'CHO_DUYET',
+    maQuanLyDuyet NVARCHAR(20) NULL,
+    thoiGianDuyet DATETIME2 NULL,
     CONSTRAINT FK_GiaoCa_NhanVien FOREIGN KEY (maNhanVien) REFERENCES NhanVien(maNhanVien),
-    CONSTRAINT FK_GiaoCa_CaLamViec FOREIGN KEY (maCa) REFERENCES CaLamViec(maCa)
+    CONSTRAINT FK_GiaoCa_CaLamViec FOREIGN KEY (maCa) REFERENCES CaLamViec(maCa),
+    CONSTRAINT FK_GiaoCa_QuanLyDuyet FOREIGN KEY (maQuanLyDuyet) REFERENCES NhanVien(maNhanVien),
+    CONSTRAINT CK_BangGiaoCa_TrangThai CHECK (trangThai IN ('DANG_MO', 'CHO_DUYET', 'DA_DUYET'))
 );
 GO
 
@@ -596,14 +605,14 @@ END
 
 -- 9. Biên bản Bàn giao ca mẫu
 IF NOT EXISTS (SELECT 1 FROM BangGiaoCa WHERE maGiaoCa = 'GC001')
-    INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, lyDoChenhLech, gioKetThucThucTe)
-    VALUES ('GC001', 'NV002', 'CA01', 1000000, 3500000, 3500000, 0, N'✓ Đã duyệt (QL: Trần Quản Lý) | Khớp két 100%', DATEADD(day, -3, DATEADD(hour, 12, CAST(CAST(GETDATE() AS DATE) AS DATETIME2))));
+    INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, tienThuTienMat, tienChuyenKhoan, tienHoanTra, lyDoChenhLech, gioKetThucThucTe, trangThai, maQuanLyDuyet, thoiGianDuyet)
+    VALUES ('GC001', 'NV002', 'CA01', 1000000, 3500000, 3500000, 0, 2500000, 750000, 0, N'Khớp két 100%', DATEADD(day, -3, DATEADD(hour, 12, CAST(CAST(GETDATE() AS DATE) AS DATETIME2))), 'DA_DUYET', 'NV001', DATEADD(minute, 10, DATEADD(day, -3, DATEADD(hour, 12, CAST(CAST(GETDATE() AS DATE) AS DATETIME2)))));
 IF NOT EXISTS (SELECT 1 FROM BangGiaoCa WHERE maGiaoCa = 'GC002')
-    INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, lyDoChenhLech, gioKetThucThucTe)
-    VALUES ('GC002', 'NV004', 'CA02', 3500000, 4600000, 4580000, -20000, N'✓ Đã duyệt (QL: Trần Quản Lý) | Thối nhầm 20.000 đ', DATEADD(day, -2, DATEADD(minute, 30, DATEADD(hour, 17, CAST(CAST(GETDATE() AS DATE) AS DATETIME2)))));
+    INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, tienThuTienMat, tienChuyenKhoan, tienHoanTra, lyDoChenhLech, gioKetThucThucTe, trangThai, maQuanLyDuyet, thoiGianDuyet)
+    VALUES ('GC002', 'NV004', 'CA02', 3500000, 4600000, 4580000, -20000, 1150000, 400000, 50000, N'Thối nhầm 20.000 đ', DATEADD(day, -2, DATEADD(minute, 30, DATEADD(hour, 17, CAST(CAST(GETDATE() AS DATE) AS DATETIME2)))), 'DA_DUYET', 'NV001', DATEADD(minute, 8, DATEADD(day, -2, DATEADD(minute, 30, DATEADD(hour, 17, CAST(CAST(GETDATE() AS DATE) AS DATETIME2))))));
 IF NOT EXISTS (SELECT 1 FROM BangGiaoCa WHERE maGiaoCa = 'GC003')
-    INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, lyDoChenhLech, gioKetThucThucTe)
-    VALUES ('GC003', 'NV001', 'CA03', 4580000, 6500000, 6500000, 0, N'✓ Đã duyệt (QL: Trần Quản Lý) | Khớp két 100%', DATEADD(day, -1, DATEADD(hour, 22, CAST(CAST(GETDATE() AS DATE) AS DATETIME2))));
+    INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong, tienCuoiCaThucTe, tienChenhLech, tienThuTienMat, tienChuyenKhoan, tienHoanTra, lyDoChenhLech, gioKetThucThucTe, trangThai, maQuanLyDuyet, thoiGianDuyet)
+    VALUES ('GC003', 'NV001', 'CA03', 4580000, 6500000, 6500000, 0, 1920000, 565000, 0, N'Khớp két 100%', DATEADD(day, -1, DATEADD(hour, 22, CAST(CAST(GETDATE() AS DATE) AS DATETIME2))), 'DA_DUYET', 'NV001', DATEADD(minute, 5, DATEADD(day, -1, DATEADD(hour, 22, CAST(CAST(GETDATE() AS DATE) AS DATETIME2)))));
 
 -- 10. Phòng Lưu Trú Pet Hotel mẫu (12 phòng)
 IF NOT EXISTS (SELECT 1 FROM PhongLuuTru WHERE maPhong = 'P101')
