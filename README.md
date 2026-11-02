@@ -25,14 +25,14 @@
       <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>1</b></td>
       <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Lê Khải Minh</b></td>
       <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>Leader / Fullstack</b></td>
-      <td style="padding: 8px; border: 1px solid #cbd5e1;">Bán hàng POS, In hóa đơn K80, Đổi trả hàng &amp; Chuyển tiếp sang POS, Tích hợp thanh toán chuyển khoản VietQR Napas 24/7</td>
-      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>feature/pos-ban-hang-doi-tra</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Bán hàng POS, In hóa đơn K80, Tích hợp thanh toán chuyển khoản VietQR Napas 24/7</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>feature/pos-ban-hang</code></td>
     </tr>
     <tr>
       <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>2</b></td>
       <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Tô Thành Đạt</b></td>
       <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>Developer</b></td>
-      <td style="padding: 8px; border: 1px solid #cbd5e1;">Quản lý Kho hàng, Danh mục sản phẩm, Quản lý Lô hàng cận date (FEFO), Thiết lập bảng quy đổi đơn vị tính đa cấp</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Quản lý Kho hàng, Danh mục sản phẩm, Quản lý Lô hàng cận date (FEFO), Đổi trả hàng hóa &amp; Hoàn kho, Thiết lập bảng quy đổi đơn vị tính đa cấp</td>
       <td style="padding: 8px; border: 1px solid #cbd5e1;"><code>feature/kho-san-pham-lo-hang</code></td>
     </tr>
     <tr>
