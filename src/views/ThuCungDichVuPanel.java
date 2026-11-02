@@ -232,6 +232,9 @@ public class ThuCungDichVuPanel extends JPanel {
         btnLamMoiSK.addActionListener(e -> napDuLieuSucKhoe());
 
         pnlToolbar.add(btnKiemTraMoi);
+        JButton btnGuiMailNhacTiem = ThemeColors.createSecondaryButton("Gửi Email Nhắc Tiêm Phòng & Voucher 10%", IconHelper.getIcon(IconHelper.STETHOSCOPE, 14, ThemeColors.PRIMARY_ACTIVE));
+        btnGuiMailNhacTiem.addActionListener(e -> guiEmailNhacTiemPhongThuCung());
+        pnlToolbar.add(btnGuiMailNhacTiem);
         pnlToolbar.add(btnLamMoiSK);
 
         String[] cols = {"Mã SK", "Thú cưng", "Ngày kiểm tra", "Cân nặng (kg)", "Nhiệt độ (°C)", "Tình trạng ve rận", "Tiêm phòng dại", "Người kiểm tra", "Ghi chú thể trạng"};
@@ -417,7 +420,7 @@ public class ThuCungDichVuPanel extends JPanel {
         pnlToolbar.add(btnXoaKH);
         pnlToolbar.add(btnLamMoiKH);
 
-        String[] cols = {"Mã KH", "Họ và tên khách hàng", "Số điện thoại", "Điểm tích lũy", "Phân loại (Khách cũ / Mới)", "Hạng thẻ thành viên", "Ưu đãi quy đổi"};
+        String[] cols = {"Mã KH", "Họ và tên khách hàng", "Số điện thoại", "Email nhận tin", "Địa chỉ liên hệ", "Điểm tích lũy", "Phân loại", "Hạng thẻ", "Ưu đãi quy đổi"};
         modelKhachHang = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int col) { return false; }
@@ -453,6 +456,8 @@ public class ThuCungDichVuPanel extends JPanel {
                     kh.getMaKhachHang(),
                     kh.getHoTen(),
                     kh.getSoDienThoai(),
+                    (kh.getEmail() != null && !kh.getEmail().isEmpty()) ? kh.getEmail() : "(chưa có)",
+                    (kh.getDiaChi() != null && !kh.getDiaChi().isEmpty()) ? kh.getDiaChi() : "(chưa có)",
                     diem + " điểm",
                     phanLoai,
                     hangThe,
@@ -467,11 +472,15 @@ public class ThuCungDichVuPanel extends JPanel {
         JTextField txtHoTen = new JTextField();
         JTextField txtSdt = new JTextField();
         JTextField txtDiem = new JTextField("0");
+        JTextField txtEmail = new JTextField(); // thêm ô nhập email để gửi thông báo lịch hẹn
+        JTextField txtDiaChi = new JTextField();
 
         Object[] msg = {
                 "Mã khách hàng (Tự động):", txtMa,
                 "Họ và tên khách hàng (*):", txtHoTen,
                 "Số điện thoại (10 số) (*):", txtSdt,
+                "Email nhận thông báo lịch & tiêm phòng:", txtEmail,
+                "Địa chỉ liên hệ nhà khách:", txtDiaChi,
                 "Điểm tích lũy khởi tạo:", txtDiem
         };
 
@@ -489,7 +498,9 @@ public class ThuCungDichVuPanel extends JPanel {
                 diem = Math.max(0, Integer.parseInt(txtDiem.getText().trim()));
             } catch (NumberFormatException ignored) {
             }
-            BanHangController.luuHoacCapNhatKhachHang(sdt, ten, diem);
+            String email = txtEmail.getText().trim();
+            String diaChi = txtDiaChi.getText().trim();
+            BanHangController.luuHoacCapNhatKhachHang(sdt, ten, diem, email, diaChi);
             napDuLieuKhachHang();
             JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ khách hàng [" + ten + " - " + sdt + "] thành công!",
                     "Thành công", JOptionPane.INFORMATION_MESSAGE);
@@ -506,16 +517,22 @@ public class ThuCungDichVuPanel extends JPanel {
         String maKH = modelKhachHang.getValueAt(row, 0).toString();
         String tenCu = modelKhachHang.getValueAt(row, 1).toString();
         String sdtCu = modelKhachHang.getValueAt(row, 2).toString();
-        String diemCuStr = modelKhachHang.getValueAt(row, 3).toString().replaceAll("\\D+", "");
+        String emailCu = modelKhachHang.getValueAt(row, 3).toString().replace("(chưa có)", "");
+        String diaChiCu = modelKhachHang.getValueAt(row, 4).toString().replace("(chưa có)", "");
+        String diemCuStr = modelKhachHang.getValueAt(row, 5).toString().replaceAll("\\D+", "");
 
         JTextField txtHoTen = new JTextField(tenCu);
         JTextField txtSdt = new JTextField(sdtCu);
+        JTextField txtEmail = new JTextField(emailCu);
+        JTextField txtDiaChi = new JTextField(diaChiCu);
         JTextField txtDiem = new JTextField(diemCuStr.isEmpty() ? "0" : diemCuStr);
 
         Object[] msg = {
                 "Mã khách hàng: " + maKH,
                 "Họ và tên khách hàng (*):", txtHoTen,
                 "Số điện thoại (10 số) (*):", txtSdt,
+                "Email nhận thông báo (*):", txtEmail,
+                "Địa chỉ nhà khách:", txtDiaChi,
                 "Điểm tích lũy hiện có:", txtDiem
         };
 
@@ -533,7 +550,9 @@ public class ThuCungDichVuPanel extends JPanel {
                 diemMoi = Math.max(0, Integer.parseInt(txtDiem.getText().trim()));
             } catch (NumberFormatException ignored) {
             }
-            if (BanHangController.capNhatThongTinKhachHang(maKH, tenMoi, sdtMoi, diemMoi)) {
+            String emailMoi = txtEmail.getText().trim();
+            String diaChiMoi = txtDiaChi.getText().trim();
+            if (BanHangController.capNhatThongTinKhachHang(maKH, tenMoi, sdtMoi, diemMoi, emailMoi, diaChiMoi)) {
                 napDuLieuKhachHang();
                 JOptionPane.showMessageDialog(this, "Đã cập nhật thông tin khách hàng " + maKH + " thành công!",
                         "Thành công", JOptionPane.INFORMATION_MESSAGE);
@@ -789,4 +808,27 @@ public class ThuCungDichVuPanel extends JPanel {
             }
         }
     }
+
+    // hàm gửi email nhắc lịch tiêm phòng dại hoặc tái chủng 7 bệnh cho chủ thú cưng
+    private void guiEmailNhacTiemPhongThuCung() {
+        List<HoSoThuCung> ds = controller.layDanhSachHoSoThuCung();
+        if (ds == null || ds.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Chưa có hồ sơ thú cưng nào trong hệ thống!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        HoSoThuCung hsChon = ds.get(0);
+        String tenBe = hsChon.getThuCung() != null ? hsChon.getThuCung().getTenThuCung() : "Bé cưng";
+        String tenChu = hsChon.getKhachHang() != null ? hsChon.getKhachHang().getHoTen() : "Quý khách";
+        String emailChu = (hsChon.getKhachHang() != null && hsChon.getKhachHang().getEmail() != null && !hsChon.getKhachHang().getEmail().isEmpty())
+                ? hsChon.getKhachHang().getEmail() : "khachhang.an@gmail.com";
+
+        String hanTaiChung = LocalDate.now().plusDays(7).format(df);
+        String tieuDe = "[Mio Pet Clinic] Nhắc Lịch Tái Chủng Vaccine Định Kỳ Cho Bé " + tenBe;
+        String html = utils.EmailThongBaoHelper.taoEmailNhacTiemPhong(
+                tenChu, tenBe, "Vaccine Phòng Dại & Mũi 7 Bệnh Tổng Hợp", hanTaiChung, "MIOHEALTH10");
+
+        utils.EmailThongBaoHelper.moHopThoaiGuiEmail(SwingUtilities.getWindowAncestor(this), emailChu, tieuDe, html);
+    }
+
 }
