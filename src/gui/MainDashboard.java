@@ -1,8 +1,8 @@
-package views;
+package gui;
 
-import controllers.DangNhapController;
-import models.entity.NhanVien;
-import models.entity.TaiKhoan;
+import bus.DangNhapBus;
+import entity.NhanVien;
+import entity.TaiKhoan;
 import utils.IconHelper;
 import utils.ThemeColors;
 import utils.UserSession;
@@ -28,6 +28,8 @@ import java.util.List;
  * - Tông màu Warm Peach / Soft Apricot / Nude sang trọng, FlatLaf hiện đại, khử răng cưa toàn diện.
  */
 public class MainDashboard extends JFrame {
+
+    private static MainDashboard currentInstance = null;
 
     private final NhanVien currentUser;
     private JPanel pnlContentCards;
@@ -74,12 +76,13 @@ public class MainDashboard extends JFrame {
     public MainDashboard(NhanVien nhanVien) {
         this.currentUser = nhanVien != null ? nhanVien : taoNhanVienMacDinh();
         UserSession.initSession(this.currentUser);
+        currentInstance = this;
         khoiTaoGiaoDien();
     }
 
     private static NhanVien taoNhanVienMacDinh() {
-        TaiKhoan tk = new TaiKhoan("admin", "123456", "NVQL", true);
-        return new NhanVien("NV001", "Lê Khãi Minh", "Quản lý hệ thống", "0901234567", tk);
+        TaiKhoan tk = new TaiKhoan("NV001", "0901234567", "minh.quanly@miopet.vn", "", "NVQL", true);
+        return new NhanVien("NV001", "Lê Khãi Minh", "Quản lý hệ thống", "0901234567", "minh.quanly@miopet.vn", tk);
     }
 
     private void khoiTaoGiaoDien() {
@@ -494,18 +497,41 @@ public class MainDashboard extends JFrame {
     /**
      * Điều hướng sang thẻ chức năng với kiểm tra thẩm quyền RBAC và đồng bộ dữ liệu.
      */
+    public static void dieuHuongCard(String cardName) {
+        if (currentInstance != null) {
+            currentInstance.dieuHuongSangChucNang(cardName);
+        }
+    }
+
     public void dieuHuongSangChucNang(String cardName) {
         String targetCard = cardName;
         boolean openDonCho = false;
+        boolean openLichSuHD = false;
+        String lichSuLoaiDon = "Tất cả loại đơn";
         boolean openTraCuuKho = false;
+        boolean openCanhBaoFefo = false;
         boolean openHoSoThuCung = false;
 
         if ("ACTION_DON_CHO".equals(cardName)) {
             targetCard = CARD_POS;
             openDonCho = true;
+        } else if ("ACTION_LICH_SU_HD".equals(cardName)) {
+            targetCard = CARD_POS;
+            openLichSuHD = true;
+        } else if ("ACTION_LICH_SU_HD_BAN_LE".equals(cardName)) {
+            targetCard = CARD_POS;
+            openLichSuHD = true;
+            lichSuLoaiDon = "Đơn bán lẻ (Hàng hóa)";
+        } else if ("ACTION_LICH_SU_HD_DICH_VU".equals(cardName)) {
+            targetCard = CARD_POS;
+            openLichSuHD = true;
+            lichSuLoaiDon = "Đơn dịch vụ Spa";
         } else if ("ACTION_TRA_CUU_KHO".equals(cardName)) {
             targetCard = CARD_KHO;
             openTraCuuKho = true;
+        } else if ("ACTION_CANH_BAO_FEFO".equals(cardName)) {
+            targetCard = CARD_KHO;
+            openCanhBaoFefo = true;
         } else if ("ACTION_HO_SO_THU_CUNG".equals(cardName)) {
             targetCard = CARD_THU_CUNG;
             openHoSoThuCung = true;
@@ -538,6 +564,10 @@ public class MainDashboard extends JFrame {
 
         if (openDonCho && banHangPOSPanel != null) {
             banHangPOSPanel.chonTabDonCho();
+        } else if (openLichSuHD && banHangPOSPanel != null) {
+            banHangPOSPanel.chonTabLichSuHoaDonTheoBoLoc("Hôm nay", lichSuLoaiDon);
+        } else if (openCanhBaoFefo && khoLoHangPanel != null) {
+            khoLoHangPanel.moTabCanhBaoHanDung();
         } else if (openTraCuuKho && khoLoHangPanel != null) {
             khoLoHangPanel.chonTabSanPham();
         } else if (openHoSoThuCung && thuCungDichVuPanel != null) {
@@ -720,7 +750,7 @@ public class MainDashboard extends JFrame {
                 return;
             }
 
-            DangNhapController c = new DangNhapController();
+            DangNhapBus c = new DangNhapBus();
             boolean ok = c.doiMatKhau(currentUser.getMaNhanVien(), oldP, newP);
             if (ok) {
                 JOptionPane.showMessageDialog(this, "Đổi mật khẩu tài khoản thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
@@ -748,7 +778,7 @@ public class MainDashboard extends JFrame {
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE);
         if (opt == JOptionPane.YES_OPTION) {
-            DangNhapController.dangXuat();
+            DangNhapBus.dangXuat();
             this.dispose();
             new LoginForm().setVisible(true);
         }

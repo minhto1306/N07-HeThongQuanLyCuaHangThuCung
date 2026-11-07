@@ -1,9 +1,9 @@
-package models.dao;
+package dao;
 
-import models.entity.BangPhanCong;
-import models.entity.CaLamViec;
-import models.entity.NhanVien;
-import models.entity.TaiKhoan;
+import entity.BangPhanCong;
+import entity.CaLamViec;
+import entity.NhanVien;
+import entity.TaiKhoan;
 import utils.DBConnection;
 
 import java.sql.*;
@@ -39,25 +39,30 @@ public class PhanCaDAO {
 
     public List<BangPhanCong> getAllPhanCong() throws SQLException {
         List<BangPhanCong> list = new ArrayList<>();
-        String sql = "SELECT pc.*, nv.hoTen, nv.chucVu, nv.soDienThoai, nv.tenDangNhap, " +
+        String sql = "SELECT pc.*, nv.hoTen, nv.chucVu, nv.soDienThoai, nv.email, nv.maTaiKhoan, " +
                      "tk.vaiTro, tk.trangThaiHoatDong, c.tenCa, c.gioBatDau, c.gioKetThuc " +
                      "FROM BangPhanCong pc " +
                      "JOIN NhanVien nv ON pc.maNhanVien = nv.maNhanVien " +
-                     "LEFT JOIN TaiKhoan tk ON nv.tenDangNhap = tk.tenDangNhap " +
+                     "LEFT JOIN TaiKhoan tk ON nv.maTaiKhoan = tk.maTaiKhoan " +
                      "JOIN CaLamViec c ON pc.maCa = c.maCa " +
                      "ORDER BY pc.ngayLamViec ASC, pc.maCa ASC";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                TaiKhoan tk = rs.getString("tenDangNhap") != null
-                        ? new TaiKhoan(rs.getString("tenDangNhap"), "", rs.getString("vaiTro"), rs.getBoolean("trangThaiHoatDong"))
+                String maTK = null;
+                try { maTK = rs.getString("maTaiKhoan"); } catch (SQLException ignored) {}
+                String email = "";
+                try { email = rs.getString("email"); } catch (SQLException ignored) {}
+                TaiKhoan tk = maTK != null
+                        ? new TaiKhoan(maTK, rs.getString("soDienThoai"), email != null ? email : "", "", rs.getString("vaiTro"), rs.getBoolean("trangThaiHoatDong"))
                         : null;
                 NhanVien nv = new NhanVien(
                         rs.getString("maNhanVien"),
                         rs.getString("hoTen"),
                         rs.getString("chucVu"),
                         rs.getString("soDienThoai"),
+                        email != null ? email : "",
                         tk
                 );
                 Time bd = rs.getTime("gioBatDau");

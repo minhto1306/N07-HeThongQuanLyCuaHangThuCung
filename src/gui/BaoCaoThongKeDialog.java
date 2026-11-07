@@ -1,6 +1,6 @@
-package views;
+package gui;
 
-import models.dao.BaoCaoThongKeDAO;
+import bus.ThongKeBus;
 import utils.IconHelper;
 import utils.ThemeColors;
 import utils.UserSession;
@@ -32,7 +32,7 @@ public class BaoCaoThongKeDialog extends JDialog {
     private final DecimalFormat dfMoney = new DecimalFormat("#,### đ");
     private final DateTimeFormatter dfDate = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private final DateTimeFormatter dfDateTime = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
-    private final BaoCaoThongKeDAO baoCaoDAO = new BaoCaoThongKeDAO();
+    private final ThongKeBus thongKeBus = new ThongKeBus();
     private JTabbedPane tabbedPane;
     private JComboBox<String> cboKyBaoCao;
     private LocalDateTime tuNgay;
@@ -146,10 +146,10 @@ public class BaoCaoThongKeDialog extends JDialog {
 
     private JPanel taoTabDoanhThuLoiNhuan() {
         try {
-            List<BaoCaoThongKeDAO.DoanhThuRow> rows = baoCaoDAO.getDoanhThu(tuNgay, denNgay);
+            var rows = thongKeBus.layBaoCaoDoanhThu(tuNgay, denNgay);
             long tong = 0, hang = 0, dichVu = 0, giaVon = 0;
             DefaultTableModel model = taoModelKhongSua(new String[]{"Mã HĐ", "Thời gian", "Khách hàng", "Thu ngân", "Tiền hàng", "Giảm giá", "Doanh thu thuần", "Giá vốn", "Lãi gộp", "Phương thức"});
-            for (BaoCaoThongKeDAO.DoanhThuRow r : rows) {
+            for (var r : rows) {
                 tong += r.doanhThuThuan; hang += r.doanhThuHangHoa; dichVu += r.doanhThuDichVu; giaVon += r.giaVon;
                 model.addRow(new Object[]{r.maHoaDon, r.thoiGian.format(dfDateTime), r.khachHang, r.thuNgan, dfMoney.format(r.tienHang), dfMoney.format(r.giamGia), dfMoney.format(r.doanhThuThuan), dfMoney.format(r.giaVon), dfMoney.format(r.doanhThuThuan - r.giaVon), r.phuongThuc});
             }
@@ -160,19 +160,19 @@ public class BaoCaoThongKeDialog extends JDialog {
             kpis.add(taoTheKpiMini("DOANH THU DỊCH VỤ", dfMoney.format(dichVu), "Spa, Grooming và lưu trú đã xuất HĐ", new Color(0xF3E8FF), new Color(0x7E22CE)));
             kpis.add(taoTheKpiMini("LỢI NHUẬN GỘP", dfMoney.format(lai), tong > 0 ? "Biên " + (lai * 100 / tong) + "%" : "Chưa phát sinh doanh thu", ThemeColors.SUCCESS_LIGHT, ThemeColors.SUCCESS_TEXT));
             return taoPanelBaoCao(kpis, model);
-        } catch (SQLException e) { return taoPanelLoi(e); }
+        } catch (Exception e) { return taoPanelLoi(e); }
     }
 
     private JPanel taoTabTopBanChay() {
         try {
-            List<BaoCaoThongKeDAO.TopBanChayRow> rows = baoCaoDAO.getTopBanChay(tuNgay, denNgay);
+            var rows = thongKeBus.layTopBanChay(tuNgay, denNgay);
             long tongDT = rows.stream().mapToLong(r -> r.doanhThu).sum();
             int tongSL = rows.stream().mapToInt(r -> r.soLuong).sum();
             String topSP = rows.stream().filter(r -> "Hàng hóa".equals(r.phanNhom)).findFirst().map(r -> r.ten).orElse("Chưa phát sinh");
             String topDV = rows.stream().filter(r -> "Dịch vụ".equals(r.phanNhom)).findFirst().map(r -> r.ten).orElse("Chưa phát sinh");
             DefaultTableModel model = taoModelKhongSua(new String[]{"Hạng", "Mã SP/DV", "Tên Sản phẩm / Dịch vụ", "Phân nhóm", "ĐVT", "Số lượng", "Doanh thu", "Tỷ trọng (%)"});
             int rank = 1;
-            for (BaoCaoThongKeDAO.TopBanChayRow r : rows) {
+            for (var r : rows) {
                 model.addRow(new Object[]{"#" + rank++, r.ma, r.ten, r.phanNhom, r.donViTinh, r.soLuong, dfMoney.format(r.doanhThu), String.format("%.1f%%", tongDT > 0 ? r.doanhThu * 100.0 / tongDT : 0)});
             }
             JPanel kpis = taoHangKpi(3);
@@ -180,17 +180,17 @@ public class BaoCaoThongKeDialog extends JDialog {
             kpis.add(taoTheKpiMini("DỊCH VỤ ĐƯỢC DÙNG NHIỀU", topDV, "Dữ liệu dịch vụ đã thanh toán", new Color(0xF3E8FF), new Color(0x7E22CE)));
             kpis.add(taoTheKpiMini("TỔNG SỐ LƯỢNG TIÊU THỤ", tongSL + " Đơn vị / Lượt", rows.size() + " mặt hàng có phát sinh", ThemeColors.SUCCESS_LIGHT, ThemeColors.SUCCESS_TEXT));
             return taoPanelBaoCao(kpis, model);
-        } catch (SQLException e) { return taoPanelLoi(e); }
+        } catch (Exception e) { return taoPanelLoi(e); }
     }
 
     private JPanel taoTabHieuSuatNhanSu() {
         try {
-            List<BaoCaoThongKeDAO.HieuSuatNhanSuRow> rows = baoCaoDAO.getHieuSuatNhanSu(tuNgay, denNgay);
+            var rows = thongKeBus.layHieuSuatNhanSu(tuNgay, denNgay);
             int active = (int) rows.stream().filter(r -> r.dangHoatDong).count();
             long total = rows.stream().mapToLong(r -> r.doanhThuPhuTrach).sum();
-            BaoCaoThongKeDAO.HieuSuatNhanSuRow best = rows.stream().filter(r -> r.soDichVu > 0).max((a, b) -> Long.compare(a.doanhThuPhuTrach, b.doanhThuPhuTrach)).orElse(null);
+            var best = rows.stream().filter(r -> r.soDichVu > 0).max((a, b) -> Long.compare(a.doanhThuPhuTrach, b.doanhThuPhuTrach)).orElse(null);
             DefaultTableModel model = taoModelKhongSua(new String[]{"Mã NV", "Họ và Tên", "Vai trò", "Số ca", "Số HĐ", "Dịch vụ hoàn tất", "Doanh thu phụ trách", "Hoa hồng", "Đánh giá"});
-            for (BaoCaoThongKeDAO.HieuSuatNhanSuRow r : rows) {
+            for (var r : rows) {
                 String note = !r.dangHoatDong ? "Tài khoản ngừng hoạt động" : r.soDichVu > 0 ? "Có phát sinh dịch vụ" : r.soCa > 0 ? "Có lịch trực" : "Chưa phát sinh trong kỳ";
                 model.addRow(new Object[]{r.maNhanVien, r.hoTen, r.chucVu, r.soCa, r.soHoaDon, r.soDichVu, dfMoney.format(r.doanhThuPhuTrach), dfMoney.format(r.hoaHong), note});
             }
@@ -199,16 +199,16 @@ public class BaoCaoThongKeDialog extends JDialog {
             kpis.add(taoTheKpiMini("KTV DỊCH VỤ NỔI BẬT", best != null ? best.hoTen : "Chưa phát sinh", best != null ? best.soDichVu + " dịch vụ hoàn tất" : "Không có dữ liệu trong kỳ", ThemeColors.SUCCESS_LIGHT, ThemeColors.SUCCESS_TEXT));
             kpis.add(taoTheKpiMini("DOANH THU PHỤ TRÁCH", dfMoney.format(total), "Hóa đơn thu ngân + dịch vụ KTV", new Color(0xE0F2FE), new Color(0x0369A1)));
             return taoPanelBaoCao(kpis, model);
-        } catch (SQLException e) { return taoPanelLoi(e); }
+        } catch (Exception e) { return taoPanelLoi(e); }
     }
 
     private JPanel taoTabKhachHangVIP() {
         try {
-            List<BaoCaoThongKeDAO.KhachHangRow> rows = baoCaoDAO.getKhachHang();
+            var rows = thongKeBus.layThongKeKhachHang();
             int vip = (int) rows.stream().filter(r -> r.diemTichLuy >= 100).count();
             int points = rows.stream().mapToInt(r -> r.diemTichLuy).sum();
             DefaultTableModel model = taoModelKhongSua(new String[]{"Mã KH", "Họ và Tên", "Số điện thoại", "Hạng thành viên", "Điểm hiện có", "Giá trị quy đổi", "Ưu đãi"});
-            for (BaoCaoThongKeDAO.KhachHangRow r : rows) {
+            for (var r : rows) {
                 model.addRow(new Object[]{r.maKhachHang, r.hoTen, r.soDienThoai, xepHang(r.diemTichLuy), r.diemTichLuy + " điểm", dfMoney.format(r.diemTichLuy * 1000L), r.diemTichLuy >= 100 ? "Giảm 5% + đổi điểm" : "100.000đ = 1 điểm"});
             }
             JPanel kpis = taoHangKpi(3);
@@ -216,59 +216,59 @@ public class BaoCaoThongKeDialog extends JDialog {
             kpis.add(taoTheKpiMini("KHÁCH VIP KIM CƯƠNG", vip + " Khách VIP", "Từ 100 điểm, giảm tự động 5%", new Color(0xFEF3C7), new Color(0xB45309)));
             kpis.add(taoTheKpiMini("QUỸ ĐIỂM ĐANG LƯU HÀNH", points + " điểm", "Tương đương " + dfMoney.format(points * 1000L), ThemeColors.SUCCESS_LIGHT, ThemeColors.SUCCESS_TEXT));
             return taoPanelBaoCao(kpis, model);
-        } catch (SQLException e) { return taoPanelLoi(e); }
+        } catch (Exception e) { return taoPanelLoi(e); }
     }
 
     private JPanel taoTabPetHotelVaDoiTra() {
         try {
-            List<BaoCaoThongKeDAO.HotelSummaryRow> rooms = baoCaoDAO.getHotelSummary();
-            BaoCaoThongKeDAO.DoiTraSummary ret = baoCaoDAO.getDoiTraSummary(tuNgay, denNgay);
+            var rooms = thongKeBus.layHotelSummary();
+            var ret = thongKeBus.layDoiTraSummary(tuNgay, denNgay);
             int total = rooms.stream().mapToInt(r -> r.tongPhong).sum();
             int occupied = rooms.stream().mapToInt(r -> r.dangCoKhach).sum();
             int cleaning = rooms.stream().mapToInt(r -> r.dangDon).sum();
             long revenue = rooms.stream().mapToLong(r -> r.doanhThuNgayTamTinh).sum();
             DefaultTableModel model = taoModelKhongSua(new String[]{"Phân khu / Nghiệp vụ", "Tổng quy mô", "Đang sử dụng", "Đang dọn", "Còn trống", "Doanh thu / Giá trị"});
-            for (BaoCaoThongKeDAO.HotelSummaryRow r : rooms) model.addRow(new Object[]{r.loaiPhong, r.tongPhong + " phòng", r.dangCoKhach + " phòng", r.dangDon + " phòng", r.phongTrong + " phòng", dfMoney.format(r.doanhThuNgayTamTinh) + " / ngày"});
+            for (var r : rooms) model.addRow(new Object[]{r.loaiPhong, r.tongPhong + " phòng", r.dangCoKhach + " phòng", r.dangDon + " phòng", r.phongTrong + " phòng", dfMoney.format(r.doanhThuNgayTamTinh) + " / ngày"});
             model.addRow(new Object[]{"Đổi trả trong kỳ", ret.soPhieu + " phiếu", ret.soLuongSanPham + " sản phẩm", "—", "—", dfMoney.format(ret.tongTienHoan)});
             JPanel kpis = taoHangKpi(3);
             kpis.add(taoTheKpiMini("CÔNG SUẤT PET HOTEL", occupied + " / " + total + " Phòng", total > 0 ? String.format("Tỷ lệ %.1f%% · %d phòng đang dọn", occupied * 100.0 / total, cleaning) : "Chưa có phòng", ThemeColors.PRIMARY_TINT, ThemeColors.PRIMARY_ACTIVE));
             kpis.add(taoTheKpiMini("DOANH THU LƯU TRÚ / NGÀY", dfMoney.format(revenue), "Phòng đang có khách + phụ phí", ThemeColors.SUCCESS_LIGHT, ThemeColors.SUCCESS_TEXT));
             kpis.add(taoTheKpiMini("HOÀN TIỀN TRONG KỲ", dfMoney.format(ret.tongTienHoan), ret.soPhieu + " phiếu đổi trả", new Color(0xE0F2FE), new Color(0x0369A1)));
             return taoPanelBaoCao(kpis, model);
-        } catch (SQLException e) { return taoPanelLoi(e); }
+        } catch (Exception e) { return taoPanelLoi(e); }
     }
 
     private JPanel taoTabCanhBaoFEFO() {
         try {
-            List<BaoCaoThongKeDAO.LoHangFefoRow> rows = baoCaoDAO.getLoHangFefo();
+            var rows = thongKeBus.layLoHangFefo();
             int urgent = (int) rows.stream().filter(r -> r.soNgayConLai <= 30).count();
             int near = (int) rows.stream().filter(r -> r.soNgayConLai > 30 && r.soNgayConLai <= 180).count();
             DefaultTableModel model = taoModelKhongSua(new String[]{"Số Lô", "Mã SP", "Tên Hàng hóa", "Ngày sản xuất", "Hạn sử dụng", "Số ngày còn lại", "Tồn lô", "Cảnh báo FEFO"});
-            for (BaoCaoThongKeDAO.LoHangFefoRow r : rows) model.addRow(new Object[]{r.soLo, r.maSanPham, r.tenSanPham, r.ngaySanXuat.format(dfDate), r.hanSuDung.format(dfDate), r.soNgayConLai, r.soLuongTon + " " + r.donViTinh, trangThaiFefo(r.soNgayConLai)});
+            for (var r : rows) model.addRow(new Object[]{r.soLo, r.maSanPham, r.tenSanPham, r.ngaySanXuat.format(dfDate), r.hanSuDung.format(dfDate), r.soNgayConLai, r.soLuongTon + " " + r.donViTinh, trangThaiFefo(r.soNgayConLai)});
             JPanel kpis = taoHangKpi(3);
             kpis.add(taoTheKpiMini("LÔ NGUY CẤP / HẾT HẠN", urgent + " Lô hàng", "Còn tối đa 30 ngày", ThemeColors.DANGER_LIGHT, ThemeColors.DANGER_TEXT));
             kpis.add(taoTheKpiMini("LÔ CẬN DATE 1 - 6 THÁNG", near + " Lô hàng", "Ưu tiên xuất trước theo FEFO", ThemeColors.WARNING_LIGHT, ThemeColors.WARNING_TEXT));
             kpis.add(taoTheKpiMini("TỔNG LÔ CÒN TỒN", rows.size() + " Lô hàng", "Chỉ hiển thị lô còn số lượng", ThemeColors.SUCCESS_LIGHT, ThemeColors.SUCCESS_TEXT));
             return taoPanelBaoCao(kpis, model);
-        } catch (SQLException e) { return taoPanelLoi(e); }
+        } catch (Exception e) { return taoPanelLoi(e); }
     }
 
     private JPanel taoTabXuatNhapTon() {
         try {
-            List<BaoCaoThongKeDAO.XuatNhapTonRow> rows = baoCaoDAO.getXuatNhapTon(tuNgay, denNgay);
+            var rows = thongKeBus.layXuatNhapTon(tuNgay, denNgay);
             int ton = rows.stream().mapToInt(r -> r.tonCuoiKy).sum();
             int nhap = rows.stream().mapToInt(r -> r.nhapTrongKy).sum();
             int xuat = rows.stream().mapToInt(r -> r.xuatBanTrongKy).sum();
             long value = rows.stream().mapToLong(r -> r.giaTriTonTheoGiaNhap).sum();
             DefaultTableModel model = taoModelKhongSua(new String[]{"Mã SP", "Tên Hàng hóa", "ĐVT cơ sở", "Tồn đầu kỳ", "Nhập trong kỳ", "Xuất bán", "Hoàn trả", "Tồn hiện tại", "Giá bán", "Giá trị tồn theo giá nhập"});
-            for (BaoCaoThongKeDAO.XuatNhapTonRow r : rows) model.addRow(new Object[]{r.maSanPham, r.tenSanPham, r.donViTinh, r.tonDauKy, r.nhapTrongKy, r.xuatBanTrongKy, r.hoanTraTrongKy, r.tonCuoiKy, dfMoney.format(r.donGiaBan), dfMoney.format(r.giaTriTonTheoGiaNhap)});
+            for (var r : rows) model.addRow(new Object[]{r.maSanPham, r.tenSanPham, r.donViTinh, r.tonDauKy, r.nhapTrongKy, r.xuatBanTrongKy, r.hoanTraTrongKy, r.tonCuoiKy, dfMoney.format(r.donGiaBan), dfMoney.format(r.giaTriTonTheoGiaNhap)});
             JPanel kpis = taoHangKpi(4);
             kpis.add(taoTheKpiMini("TỔNG MÃ HÀNG", rows.size() + " Mặt hàng", "Đọc từ SanPham", ThemeColors.PRIMARY_TINT, ThemeColors.PRIMARY_ACTIVE));
             kpis.add(taoTheKpiMini("NHẬP / XUẤT TRONG KỲ", nhap + " / " + xuat, "Đơn vị cơ sở", new Color(0xE0F2FE), new Color(0x0369A1)));
             kpis.add(taoTheKpiMini("TỒN HIỆN TẠI", ton + " Đơn vị", "Tổng tồn các lô còn lại", ThemeColors.WARNING_LIGHT, ThemeColors.WARNING_TEXT));
             kpis.add(taoTheKpiMini("GIÁ TRỊ TỒN THEO GIÁ NHẬP", dfMoney.format(value), "Không dùng giá bán niêm yết", ThemeColors.SUCCESS_LIGHT, ThemeColors.SUCCESS_TEXT));
             return taoPanelBaoCao(kpis, model);
-        } catch (SQLException e) { return taoPanelLoi(e); }
+        } catch (Exception e) { return taoPanelLoi(e); }
     }
 
     private String xepHang(int p) { return p >= 100 ? "VIP Kim Cương" : p >= 50 ? "Hạng Vàng" : p >= 20 ? "Hạng Bạc" : "Thành viên Mới"; }

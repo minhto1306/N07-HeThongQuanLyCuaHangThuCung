@@ -1,4 +1,4 @@
-package models.dao;
+package dao;
 
 import utils.DBConnection;
 
@@ -209,7 +209,7 @@ public class BaoCaoThongKeDAO {
                 " SELECT nv.maNhanVien,nv.hoTen,nv.chucVu,COALESCE(tk.trangThaiHoatDong,1) hoatDong," +
                 " COALESCE(pc.soCa,0) soCa,COALESCE(hd.soHD,0) soHD,COALESCE(dv.soDV,0) soDV," +
                 " COALESCE(hd.doanhThu,0)+COALESCE(dv.doanhThuDV,0) doanhThu,COALESCE(dv.hoaHong,0) hoaHong" +
-                " FROM NhanVien nv LEFT JOIN TaiKhoan tk ON tk.tenDangNhap=nv.tenDangNhap" +
+                " FROM NhanVien nv LEFT JOIN TaiKhoan tk ON tk.maTaiKhoan=nv.maTaiKhoan" +
                 " LEFT JOIN PC pc ON pc.maNhanVien=nv.maNhanVien LEFT JOIN HD hd ON hd.maNhanVien=nv.maNhanVien LEFT JOIN DV dv ON dv.maKtvThucHien=nv.maNhanVien" +
                 " ORDER BY doanhThu DESC,nv.maNhanVien";
         List<HieuSuatNhanSuRow> rows = new ArrayList<>();

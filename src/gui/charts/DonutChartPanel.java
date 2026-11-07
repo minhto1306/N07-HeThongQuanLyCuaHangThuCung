@@ -1,4 +1,4 @@
-package views.charts;
+package gui.charts;
 
 import utils.IconHelper;
 import utils.ThemeColors;

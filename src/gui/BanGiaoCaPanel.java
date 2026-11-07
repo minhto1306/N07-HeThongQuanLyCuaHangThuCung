@@ -1,13 +1,11 @@
-package views;
+package gui;
 
-import controllers.DangNhapController;
-import models.dao.BangGiaoCaDAO;
-import models.dao.NhanVienDAO;
-import models.dao.TaiKhoanDAO;
-import models.entity.BangGiaoCa;
-import models.entity.CaLamViec;
-import models.entity.NhanVien;
-import models.entity.TaiKhoan;
+import bus.DangNhapBus;
+import bus.GiaoCaBus;
+import entity.BangGiaoCa;
+import entity.CaLamViec;
+import entity.NhanVien;
+import entity.TaiKhoan;
 import utils.IconHelper;
 import utils.ThemeColors;
 import utils.UserSession;
@@ -36,6 +34,8 @@ import java.util.List;
  * 2. Bàn giao chờ duyệt (Async Handover): Thu ngân gửi phiếu "⏳ Chờ QL duyệt" rồi đăng xuất -> Quản lý (admin) đăng nhập vào sau và bấm "✅ Quản lý Duyệt & Xác nhận Két".
  */
 public class BanGiaoCaPanel extends JPanel {
+
+    private final GiaoCaBus giaoCaBus = new GiaoCaBus();
 
     private static final long TIEN_BAN_GIAO_MAU = 6_500_000L;
 
@@ -469,23 +469,22 @@ public class BanGiaoCaPanel extends JPanel {
                 btnQuanLyDuyet.setVisible(UserSession.isQuanLy());
             }
 
-            BangGiaoCaDAO dao = new BangGiaoCaDAO();
             try {
-                BangGiaoCa caBanGiaoGanNhat = dao.getCaBanGiaoGanNhat();
+                BangGiaoCa caBanGiaoGanNhat = giaoCaBus.layCaBanGiaoGanNhat();
                 if (caBanGiaoGanNhat != null) {
                     tienDauCa = caBanGiaoGanNhat.getTienCuoiCaThucTe() != null
                             ? caBanGiaoGanNhat.getTienCuoiCaThucTe().longValue()
                             : TIEN_BAN_GIAO_MAU;
                     LocalDateTime mocBatDauCa = caBanGiaoGanNhat.getGioKetThucThucTe();
-                    tienHeThongGhiNhan = dao.tinhDoanhThuTienMatTuThoiDiem(mocBatDauCa);
-                    tienChuyenKhoanGhiNhan = dao.tinhDoanhThuChuyenKhoanTuThoiDiem(mocBatDauCa);
-                    tienHoanTraKhach = dao.tinhTongTienHoanTraTuThoiDiem(mocBatDauCa);
+                    tienHeThongGhiNhan = giaoCaBus.tinhDoanhThuTienMatTuThoiDiem(mocBatDauCa);
+                    tienChuyenKhoanGhiNhan = giaoCaBus.tinhDoanhThuChuyenKhoanTuThoiDiem(mocBatDauCa);
+                    tienHoanTraKhach = giaoCaBus.tinhTongTienHoanTraTuThoiDiem(mocBatDauCa);
                 } else {
                     tienDauCa = TIEN_BAN_GIAO_MAU;
                     LocalDateTime dauNgay = java.time.LocalDate.now().atStartOfDay();
-                    tienHeThongGhiNhan = dao.tinhDoanhThuTienMatTuThoiDiem(dauNgay);
-                    tienChuyenKhoanGhiNhan = dao.tinhDoanhThuChuyenKhoanTuThoiDiem(dauNgay);
-                    tienHoanTraKhach = dao.tinhTongTienHoanTraTuThoiDiem(dauNgay);
+                    tienHeThongGhiNhan = giaoCaBus.tinhDoanhThuTienMatTuThoiDiem(dauNgay);
+                    tienChuyenKhoanGhiNhan = giaoCaBus.tinhDoanhThuChuyenKhoanTuThoiDiem(dauNgay);
+                    tienHoanTraKhach = giaoCaBus.tinhTongTienHoanTraTuThoiDiem(dauNgay);
                 }
             } catch (Exception e) {
                 // Dữ liệu mẫu giữ cho màn hình demo nhất quán khi CSDL chưa sẵn sàng.
@@ -568,8 +567,7 @@ public class BanGiaoCaPanel extends JPanel {
         if (modelLichSu == null) return;
         modelLichSu.setRowCount(0);
         try {
-            BangGiaoCaDAO dao = new BangGiaoCaDAO();
-            List<BangGiaoCa> dbList = dao.getAllBangGiaoCa();
+            List<BangGiaoCa> dbList = giaoCaBus.layToanBoLichSuGiaoCa();
             if (dbList != null && !dbList.isEmpty()) {
                 for (BangGiaoCa bgc : dbList) {
                     String maCa = bgc.getCaLamViec() != null && bgc.getCaLamViec().getMaCa() != null ? bgc.getCaLamViec().getMaCa() : "CA01";
@@ -691,8 +689,7 @@ public class BanGiaoCaPanel extends JPanel {
         LocalDateTime nowDt = LocalDateTime.now();
         String nowStr = nowDt.format(dtf);
         
-        BangGiaoCaDAO dao = new BangGiaoCaDAO();
-        String maGC = dao.phatSinhMaGiaoCa();
+        String maGC = giaoCaBus.phatSinhMaGiaoCa();
 
         int maxNum = 0;
         try {
@@ -725,7 +722,7 @@ public class BanGiaoCaPanel extends JPanel {
             bgc.setTienChuyenKhoan(BigDecimal.valueOf(tienChuyenKhoanGhiNhan));
             bgc.setTienHoanTra(BigDecimal.valueOf(tienHoanTraKhach));
             bgc.setTrangThai("CHO_DUYET");
-            if (!dao.insertBangGiaoCa(bgc)) {
+            if (!giaoCaBus.luuBangGiaoCa(bgc)) {
                 throw new SQLException("Không có bản ghi bàn giao ca nào được lưu.");
             }
         } catch (Exception e) {
@@ -762,8 +759,7 @@ public class BanGiaoCaPanel extends JPanel {
             return;
         }
 
-        BangGiaoCaDAO dao = new BangGiaoCaDAO();
-        List<BangGiaoCa> dsCho = dao.getDanhSachCaChoDuyet();
+        List<BangGiaoCa> dsCho = giaoCaBus.layDanhSachCaChoDuyet();
 
         int selectedMainRow = tblLichSu != null ? tblLichSu.getSelectedRow() : -1;
         if (selectedMainRow >= 0 && (dsCho == null || dsCho.isEmpty())) {
@@ -959,8 +955,7 @@ public class BanGiaoCaPanel extends JPanel {
             LocalDateTime thoiGianDuyet = LocalDateTime.now();
             String ghiChuMoi = "✓ Đã duyệt (QL: " + tenQuanLyDuyet + ") | " + lyDoGoc;
 
-            BangGiaoCaDAO daoGiaoCa = new BangGiaoCaDAO();
-            boolean ok = daoGiaoCa.duyetGiaoCa(maGC, UserSession.getUserId(), thoiGianDuyet);
+            boolean ok = giaoCaBus.duyetGiaoCa(maGC, UserSession.getUserId(), thoiGianDuyet);
             if (!ok) {
                 JOptionPane.showMessageDialog(dlg, "Lỗi khi cập nhật cơ sở dữ liệu!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
@@ -990,7 +985,7 @@ public class BanGiaoCaPanel extends JPanel {
 
         String maGC = String.valueOf(modelLichSu.getValueAt(row, 0));
         try {
-            BangGiaoCa bgc = new BangGiaoCaDAO().getBangGiaoCaTheoMa(maGC);
+            BangGiaoCa bgc = giaoCaBus.layBangGiaoCaTheoMa(maGC);
             if (bgc == null) throw new SQLException("Không tìm thấy biên bản " + maGC);
             String maCa = bgc.getCaLamViec() != null ? bgc.getCaLamViec().getMaCa() : "";
             String thuNganGiao = bgc.getNhanVien() != null ? bgc.getNhanVien().getHoTen() : "";
@@ -1072,7 +1067,7 @@ public class BanGiaoCaPanel extends JPanel {
 
     private void thucHienDangXuatNgay() {
         Window win = SwingUtilities.getWindowAncestor(this);
-        DangNhapController.dangXuat();
+        DangNhapBus.dangXuat();
         if (win != null) {
             win.dispose();
         }

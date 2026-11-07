@@ -1,9 +1,9 @@
-package views;
+package gui;
 
-import controllers.PhanCaController;
-import models.entity.BangPhanCong;
-import models.entity.CaLamViec;
-import models.entity.NhanVien;
+import bus.PhanCaBus;
+import entity.BangPhanCong;
+import entity.CaLamViec;
+import entity.NhanVien;
 import utils.IconHelper;
 import utils.LichPhanCaExcelExporter;
 import utils.ThemeColors;
@@ -39,7 +39,7 @@ import java.util.List;
  */
 public class LichPhanCaPanel extends JPanel {
 
-    private final PhanCaController controller;
+    private final PhanCaBus controller;
     private LocalDate currentMonday;
 
     private JLabel lblTuanHienTai;
@@ -60,10 +60,10 @@ public class LichPhanCaPanel extends JPanel {
     };
 
     public LichPhanCaPanel() {
-        this(new PhanCaController());
+        this(new PhanCaBus());
     }
 
-    public LichPhanCaPanel(PhanCaController controller) {
+    public LichPhanCaPanel(PhanCaBus controller) {
         this.controller = controller;
         this.currentMonday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 

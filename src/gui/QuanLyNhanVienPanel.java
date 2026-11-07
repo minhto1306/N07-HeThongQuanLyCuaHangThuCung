@@ -1,9 +1,10 @@
-package views;
+package gui;
 
-import controllers.NhanVienController;
-import models.entity.NhanVien;
-import models.entity.TaiKhoan;
+import bus.NhanVienBus;
+import entity.NhanVien;
+import entity.TaiKhoan;
 import utils.IconHelper;
+import utils.MaTuSinhHelper;
 import utils.ThemeColors;
 
 import javax.swing.*;
@@ -19,16 +20,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Màn hình Quản lý Nhân viên & Tài khoản Phân quyền (Dành riêng cho NVQL).
+ * Màn hình Quản lý Nhân viên & Phân quyền Hệ thống (Dành riêng cho Quản lý NVQL).
  * Giao diện hiện đại dạng Lưới thẻ (Grid Cards):
- * - Thẻ nhân viên hiển thị Avatar tròn, Họ tên, Mã NV, Badge vai trò (màu riêng cho 4 vai trò), SĐT, Trạng thái.
- * - Các nút thao tác nhanh trên card: Đổi vai trò, Cấp lại mật khẩu, Khóa / Mở khóa tài khoản.
- * - Bộ lọc nhanh theo vai trò và thanh tìm kiếm tức thời.
- * - Nút thêm mới nhân viên kèm Dialog popup chuẩn FlatLaf.
+ * - Thẻ nhân viên hiển thị Avatar tròn, Họ tên, Mã NV tự sinh, Email công việc, SĐT đăng nhập.
+ * - Mã NV tự động tăng từ MaTuSinhHelper, không cho phép chỉnh sửa bằng tay.
+ * - Thao tác nhanh: Đổi vai trò, Cấp lại mật khẩu (tự động băm SHA-256), Khóa / Mở khóa tài khoản.
  */
 public class QuanLyNhanVienPanel extends JPanel {
 
-    private final NhanVienController controller = new NhanVienController();
+    private final NhanVienBus controller = new NhanVienBus();
     private final List<NhanVien> danhSachNhanVien = new ArrayList<>();
     private final List<NhanVien> danhSachLoc = new ArrayList<>();
 
@@ -97,9 +97,9 @@ public class QuanLyNhanVienPanel extends JPanel {
         pnlBottomRow.setOpaque(false);
 
         txtTimKiem = new JTextField();
-        txtTimKiem.setPreferredSize(new Dimension(240, 36));
+        txtTimKiem.setPreferredSize(new Dimension(260, 36));
         txtTimKiem.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        txtTimKiem.putClientProperty("JTextField.placeholderText", "Tìm theo tên, mã, SĐT, user...");
+        txtTimKiem.putClientProperty("JTextField.placeholderText", "Tìm theo tên, mã NV, SĐT, email...");
         txtTimKiem.putClientProperty("JTextField.leadingIcon", IconHelper.getIcon(IconHelper.SEARCH, 15, ThemeColors.TEXT_MUTED));
         txtTimKiem.putClientProperty("JTextField.showClearButton", true);
         txtTimKiem.setBorder(ThemeColors.createInputBorder());
@@ -121,7 +121,7 @@ public class QuanLyNhanVienPanel extends JPanel {
         JPanel pnlChips = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         pnlChips.setOpaque(false);
 
-        String[] roles = {"TẤT CẢ", "Quản lý (NVQL)", "Thu ngân (NVTN)", "Bán hàng (NVBH)", "Chăm sóc (NVCS)"};
+        String[] roles = {"TẤT CẢ", "Quản lý (NVQL)", "Thủ kho (NVKHO)", "Thu ngân (NVTN)", "Bán hàng (NVBH)", "Chăm sóc (NVCS)"};
         for (String r : roles) {
             JButton btnChip = taoFilterChip(r);
             filterButtons.add(btnChip);
@@ -186,6 +186,7 @@ public class QuanLyNhanVienPanel extends JPanel {
 
             boolean matchRole = true;
             if ("Quản lý (NVQL)".equalsIgnoreCase(currentRoleFilter)) matchRole = "NVQL".equalsIgnoreCase(vaiTro);
+            else if ("Thủ kho (NVKHO)".equalsIgnoreCase(currentRoleFilter)) matchRole = "NVKHO".equalsIgnoreCase(vaiTro);
             else if ("Thu ngân (NVTN)".equalsIgnoreCase(currentRoleFilter)) matchRole = "NVTN".equalsIgnoreCase(vaiTro);
             else if ("Bán hàng (NVBH)".equalsIgnoreCase(currentRoleFilter)) matchRole = "NVBH".equalsIgnoreCase(vaiTro);
             else if ("Chăm sóc (NVCS)".equalsIgnoreCase(currentRoleFilter)) matchRole = "NVCS".equalsIgnoreCase(vaiTro);
@@ -194,7 +195,7 @@ public class QuanLyNhanVienPanel extends JPanel {
                     nv.getHoTen().toLowerCase().contains(currentSearchKeyword) ||
                     nv.getMaNhanVien().toLowerCase().contains(currentSearchKeyword) ||
                     nv.getSoDienThoai().contains(currentSearchKeyword) ||
-                    (tk != null && tk.getTenDangNhap().toLowerCase().contains(currentSearchKeyword));
+                    nv.getEmail().toLowerCase().contains(currentSearchKeyword);
 
             if (matchRole && matchKw) {
                 danhSachLoc.add(nv);
@@ -248,7 +249,7 @@ public class QuanLyNhanVienPanel extends JPanel {
         lblName.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblName.setForeground(ThemeColors.TEXT_PRIMARY);
 
-        JLabel lblMa = new JLabel(nv.getMaNhanVien() + " · User: " + (tk != null ? tk.getTenDangNhap() : "N/A"));
+        JLabel lblMa = new JLabel(nv.getMaNhanVien() + " · " + nv.getChucVu());
         lblMa.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblMa.setForeground(ThemeColors.TEXT_MUTED);
 
@@ -262,15 +263,20 @@ public class QuanLyNhanVienPanel extends JPanel {
         JLabel lblRoleBadge = taoBadgeVaiTro(vaiTro);
         pnlHeader.add(lblRoleBadge, BorderLayout.EAST);
 
-        // 2. Ở giữa thẻ: Số điện thoại, Chức danh & Trạng thái hoạt động
-        JPanel pnlBody = new JPanel(new GridLayout(2, 1, 0, 4));
+        // 2. Ở giữa thẻ: Số điện thoại đăng nhập, Email & Trạng thái hoạt động
+        JPanel pnlBody = new JPanel(new GridLayout(3, 1, 0, 4));
         pnlBody.setOpaque(false);
         pnlBody.setBorder(new EmptyBorder(6, 0, 6, 0));
 
-        JLabel lblPhone = new JLabel("SĐT: " + nv.getSoDienThoai() + " · " + nv.getChucVu(),
+        JLabel lblPhone = new JLabel("Đăng nhập (SĐT): " + nv.getSoDienThoai(),
                 IconHelper.getIcon(IconHelper.PHONE, 13, ThemeColors.TEXT_MUTED), SwingConstants.LEFT);
         lblPhone.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblPhone.setForeground(ThemeColors.TEXT_SECONDARY);
+
+        JLabel lblEmail = new JLabel("Email: " + (nv.getEmail().isEmpty() ? "Chưa thiết lập" : nv.getEmail()),
+                IconHelper.getIcon(IconHelper.MAIL, 13, ThemeColors.TEXT_MUTED), SwingConstants.LEFT);
+        lblEmail.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblEmail.setForeground(ThemeColors.TEXT_SECONDARY);
 
         JLabel lblStatus;
         if (hoatDong) {
@@ -284,6 +290,7 @@ public class QuanLyNhanVienPanel extends JPanel {
         pnlStatusRow.add(lblStatus);
 
         pnlBody.add(lblPhone);
+        pnlBody.add(lblEmail);
         pnlBody.add(pnlStatusRow);
 
         // 3. Phía dưới thẻ: Bộ nút thao tác nhanh
@@ -341,6 +348,8 @@ public class QuanLyNhanVienPanel extends JPanel {
         switch (vaiTro.toUpperCase()) {
             case "NVQL":
                 return ThemeColors.createBadge("Quản lý", ThemeColors.PRIMARY_SOFT, ThemeColors.PRIMARY_ACTIVE);
+            case "NVKHO":
+                return ThemeColors.createBadge("Thủ kho", new Color(0xFE, 0xF3, 0xC7), new Color(0xB4, 0x53, 0x09));
             case "NVTN":
                 return ThemeColors.createBadge("Thu ngân", new Color(0xDB, 0xEA, 0xFE), new Color(0x1E, 0x40, 0xAF));
             case "NVBH":
@@ -355,6 +364,7 @@ public class QuanLyNhanVienPanel extends JPanel {
     private Color layMauAvatarTheoVaiTro(String vaiTro) {
         switch (vaiTro.toUpperCase()) {
             case "NVQL": return ThemeColors.PRIMARY;
+            case "NVKHO": return new Color(0xD9, 0x77, 0x06);
             case "NVTN": return new Color(0x25, 0x63, 0xEB);
             case "NVBH": return new Color(0x10, 0xB9, 0x81);
             case "NVCS": return new Color(0x8B, 0x5C, 0xF6);
@@ -380,40 +390,52 @@ public class QuanLyNhanVienPanel extends JPanel {
     }
 
     public void moDialogThemNhanVien() {
+        String maTuDong = MaTuSinhHelper.sinhMaNhanVien();
+        JTextField txtMaNV = new JTextField(maTuDong);
+        txtMaNV.setEditable(false);
+        txtMaNV.setBackground(new Color(0xF1, 0xF5, 0xF9));
+
         JTextField txtHoTen = new JTextField();
         JTextField txtChucVu = new JTextField("Kỹ thuật viên Grooming");
         JTextField txtPhone = new JTextField();
-        JTextField txtUser = new JTextField();
+        txtPhone.putClientProperty("JTextField.placeholderText", "Số điện thoại dùng để đăng nhập...");
+
+        JTextField txtEmail = new JTextField(maTuDong.toLowerCase() + "@miopet.vn");
+        txtEmail.putClientProperty("JTextField.placeholderText", "Hòm thư nhận OTP khôi phục mật khẩu...");
+
         JPasswordField txtPass = new JPasswordField("123456");
-        JComboBox<String> cboRole = new JComboBox<>(new String[]{"NVCS", "NVBH", "NVTN", "NVQL"});
+        JComboBox<String> cboRole = new JComboBox<>(new String[]{"NVCS", "NVBH", "NVTN", "NVKHO", "NVQL"});
 
         Object[] fields = {
+                "Mã nhân viên (Hệ thống tự sinh):", txtMaNV,
                 "Họ và tên nhân viên:", txtHoTen,
                 "Chức vụ công việc:", txtChucVu,
-                "Số điện thoại liên hệ:", txtPhone,
-                "Tên đăng nhập hệ thống:", txtUser,
-                "Mật khẩu khởi tạo:", txtPass,
+                "Số điện thoại (dùng để đăng nhập):", txtPhone,
+                "Email công việc (để nhận OTP):", txtEmail,
+                "Mật khẩu khởi tạo (mặc định 123456):", txtPass,
                 "Phân quyền vai trò:", cboRole
         };
 
-        int opt = JOptionPane.showConfirmDialog(this, fields, "THÊM MỚI NHÂN VIÊN & TÀI KHOẢN", JOptionPane.OK_CANCEL_OPTION);
+        int opt = JOptionPane.showConfirmDialog(this, fields, "THÊM MỚI NHÂN VIÊN & TÀI KHOẢN HỆ THỐNG", JOptionPane.OK_CANCEL_OPTION);
         if (opt == JOptionPane.OK_OPTION) {
             String ten = txtHoTen.getText().trim();
             String cv = txtChucVu.getText().trim();
             String sdt = txtPhone.getText().trim();
-            String u = txtUser.getText().trim();
+            String email = txtEmail.getText().trim();
             String p = new String(txtPass.getPassword()).trim();
             String r = (String) cboRole.getSelectedItem();
 
-            if (ten.isEmpty() || u.isEmpty() || p.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ Họ tên, Tên đăng nhập và Mật khẩu!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            if (ten.isEmpty() || sdt.isEmpty() || p.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ Họ tên, Số điện thoại và Mật khẩu!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            boolean ok = controller.themNhanVien(ten, cv, sdt, u, p, r);
+            boolean ok = controller.themNhanVien(ten, cv, sdt, email, p, r);
             if (ok) {
                 taiDuLieuNhanVien();
-                JOptionPane.showMessageDialog(this, "Đã thêm mới nhân viên [" + ten + "] thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Đã thêm mới nhân viên [" + ten + "] thành công!\nMã nhân viên: " + maTuDong + "\nĐăng nhập bằng SĐT: " + sdt,
+                        "Thông báo", JOptionPane.INFORMATION_MESSAGE);
             }
         }
     }
@@ -422,17 +444,17 @@ public class QuanLyNhanVienPanel extends JPanel {
         TaiKhoan tk = nv.getTaiKhoan();
         if (tk == null) return;
 
-        String[] roles = {"NVQL", "NVTN", "NVBH", "NVCS"};
+        String[] roles = {"NVQL", "NVKHO", "NVTN", "NVBH", "NVCS"};
         JComboBox<String> cbo = new JComboBox<>(roles);
         cbo.setSelectedItem(tk.getVaiTro());
 
         int opt = JOptionPane.showConfirmDialog(this,
-                new Object[]{"Chọn vai trò mới cho nhân viên " + nv.getHoTen() + ":", cbo},
+                new Object[]{"Chọn vai trò mới cho nhân viên " + nv.getHoTen() + " (" + nv.getMaNhanVien() + "):", cbo},
                 "ĐỔI VAI TRÒ TÀI KHOẢN", JOptionPane.OK_CANCEL_OPTION);
 
         if (opt == JOptionPane.OK_OPTION) {
             String roleMoi = (String) cbo.getSelectedItem();
-            boolean ok = controller.doiVaiTro(tk.getTenDangNhap(), roleMoi);
+            boolean ok = controller.doiVaiTro(nv.getMaNhanVien(), roleMoi);
             if (ok) {
                 taiDuLieuNhanVien();
                 JOptionPane.showMessageDialog(this, "Đã cập nhật vai trò mới [" + roleMoi + "] thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
@@ -441,21 +463,20 @@ public class QuanLyNhanVienPanel extends JPanel {
     }
 
     private void moDialogResetMatKhau(NhanVien nv) {
-        TaiKhoan tk = nv.getTaiKhoan();
-        if (tk == null) return;
-
         JPasswordField txtNewPass = new JPasswordField("123456");
         int opt = JOptionPane.showConfirmDialog(this,
-                new Object[]{"Cấp lại mật khẩu cho tài khoản [" + tk.getTenDangNhap() + "]:", txtNewPass},
-                "CẤP LẠI MẬT KHẨU", JOptionPane.OK_CANCEL_OPTION);
+                new Object[]{"Cấp lại mật khẩu cho nhân viên [" + nv.getHoTen() + " - " + nv.getSoDienThoai() + "]:", txtNewPass},
+                "CẤP LẠI MẬT KHẨU (BĂM SHA-256)", JOptionPane.OK_CANCEL_OPTION);
 
         if (opt == JOptionPane.OK_OPTION) {
             String passMoi = new String(txtNewPass.getPassword()).trim();
             if (passMoi.isEmpty()) passMoi = "123456";
 
-            boolean ok = controller.resetMatKhau(tk.getTenDangNhap(), passMoi);
+            boolean ok = controller.resetMatKhau(nv.getMaNhanVien(), passMoi);
             if (ok) {
-                JOptionPane.showMessageDialog(this, "Đã cấp lại mật khẩu cho tài khoản [" + tk.getTenDangNhap() + "]!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Đã cấp lại mật khẩu thành công cho nhân viên [" + nv.getHoTen() + "]!\nMật khẩu mới đã được băm SHA-256 bảo mật.",
+                        "Thành công", JOptionPane.INFORMATION_MESSAGE);
             }
         }
     }
@@ -466,11 +487,11 @@ public class QuanLyNhanVienPanel extends JPanel {
 
         String hanhDong = tk.isTrangThaiHoatDong() ? "Khóa" : "Mở khóa";
         int opt = JOptionPane.showConfirmDialog(this,
-                "Bạn có chắc muốn " + hanhDong + " tài khoản [" + tk.getTenDangNhap() + "] của nhân viên " + nv.getHoTen() + "?",
+                "Bạn có chắc muốn " + hanhDong + " tài khoản của nhân viên " + nv.getHoTen() + " (" + nv.getMaNhanVien() + ")?",
                 "Xác nhận " + hanhDong, JOptionPane.YES_NO_OPTION);
 
         if (opt == JOptionPane.YES_OPTION) {
-            boolean ok = controller.toggleTrangThai(tk.getTenDangNhap());
+            boolean ok = controller.toggleTrangThai(nv.getMaNhanVien());
             if (ok) {
                 taiDuLieuNhanVien();
                 JOptionPane.showMessageDialog(this, "Đã " + hanhDong + " tài khoản thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);

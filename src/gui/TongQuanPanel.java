@@ -1,15 +1,15 @@
-package views;
+package gui;
 
-import controllers.ThuCungController;
-import models.entity.ChiTietLichHen;
-import models.entity.DichVu;
-import models.entity.LichHen;
-import models.entity.NhanVien;
-import models.entity.ThuCung;
+import bus.ThuCungBus;
+import entity.ChiTietLichHen;
+import entity.DichVu;
+import entity.LichHen;
+import entity.NhanVien;
+import entity.ThuCung;
 import utils.IconHelper;
 import utils.ThemeColors;
-import views.charts.BarChartPanel;
-import views.charts.DonutChartPanel;
+import gui.charts.BarChartPanel;
+import gui.charts.DonutChartPanel;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -225,7 +225,7 @@ public class TongQuanPanel extends JPanel {
     }
 
     /**
-     * Nạp lại toàn bộ KPI, Biểu đồ và 2 Bảng dữ liệu từ nguồn thực tế (BanHangPOSPanel, ThuCungController, KhoLoHangPanel).
+     * Nạp lại toàn bộ KPI, Biểu đồ và 2 Bảng dữ liệu từ nguồn thực tế (BanHangPOSPanel, ThuCungBus, KhoLoHangPanel).
      */
     public void lamMoiDuLieuDashboard() {
         if (!SwingUtilities.isEventDispatchThread()) {
@@ -253,10 +253,10 @@ public class TongQuanPanel extends JPanel {
         lblDoanhThuGhiChu.setText("Spa: " + rutGonTien(dtSpa) + " • Hàng hóa: " + rutGonTien(dtHangHoa));
 
         lblHoaDonGiaTri.setText(tongDon + " đơn");
-        lblHoaDonGhiChu.setText(donBanLe + " đơn bán lẻ, " + donDichVu + " đơn dịch vụ");
+        lblHoaDonGhiChu.setText(donBanLe + " đơn bán lẻ | " + donDichVu + " đơn dịch vụ");
 
-        // 2. Lấy dữ liệu lịch hẹn thực tế từ ThuCungController
-        List<LichHen> dsLichHen = new ThuCungController().layDanhSachLichHen();
+        // 2. Lấy dữ liệu lịch hẹn thực tế từ ThuCungBus (đồng bộ 100% với QuanLyLichHenPanel)
+        List<LichHen> dsLichHen = new ThuCungBus().layDanhSachLichHen();
         modelLichHen.setRowCount(0);
 
         int tongThuCungDichVu = 0;
@@ -269,17 +269,20 @@ public class TongQuanPanel extends JPanel {
             String tenKhach = lh.getKhachHang() != null ? lh.getKhachHang().getHoTen() : "Khách lẻ";
             String rawStatus = lh.getTrangThaiLichHen() != null ? lh.getTrangThaiLichHen() : "Đã đặt";
             String statusHienThi = chuanHoaTrangThaiLichHen(rawStatus);
+            boolean daHuy = "Hủy".equalsIgnoreCase(rawStatus) || "Đã hủy".equalsIgnoreCase(rawStatus);
 
             List<ChiTietLichHen> dsCT = lh.getDsChiTiet();
             if (dsCT != null && !dsCT.isEmpty()) {
                 for (ChiTietLichHen ct : dsCT) {
-                    tongThuCungDichVu++;
-                    if (statusHienThi.contains("hoàn thành")) {
-                        soDichVuXong++;
-                    } else if (statusHienThi.contains("thực hiện")) {
-                        soDangThucHien++;
-                    } else {
-                        soChoTiepNhan++;
+                    if (!daHuy) {
+                        tongThuCungDichVu++;
+                        if (statusHienThi.contains("hoàn thành")) {
+                            soDichVuXong++;
+                        } else if (statusHienThi.contains("thực hiện")) {
+                            soDangThucHien++;
+                        } else {
+                            soChoTiepNhan++;
+                        }
                     }
 
                     ThuCung tc = ct.getThuCung();
@@ -294,52 +297,49 @@ public class TongQuanPanel extends JPanel {
                     modelLichHen.addRow(new Object[]{gioHen, tenKhach, tenTC, tenDV, tenKTV, statusHienThi});
                 }
             } else {
-                tongThuCungDichVu++;
-                if (statusHienThi.contains("hoàn thành")) {
-                    soDichVuXong++;
-                } else if (statusHienThi.contains("thực hiện")) {
-                    soDangThucHien++;
-                } else {
-                    soChoTiepNhan++;
+                if (!daHuy) {
+                    tongThuCungDichVu++;
+                    if (statusHienThi.contains("hoàn thành")) {
+                        soDichVuXong++;
+                    } else if (statusHienThi.contains("thực hiện")) {
+                        soDangThucHien++;
+                    } else {
+                        soChoTiepNhan++;
+                    }
                 }
                 String tenKTV = lh.getNhanVienTiepNhan() != null ? lh.getNhanVienTiepNhan().getHoTen() : "Chưa phân công";
                 modelLichHen.addRow(new Object[]{gioHen, tenKhach, "Thú cưng", "Dịch vụ chăm sóc", tenKTV, statusHienThi});
             }
         }
 
-        // Cộng thêm các đơn dịch vụ phát sinh trực tiếp tại quầy POS (vượt ngoài đơn mẫu ban đầu)
-        int extraPosServiceOrders = Math.max(0, donDichVu - 1);
-        tongThuCungDichVu += extraPosServiceOrders;
-        soDichVuXong += extraPosServiceOrders;
-
         lblThuCungGiaTri.setText(tongThuCungDichVu + " bé");
         lblThuCungGhiChu.setText(soDichVuXong + " hoàn thành, " + soDangThucHien + " đang làm, " + soChoTiepNhan + " chờ");
 
-        // 3. Lấy dữ liệu lô hàng thực tế từ KhoLoHangPanel
+        // 3. Lấy dữ liệu lô hàng thực tế từ KhoLoHangPanel & KhoLoHangBus (Thống nhất quy tắc ≤ 60 ngày)
         List<KhoLoHangPanel.LoHangRecord> dsLo = KhoLoHangPanel.layDanhSachLoHangFEFO();
         int soLoCanhBao = KhoLoHangPanel.demSoLoCanhBaoFEFO();
         modelCanhBaoFEFO.setRowCount(0);
 
         int tongTonCanhBao = 0;
         for (KhoLoHangPanel.LoHangRecord lo : dsLo) {
-            String mucCanhBao = xacDinhMucCanhBaoHienThi(lo);
-            if (lo.trangThaiFEFO != null && (lo.trangThaiFEFO.toUpperCase().contains("CẬN DATE")
-                    || lo.trangThaiFEFO.toUpperCase().contains("ƯU TIÊN")
-                    || lo.soLuongTon <= 15)) {
+            if (lo.soLuongTon <= 0) continue;
+            String st = lo.trangThaiFEFO != null ? lo.trangThaiFEFO.toUpperCase() : "";
+            if (st.contains("CẬN DATE") || st.contains("NGUY CẤP") || st.contains("HẾT HẠN")) {
                 tongTonCanhBao += lo.soLuongTon;
+                String mucCanhBao = xacDinhMucCanhBaoHienThi(lo);
+                modelCanhBaoFEFO.addRow(new Object[]{
+                        lo.soLo,
+                        lo.tenSP,
+                        lo.hanSD,
+                        String.valueOf(lo.soLuongTon),
+                        lo.donVi,
+                        mucCanhBao
+                });
             }
-            modelCanhBaoFEFO.addRow(new Object[]{
-                    lo.soLo,
-                    lo.tenSP,
-                    lo.hanSD,
-                    String.valueOf(lo.soLuongTon),
-                    lo.donVi,
-                    mucCanhBao
-            });
         }
 
         lblCanhBaoGiaTri.setText(soLoCanhBao + " lô cảnh báo");
-        lblCanhBaoGhiChu.setText("Tồn nhóm ưu tiên FEFO: " + tongTonCanhBao + " đơn vị");
+        lblCanhBaoGhiChu.setText("Hạn dùng ≤ 60 ngày • Tồn: " + tongTonCanhBao + " đơn vị");
 
         // 4. Cập nhật 2 biểu đồ trực quan
         if (barChartPanel != null) {
@@ -349,9 +349,21 @@ public class TongQuanPanel extends JPanel {
             donutChartPanel.capNhatCoCauDoanhThu(dtSpa, dtHangHoa, dtKhac, soDichVuXong, Math.max(1, tongThuCungDichVu));
         }
 
-        // 5. Cập nhật số liệu Chế độ Chiến lược (Strategic View - Image 3)
+        // 5. Cập nhật số liệu Chế độ Chiến lược (Strategic View - từ ThongKeBus thực tế)
+        bus.ThongKeBus tkBus = new bus.ThongKeBus();
         if (lblStratDoanhThu != null) lblStratDoanhThu.setText(dfMoney.format(doanhThuHomNay));
-        long loiNhuan = Math.round(doanhThuHomNay * 0.42);
+        long loiNhuan = 0L;
+        try {
+            var rowsDT = tkBus.layBaoCaoDoanhThu(LocalDate.now(), LocalDate.now());
+            long tongDT = 0L, tongGV = 0L;
+            for (var r : rowsDT) {
+                tongDT += r.doanhThuThuan;
+                tongGV += r.giaVon;
+            }
+            loiNhuan = tongDT > 0 ? (tongDT - tongGV) : Math.round(doanhThuHomNay * 0.42);
+        } catch (Exception ignored) {
+            loiNhuan = Math.round(doanhThuHomNay * 0.42);
+        }
         if (lblStratLoiNhuan != null) lblStratLoiNhuan.setText(dfMoney.format(loiNhuan));
         if (lblStratHangHoa != null) lblStratHangHoa.setText(dfMoney.format(dtHangHoa));
         if (lblStratDichVu != null) lblStratDichVu.setText(dfMoney.format(dtSpa));
@@ -367,7 +379,7 @@ public class TongQuanPanel extends JPanel {
                             String ma = mon[1] != null ? mon[1].toString() : "";
                             String ten = mon[2] != null ? mon[2].toString() : "";
                             String loai = ma.startsWith("SP") ? "Hàng hóa" : "Spa Grooming";
-                            int sl = mon[5] instanceof Number ? ((Number) mon[5]).intValue() : 1;
+                            int sl = mon[4] instanceof Number ? ((Number) mon[4]).intValue() : 1;
                             long tt = 0L;
                             try {
                                 String num = mon[6].toString().replaceAll("[^0-9]", "").trim();
@@ -397,29 +409,30 @@ public class TongQuanPanel extends JPanel {
         if (modelHieuSuatKTV != null) {
             modelHieuSuatKTV.setRowCount(0);
             try {
-                List<models.entity.NhanVien> dsNV = new controllers.NhanVienController().layDanhSachNhanVien();
-                for (models.entity.NhanVien nv : dsNV) {
-                    if ((nv.getTaiKhoan() == null || nv.getTaiKhoan().isTrangThaiHoatDong()) && !nv.getMaNhanVien().equalsIgnoreCase("NV001")) {
-                        String vaiTroStr = nv.getChucVu() != null ? nv.getChucVu() : "Nhân viên";
+                var rowsNS = tkBus.layHieuSuatNhanSu(LocalDate.now().minusDays(30), LocalDate.now());
+                for (var r : rowsNS) {
+                    if (r.dangHoatDong && !"NV001".equalsIgnoreCase(r.maNhanVien)) {
+                        int soLuot = r.soDichVu > 0 ? r.soDichVu : r.soHoaDon;
+                        long tienThucTe = r.hoaHong > 0 ? r.hoaHong : r.doanhThuPhuTrach;
                         modelHieuSuatKTV.addRow(new Object[]{
-                                nv.getHoTen(),
-                                vaiTroStr,
-                                "Ca làm việc chính",
-                                "5.0 ★ (Tốt)",
-                                "500.000 đ"
+                                r.hoTen,
+                                r.chucVu != null ? r.chucVu : "Nhân viên",
+                                soLuot + " ca / hóa đơn",
+                                soLuot > 0 ? "Hoàn thành 100%" : "Đang trực ca",
+                                dfMoney.format(tienThucTe)
                         });
                     }
                 }
             } catch (Exception ignored) {}
         }
 
-        // 6. Cập nhật số liệu Chế độ Phân tích (Analytical View - Image 5)
+        // 6. Cập nhật số liệu Chế độ Phân tích (Analytical View - từ CSDL thực tế)
         int tongSoLo = dsLo.size();
         if (lblAnalytTongMa != null) lblAnalytTongMa.setText(tongSoLo + " lô kho");
         try {
-            List<views.PetHotelPanel.PhongLuuTru> dsPhong = new models.dao.PhongLuuTruDAO().getAllPhong();
+            List<gui.PetHotelPanel.PhongLuuTru> dsPhong = new bus.PetHotelBus().layDanhSachPhong();
             int phongCoKhach = 0;
-            for (views.PetHotelPanel.PhongLuuTru p : dsPhong) {
+            for (gui.PetHotelPanel.PhongLuuTru p : dsPhong) {
                 if (p.trangThai != null && p.trangThai.contains("CÓ KHÁCH")) phongCoKhach++;
             }
             int pct = dsPhong.isEmpty() ? 0 : (phongCoKhach * 100 / dsPhong.size());
@@ -428,7 +441,16 @@ public class TongQuanPanel extends JPanel {
             if (lblAnalytHotel != null) lblAnalytHotel.setText("Khách sạn hoạt động");
         }
         if (lblAnalytFEFO != null) lblAnalytFEFO.setText(soLoCanhBao + " lô cận date");
-        if (lblAnalytVIP != null) lblAnalytVIP.setText("68.5% (VIP Gold)");
+        if (lblAnalytVIP != null) {
+            var rowsKH = tkBus.layThongKeKhachHang();
+            int tongKH = Math.max(1, rowsKH.size());
+            int khThanThiet = 0;
+            for (var r : rowsKH) {
+                if (r.diemTichLuy >= 10) khThanThiet++;
+            }
+            int pctThanThiet = (khThanThiet * 100) / tongKH;
+            lblAnalytVIP.setText(pctThanThiet + "% (" + khThanThiet + "/" + rowsKH.size() + " thẻ thành viên)");
+        }
 
         if (modelAnalytROP != null) {
             modelAnalytROP.setRowCount(0);
@@ -467,22 +489,42 @@ public class TongQuanPanel extends JPanel {
         lblDoanhThuGiaTri = new JLabel("0 đ");
         lblDoanhThuGhiChu = new JLabel("Đang tải dữ liệu...");
         pnlCards.add(taoTheKpiDong("DOANH THU HÔM NAY", lblDoanhThuGiaTri, lblDoanhThuGhiChu,
-                IconHelper.TRENDING_UP, ThemeColors.PRIMARY, ThemeColors.PRIMARY_SOFT));
+                IconHelper.TRENDING_UP, ThemeColors.PRIMARY, ThemeColors.PRIMARY_SOFT,
+                () -> {
+                    Frame topFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+                    new BaoCaoThongKeDialog(topFrame, 0).setVisible(true);
+                }));
 
         lblHoaDonGiaTri = new JLabel("0 đơn");
-        lblHoaDonGhiChu = new JLabel("0 đơn bán lẻ, 0 đơn dịch vụ");
+        lblHoaDonGhiChu = new JLabel("0 đơn bán lẻ | 0 đơn dịch vụ");
+        lblHoaDonGhiChu.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        lblHoaDonGhiChu.setToolTipText("Nhấn nửa trái để lọc Đơn bán lẻ hôm nay, nửa phải để lọc Đơn dịch vụ hôm nay");
+        lblHoaDonGhiChu.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getX() < lblHoaDonGhiChu.getWidth() / 2) {
+                    MainDashboard.dieuHuongCard("ACTION_LICH_SU_HD_BAN_LE");
+                } else {
+                    MainDashboard.dieuHuongCard("ACTION_LICH_SU_HD_DICH_VU");
+                }
+                e.consume();
+            }
+        });
         pnlCards.add(taoTheKpiDong("HÓA ĐƠN ĐÃ LẬP", lblHoaDonGiaTri, lblHoaDonGhiChu,
-                IconHelper.RECEIPT, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG));
+                IconHelper.RECEIPT, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG,
+                () -> MainDashboard.dieuHuongCard("ACTION_LICH_SU_HD")));
 
         lblThuCungGiaTri = new JLabel("0 bé");
         lblThuCungGhiChu = new JLabel("0 hoàn thành, 0 đang phục vụ");
         pnlCards.add(taoTheKpiDong("THÚ CƯNG LÀM DỊCH VỤ", lblThuCungGiaTri, lblThuCungGhiChu,
-                IconHelper.PAW, ThemeColors.INFO, ThemeColors.INFO_BG));
+                IconHelper.PAW, ThemeColors.INFO, ThemeColors.INFO_BG,
+                () -> MainDashboard.dieuHuongCard(MainDashboard.CARD_LICH_HEN)));
 
         lblCanhBaoGiaTri = new JLabel("0 lô hàng");
-        lblCanhBaoGhiChu = new JLabel("Ưu tiên xuất theo chuẩn FEFO");
-        pnlCards.add(taoTheKpiDong("CẢNH BÁO LÔ HÀNG FEFO", lblCanhBaoGiaTri, lblCanhBaoGhiChu,
-                IconHelper.ALERT_TRIANGLE, ThemeColors.DANGER, ThemeColors.DANGER_BG));
+        lblCanhBaoGhiChu = new JLabel("Hạn dùng ≤ 60 ngày - Cần ưu tiên FEFO");
+        pnlCards.add(taoTheKpiDong("LÔ HÀNG SẮP HẾT HẠN (≤ 60 NGÀY)", lblCanhBaoGiaTri, lblCanhBaoGhiChu,
+                IconHelper.ALERT_TRIANGLE, ThemeColors.DANGER, ThemeColors.DANGER_BG,
+                () -> MainDashboard.dieuHuongCard("ACTION_CANH_BAO_FEFO")));
 
         view.add(pnlCards);
         view.add(Box.createVerticalStrut(16));
@@ -823,9 +865,39 @@ public class TongQuanPanel extends JPanel {
     }
 
     private JPanel taoTheKpiDong(String tieuDe, JLabel lblGiaTri, JLabel lblGhiChu, String iconName, Color iconColor, Color iconBgColor) {
+        return taoTheKpiDong(tieuDe, lblGiaTri, lblGhiChu, iconName, iconColor, iconBgColor, null);
+    }
+
+    private JPanel taoTheKpiDong(String tieuDe, JLabel lblGiaTri, JLabel lblGhiChu, String iconName, Color iconColor, Color iconBgColor, Runnable onClickAction) {
         JPanel card = new JPanel(new BorderLayout(12, 0));
         card.setBackground(ThemeColors.SURFACE);
         card.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
+
+        if (onClickAction != null) {
+            card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            card.setToolTipText("Bấm để xem chi tiết danh sách...");
+            card.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    onClickAction.run();
+                }
+
+                @Override
+                public void mouseEntered(java.awt.event.MouseEvent e) {
+                    card.setBackground(new Color(0xFF, 0xFA, 0xF5));
+                    card.setBorder(new CompoundBorder(
+                            new LineBorder(ThemeColors.PRIMARY, 1, true),
+                            new EmptyBorder(14, 16, 14, 16)
+                    ));
+                }
+
+                @Override
+                public void mouseExited(java.awt.event.MouseEvent e) {
+                    card.setBackground(ThemeColors.SURFACE);
+                    card.setBorder(ThemeColors.createCardBorder(14, 16, 14, 16));
+                }
+            });
+        }
 
         // Vòng tròn pastel chứa Icon Lucide bên trái
         JPanel pnlIcon = new JPanel(new GridBagLayout()) {

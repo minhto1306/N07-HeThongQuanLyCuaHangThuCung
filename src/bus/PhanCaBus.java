@@ -1,8 +1,8 @@
-package controllers;
+package bus;
 
-import models.entity.BangPhanCong;
-import models.entity.CaLamViec;
-import models.entity.NhanVien;
+import entity.BangPhanCong;
+import entity.CaLamViec;
+import entity.NhanVien;
 import utils.UserSession;
 
 import java.time.DayOfWeek;
@@ -16,15 +16,15 @@ import java.util.List;
  * Controller quản lý Phân công ca làm việc & Ma trận lịch tuần.
  * Chuẩn hóa 4 ca làm việc trong ngày và lưu vết phân công kèm ghi chú ca.
  */
-public class PhanCaController {
+public class PhanCaBus {
 
-    private final NhanVienController nhanVienController;
-    private final models.dao.PhanCaDAO phanCaDAO = new models.dao.PhanCaDAO();
+    private final NhanVienBus NhanVienBus;
+    private final dao.PhanCaDAO phanCaDAO = new dao.PhanCaDAO();
     private final List<CaLamViec> danhSachCa = new ArrayList<>();
     private final List<BangPhanCong> danhSachPhanCong = new ArrayList<>();
 
-    public PhanCaController() {
-        this.nhanVienController = new NhanVienController();
+    public PhanCaBus() {
+        this.NhanVienBus = new NhanVienBus();
         khoiTaoCaLamViec();
         dongBoPhanCongTuDatabase();
     }
@@ -63,7 +63,7 @@ public class PhanCaController {
     }
 
     private void khoiTaoDuLieuPhanCongMau() {
-        List<NhanVien> dsNV = nhanVienController.layDanhSachNhanVien();
+        List<NhanVien> dsNV = NhanVienBus.layDanhSachNhanVien();
         if (dsNV.isEmpty()) return;
 
         LocalDate today = LocalDate.now();
@@ -216,7 +216,7 @@ public class PhanCaController {
                 if (!phanCaDAO.deletePhanCong(tonTai.getMaPhanCong())) return false;
                 return danhSachPhanCong.remove(tonTai);
             } catch (Exception e) {
-                System.err.println("[PhanCaController] Lỗi xóa phân công: " + e.getMessage());
+                System.err.println("[PhanCaBus] Lỗi xóa phân công: " + e.getMessage());
                 return false;
             }
         }
@@ -229,7 +229,7 @@ public class PhanCaController {
                 trungCa.setGhiChu(ghiChuMoi);
                 return true;
             } catch (Exception e) {
-                System.err.println("[PhanCaController] Lỗi cập nhật nhiệm vụ: " + e.getMessage());
+                System.err.println("[PhanCaBus] Lỗi cập nhật nhiệm vụ: " + e.getMessage());
                 return false;
             }
         }
@@ -242,14 +242,14 @@ public class PhanCaController {
             }
         }
 
-        String maPC = "PC" + System.currentTimeMillis();
+        String maPC = utils.MaTuSinhHelper.sinhMaPhanCong();
         BangPhanCong pcMoi = new BangPhanCong(maPC, nv, ca, ngay, "Chưa bắt đầu", ghiChu != null ? ghiChu : "");
         try {
             if (!phanCaDAO.insertPhanCong(pcMoi)) return false;
             danhSachPhanCong.add(pcMoi);
             return true;
         } catch (Exception e) {
-            System.err.println("[PhanCaController] Lỗi thêm phân công: " + e.getMessage());
+            System.err.println("[PhanCaBus] Lỗi thêm phân công: " + e.getMessage());
             return false;
         }
     }
@@ -301,7 +301,7 @@ public class PhanCaController {
                 pc.setCaLamViec(caMoi);
                 return true;
             } catch (Exception e) {
-                System.err.println("[PhanCaController] Lỗi đổi ca: " + e.getMessage());
+                System.err.println("[PhanCaBus] Lỗi đổi ca: " + e.getMessage());
                 return false;
             }
         }
@@ -318,7 +318,7 @@ public class PhanCaController {
         return false;
     }
 
-    public NhanVienController getNhanVienController() {
-        return nhanVienController;
+    public NhanVienBus getNhanVienController() {
+        return NhanVienBus;
     }
 }
