@@ -14,18 +14,6 @@ import java.util.List;
  */
 public class TheSpaPassDAO {
 
-    public String sinhMaTheSpaPass(String sdt) {
-        String sql = "SELECT dbo.fn_SinhMaTheSpaPass(?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, sdt);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getString(1);
-            }
-        } catch (SQLException ignored) {}
-        return "PASS_" + (sdt != null ? sdt : "000") + "_01";
-    }
-
     public List<TheSpaPass> getAllTheSpaPass() throws SQLException {
         List<TheSpaPass> list = new ArrayList<>();
         String sql = "SELECT * FROM TheSpaPass ORDER BY ngayKichHoat DESC";
@@ -111,6 +99,38 @@ public class TheSpaPassDAO {
             ps.setString(4, the.getTrangThai());
             ps.setString(5, the.getMaThe());
             return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean suDungMotBuoi(String maThe, String maHoaDon, String maNhanVien, String ghiChu)
+            throws SQLException {
+        String sqlUpdate = "UPDATE TheSpaPass SET soBuoiDaDung=soBuoiDaDung+1 "
+                + "WHERE maThe=? AND trangThai=N'ĐANG HOẠT ĐỘNG' AND ngayHetHan>=CAST(GETDATE() AS DATE) "
+                + "AND soBuoiDaDung<tongSoBuoi";
+        String sqlHistory = "INSERT INTO LichSuSuDungSpaPass(maThe,maHoaDon,maNhanVien,thoiGianSuDung,ghiChu) "
+                + "VALUES(?,?,?,SYSDATETIME(),?)";
+        Connection conn = null;
+        try {
+            conn = DBConnection.getConnection();
+            conn.setAutoCommit(false);
+            try (PreparedStatement ps = conn.prepareStatement(sqlUpdate)) {
+                ps.setString(1, maThe);
+                if (ps.executeUpdate() != 1) throw new SQLException("Thẻ không còn lượt hoặc đã hết hạn");
+            }
+            try (PreparedStatement ps = conn.prepareStatement(sqlHistory)) {
+                ps.setString(1, maThe);
+                ps.setString(2, maHoaDon);
+                ps.setString(3, maNhanVien);
+                ps.setString(4, ghiChu);
+                ps.executeUpdate();
+            }
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ignored) {}
+            throw e;
+        } finally {
+            if (conn != null) try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
         }
     }
 }

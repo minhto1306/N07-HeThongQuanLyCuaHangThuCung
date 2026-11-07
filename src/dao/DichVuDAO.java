@@ -16,28 +16,6 @@ import java.util.List;
  */
 public class DichVuDAO {
 
-    public String sinhMaDichVuMoi() {
-        String sql = "SELECT dbo.fn_SinhMaDichVu()";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) return rs.getString(1);
-        } catch (SQLException ignored) {}
-        return "DV001";
-    }
-
-    public String sinhMaTheSpaPass(String sdt) {
-        String sql = "SELECT dbo.fn_SinhMaTheSpaPass(?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, sdt);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getString(1);
-            }
-        } catch (SQLException ignored) {}
-        return "PASS_" + (sdt != null ? sdt : "000") + "_01";
-    }
-
     /**
      * Lấy toàn bộ danh sách dịch vụ trong hệ thống
      */

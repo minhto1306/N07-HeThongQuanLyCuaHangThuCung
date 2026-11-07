@@ -324,37 +324,53 @@ public class BaoCaoThongKeDAO {
 
     public List<XuatNhapTonRow> getXuatNhapTon(LocalDateTime tu, LocalDateTime den) throws SQLException {
         String sql =
-                "WITH L AS (SELECT maSanPham,SUM(soLuongTon) tonCuoi," +
+                "WITH L AS (SELECT maSanPham,SUM(CAST(soLuongTon AS BIGINT)) tonHienTai," +
+                " SUM(CAST(soLuongTon AS BIGINT)*CAST(donGiaNhapCoSo AS BIGINT)) giaTriHienTai FROM LoHang GROUP BY maSanPham)," +
+                " N AS (SELECT maSanPham," +
                 " SUM(CASE WHEN ngayNhap>=? AND ngayNhap<? THEN soLuongNhap ELSE 0 END) nhapKy," +
-                " SUM(CAST(soLuongTon AS BIGINT)*CAST(donGiaNhapCoSo AS BIGINT)) giaTriTon FROM LoHang GROUP BY maSanPham)," +
-                " X AS (SELECT l.maSanPham,SUM(x.soLuongXuatCoSo) xuatKy FROM ChiTietXuatLo x JOIN LoHang l ON l.soLo=x.soLo" +
-                " JOIN ChiTietHoaDon ct ON ct.maChiTiet=x.maChiTiet JOIN HoaDon h ON h.maHoaDon=ct.maHoaDon" +
-                " WHERE h.trangThaiHoaDon=N'Đã thanh toán' AND COALESCE(h.thoiGianThanhToan,h.ngayLap)>=? AND COALESCE(h.thoiGianThanhToan,h.ngayLap)<? GROUP BY l.maSanPham)," +
-                " R AS (SELECT ct.maSanPham,SUM(ct.soLuongDoiTra) traKy FROM ChiTietDoiTra ct JOIN PhieuDoiTra p ON p.maPhieuDoiTra=ct.maPhieuDoiTra" +
-                " WHERE p.ngayDoiTra>=? AND p.ngayDoiTra<? GROUP BY ct.maSanPham)" +
+                " SUM(CASE WHEN ngayNhap>=? THEN soLuongNhap ELSE 0 END) nhapSau," +
+                " SUM(CASE WHEN ngayNhap>=? THEN CAST(soLuongNhap AS BIGINT)*CAST(donGiaNhapCoSo AS BIGINT) ELSE 0 END) giaTriNhapSau" +
+                " FROM LoHang GROUP BY maSanPham)," +
+                " X AS (SELECT l.maSanPham," +
+                " SUM(CASE WHEN COALESCE(h.thoiGianThanhToan,h.ngayLap)>=? AND COALESCE(h.thoiGianThanhToan,h.ngayLap)<? THEN x.soLuongXuatCoSo ELSE 0 END) xuatKy," +
+                " SUM(CASE WHEN COALESCE(h.thoiGianThanhToan,h.ngayLap)>=? THEN x.soLuongXuatCoSo ELSE 0 END) xuatSau," +
+                " SUM(CASE WHEN COALESCE(h.thoiGianThanhToan,h.ngayLap)>=? THEN CAST(x.soLuongXuatCoSo AS BIGINT)*CAST(l.donGiaNhapCoSo AS BIGINT) ELSE 0 END) giaTriXuatSau" +
+                " FROM ChiTietXuatLo x JOIN LoHang l ON l.soLo=x.soLo JOIN ChiTietHoaDon cthd ON cthd.maChiTiet=x.maChiTiet" +
+                " JOIN HoaDon h ON h.maHoaDon=cthd.maHoaDon WHERE h.trangThaiHoaDon=N'Đã thanh toán' GROUP BY l.maSanPham)," +
+                " R AS (SELECT ct.maSanPham," +
+                " SUM(CASE WHEN p.ngayDoiTra>=? AND p.ngayDoiTra<? THEN COALESCE(NULLIF(ct.soLuongCoSoHoan,0),ct.soLuongDoiTra) ELSE 0 END) traKy," +
+                " SUM(CASE WHEN p.ngayDoiTra>=? THEN COALESCE(NULLIF(ct.soLuongCoSoHoan,0),ct.soLuongDoiTra) ELSE 0 END) traSau," +
+                " SUM(CASE WHEN p.ngayDoiTra>=? THEN CAST(COALESCE(NULLIF(ct.soLuongCoSoHoan,0),ct.soLuongDoiTra) AS BIGINT)*CAST(COALESCE(l.donGiaNhapCoSo,0) AS BIGINT) ELSE 0 END) giaTriTraSau" +
+                " FROM ChiTietDoiTra ct JOIN PhieuDoiTra p ON p.maPhieuDoiTra=ct.maPhieuDoiTra LEFT JOIN LoHang l ON l.soLo=ct.soLo GROUP BY ct.maSanPham)" +
                 " SELECT sp.maSanPham,sp.tenSanPham,COALESCE(dvt.tenDonVi,N'Đơn vị') donViTinh," +
-                " COALESCE(l.tonCuoi,0) tonCuoi,COALESCE(l.nhapKy,0) nhapKy,COALESCE(x.xuatKy,0) xuatKy,COALESCE(r.traKy,0) traKy," +
-                " COALESCE(qd.giaBan,0) giaBan,COALESCE(l.giaTriTon,0) giaTriTon" +
-                " FROM SanPham sp LEFT JOIN L l ON l.maSanPham=sp.maSanPham LEFT JOIN X x ON x.maSanPham=sp.maSanPham LEFT JOIN R r ON r.maSanPham=sp.maSanPham" +
+                " (COALESCE(l.tonHienTai,0)-COALESCE(n.nhapSau,0)+COALESCE(x.xuatSau,0)-COALESCE(r.traSau,0)) tonCuoi," +
+                " COALESCE(n.nhapKy,0) nhapKy,COALESCE(x.xuatKy,0) xuatKy,COALESCE(r.traKy,0) traKy," +
+                " COALESCE(qd.giaBan,0) giaBan," +
+                " (COALESCE(l.giaTriHienTai,0)-COALESCE(n.giaTriNhapSau,0)+COALESCE(x.giaTriXuatSau,0)-COALESCE(r.giaTriTraSau,0)) giaTriTon" +
+                " FROM SanPham sp LEFT JOIN L l ON l.maSanPham=sp.maSanPham LEFT JOIN N n ON n.maSanPham=sp.maSanPham" +
+                " LEFT JOIN X x ON x.maSanPham=sp.maSanPham LEFT JOIN R r ON r.maSanPham=sp.maSanPham" +
                 " OUTER APPLY (SELECT TOP 1 q.giaBan,q.maDonVi FROM QuyDoiDonVi q WHERE q.maSanPham=sp.maSanPham AND q.tyLeQuyDoi=1 ORDER BY q.maQuyDoi) qd" +
                 " LEFT JOIN DonViTinh dvt ON dvt.maDonVi=qd.maDonVi ORDER BY sp.maSanPham";
         List<XuatNhapTonRow> rows = new ArrayList<>();
         try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            for (int i = 0; i < 3; i++) {
-                ps.setTimestamp(i * 2 + 1, Timestamp.valueOf(tu));
-                ps.setTimestamp(i * 2 + 2, Timestamp.valueOf(den));
-            }
+            int i = 1;
+            ps.setTimestamp(i++, Timestamp.valueOf(tu)); ps.setTimestamp(i++, Timestamp.valueOf(den));
+            ps.setTimestamp(i++, Timestamp.valueOf(den)); ps.setTimestamp(i++, Timestamp.valueOf(den));
+            ps.setTimestamp(i++, Timestamp.valueOf(tu)); ps.setTimestamp(i++, Timestamp.valueOf(den));
+            ps.setTimestamp(i++, Timestamp.valueOf(den)); ps.setTimestamp(i++, Timestamp.valueOf(den));
+            ps.setTimestamp(i++, Timestamp.valueOf(tu)); ps.setTimestamp(i++, Timestamp.valueOf(den));
+            ps.setTimestamp(i++, Timestamp.valueOf(den)); ps.setTimestamp(i++, Timestamp.valueOf(den));
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     XuatNhapTonRow r = new XuatNhapTonRow();
                     r.maSanPham = rs.getString("maSanPham");
                     r.tenSanPham = rs.getString("tenSanPham");
                     r.donViTinh = rs.getString("donViTinh");
-                    r.tonCuoiKy = rs.getInt("tonCuoi");
+                    r.tonCuoiKy = Math.max(0, rs.getInt("tonCuoi"));
                     r.nhapTrongKy = rs.getInt("nhapKy");
                     r.xuatBanTrongKy = rs.getInt("xuatKy");
                     r.hoanTraTrongKy = rs.getInt("traKy");
-                    r.tonDauKy = r.tonCuoiKy - r.nhapTrongKy + r.xuatBanTrongKy - r.hoanTraTrongKy;
+                    r.tonDauKy = Math.max(0, r.tonCuoiKy - r.nhapTrongKy + r.xuatBanTrongKy - r.hoanTraTrongKy);
                     r.donGiaBan = rs.getLong("giaBan");
                     r.giaTriTonTheoGiaNhap = rs.getLong("giaTriTon");
                     rows.add(r);

@@ -20,26 +20,6 @@ import java.util.List;
  */
 public class ThuCungDAO {
 
-    public String sinhMaHoSoMoi() {
-        String sql = "SELECT dbo.fn_SinhMaHoSo()";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) return rs.getString(1);
-        } catch (SQLException ignored) {}
-        return "HS001";
-    }
-
-    public String sinhMaThuCungMoi() {
-        String sql = "SELECT dbo.fn_SinhMaThuCung()";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) return rs.getString(1);
-        } catch (SQLException ignored) {}
-        return "TC0001";
-    }
-
     /**
      * Lấy toàn bộ danh sách thú cưng kèm thông tin chủ nuôi và mã Microchip
      */
@@ -166,7 +146,7 @@ public class ThuCungDAO {
                 psTC.executeUpdate();
             }
 
-            String maHoSo = sinhMaHoSoMoi();
+            String maHoSo = utils.MaTuSinhHelper.sinhMaHoSo();
             try (PreparedStatement psHS = conn.prepareStatement(sqlHS)) {
                 psHS.setString(1, maHoSo);
                 psHS.setString(2, maKhachHang);

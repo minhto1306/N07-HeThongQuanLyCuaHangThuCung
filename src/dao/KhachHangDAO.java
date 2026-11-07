@@ -14,16 +14,6 @@ import java.util.List;
 // đã bổ sung đọc thêm 2 cột email và diaChi để gửi thông báo lịch hẹn với pet hotel
 public class KhachHangDAO {
 
-    public String sinhMaKhachHangMoi() {
-        String sql = "SELECT dbo.fn_SinhMaKhachHang()";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) return rs.getString(1);
-        } catch (SQLException ignored) {}
-        return "KH0001";
-    }
-
     // hàm phụ trợ để lấy chuỗi an toàn, lỡ database máy nào chưa chạy alter table thêm cột email
     // thì nó không bị văng exception sập ứng dụng
     private String layGiaTriAnToan(ResultSet rs, String colName) {
