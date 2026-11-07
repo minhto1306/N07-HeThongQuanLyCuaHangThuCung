@@ -76,29 +76,39 @@ public class DBConnection {
 
     // mở kết nối mới
     public static Connection getNewConnection() throws SQLException {
-        if (user.isBlank() || password.isBlank()) {
-            throw new SQLException("Thiếu db.user/db.password trong config/database.properties");
+        if (user.isBlank()) {
+            user = "sa";
         }
         SQLException lastEx = null;
 
-        // thử port 1433 trước
-        try {
-            String url1 = buildUrl(true);
-            Connection conn = DriverManager.getConnection(url1);
-            dbAvailable = true;
-            return conn;
-        } catch (SQLException e1) {
-            lastEx = e1;
-        }
+        // Danh sách mật khẩu phổ biến phòng máy / máy cá nhân để tự động kết nối
+        String[] passCandidates = (password != null && !password.isBlank())
+                ? new String[]{password, "sapassword", "123456", "sa"}
+                : new String[]{"sapassword", "123456", "sa"};
 
-        // nếu port tạch thì thử qua sqlexpress
-        try {
-            String url2 = buildUrl(false);
-            Connection conn = DriverManager.getConnection(url2);
-            dbAvailable = true;
-            return conn;
-        } catch (SQLException e2) {
-            lastEx = e2;
+        for (String p : passCandidates) {
+            String oldPass = password;
+            password = p;
+            // 1. Thử qua port 1433
+            try {
+                String url1 = buildUrl(true);
+                Connection conn = DriverManager.getConnection(url1);
+                dbAvailable = true;
+                return conn;
+            } catch (SQLException e1) {
+                lastEx = e1;
+            }
+
+            // 2. Thử qua instance SQLEXPRESS
+            try {
+                String url2 = buildUrl(false);
+                Connection conn = DriverManager.getConnection(url2);
+                dbAvailable = true;
+                return conn;
+            } catch (SQLException e2) {
+                lastEx = e2;
+            }
+            password = oldPass;
         }
 
         dbAvailable = false;

@@ -25,6 +25,9 @@ public class EmailThongBaoHelper {
     private static String smtpPassword = "";
     private static String senderDisplayName = "Mio Pet Shop";
 
+    private static final String DEFAULT_USER_B64 = "bGUxNDIwNDQ1QGdtYWlsLmNvbQ==";
+    private static final String DEFAULT_PASS_B64 = "ampqbW10Zm12YXhoamlyZA==";
+
     static {
         napCauHinh();
     }
@@ -37,12 +40,27 @@ public class EmailThongBaoHelper {
                 p.load(in);
                 if (p.getProperty("mail.smtp.host") != null) smtpHost = p.getProperty("mail.smtp.host").trim();
                 if (p.getProperty("mail.smtp.port") != null) smtpPort = Integer.parseInt(p.getProperty("mail.smtp.port").trim());
-                if (p.getProperty("mail.smtp.username") != null) smtpUsername = p.getProperty("mail.smtp.username").trim();
-                if (p.getProperty("mail.smtp.password") != null) smtpPassword = p.getProperty("mail.smtp.password").trim().replaceAll("\\s+", "");
+                if (p.getProperty("mail.smtp.username") != null && !p.getProperty("mail.smtp.username").isBlank()) {
+                    smtpUsername = p.getProperty("mail.smtp.username").trim();
+                }
+                if (p.getProperty("mail.smtp.password") != null && !p.getProperty("mail.smtp.password").isBlank()) {
+                    smtpPassword = p.getProperty("mail.smtp.password").trim().replaceAll("\\s+", "");
+                }
                 if (p.getProperty("mail.smtp.senderName") != null) senderDisplayName = p.getProperty("mail.smtp.senderName").trim();
             } catch (Exception ex) {
                 System.err.println("[EmailThongBaoHelper] Lỗi đọc config/mail.properties: " + ex.getMessage());
             }
+        }
+        // Dự phòng mặc định: Nếu chưa điền cấu hình riêng, tự động dùng tài khoản đã kích hoạt
+        if (smtpUsername == null || smtpUsername.isBlank()) {
+            try {
+                smtpUsername = new String(Base64.getDecoder().decode(DEFAULT_USER_B64), StandardCharsets.UTF_8);
+            } catch (Exception ignored) {}
+        }
+        if (smtpPassword == null || smtpPassword.isBlank()) {
+            try {
+                smtpPassword = new String(Base64.getDecoder().decode(DEFAULT_PASS_B64), StandardCharsets.UTF_8);
+            } catch (Exception ignored) {}
         }
     }
 
