@@ -2,7 +2,6 @@ package gui;
 
 import bus.DangNhapBus;
 import entity.NhanVien;
-import entity.TaiKhoan;
 import utils.IconHelper;
 import utils.ThemeColors;
 import utils.UserSession;
@@ -67,22 +66,20 @@ public class MainDashboard extends JFrame {
      * Constructor mặc định (dùng cho chạy thử nghiệm hoặc standalone preview).
      */
     public MainDashboard() {
-        this(taoNhanVienMacDinh());
+        this(UserSession.getCurrentUser());
     }
 
     /**
      * Constructor chính với nhân viên đã xác thực từ LoginForm.
      */
     public MainDashboard(NhanVien nhanVien) {
-        this.currentUser = nhanVien != null ? nhanVien : taoNhanVienMacDinh();
+        if (nhanVien == null || nhanVien.getTaiKhoan() == null) {
+            throw new IllegalStateException("Phải đăng nhập hợp lệ trước khi mở Dashboard");
+        }
+        this.currentUser = nhanVien;
         UserSession.initSession(this.currentUser);
         currentInstance = this;
         khoiTaoGiaoDien();
-    }
-
-    private static NhanVien taoNhanVienMacDinh() {
-        TaiKhoan tk = new TaiKhoan("NV001", "0901234567", "minh.quanly@miopet.vn", "", "NVQL", true);
-        return new NhanVien("NV001", "Lê Khãi Minh", "Quản lý hệ thống", "0901234567", "minh.quanly@miopet.vn", tk);
     }
 
     private void khoiTaoGiaoDien() {
@@ -792,6 +789,6 @@ public class MainDashboard extends JFrame {
             com.formdev.flatlaf.FlatLightLaf.setup();
         } catch (Exception ignored) {}
 
-        SwingUtilities.invokeLater(() -> new MainDashboard().setVisible(true));
+        SwingUtilities.invokeLater(() -> new LoginForm().setVisible(true));
     }
 }

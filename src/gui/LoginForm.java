@@ -357,6 +357,13 @@ public class LoginForm extends JFrame {
         btnXacNhanDoiMK.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         btnGuiOtp.addActionListener(e -> {
+            if (!utils.EmailThongBaoHelper.isSmtpConfigured()) {
+                JOptionPane.showMessageDialog(dlg,
+                        "Hệ thống chưa cấu hình máy chủ email thật nên không thể gửi OTP an toàn.\n"
+                        + "Vui lòng liên hệ Quản lý để được cấp lại mật khẩu.",
+                        "Khôi phục mật khẩu tạm khóa", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             String sdt = txtResetPhone.getText().trim();
             String mail = txtResetEmail.getText().trim();
 
@@ -368,7 +375,7 @@ public class LoginForm extends JFrame {
             NhanVien nv = dangNhapBus.xacThucQuenMatKhau(sdt, mail);
             if (nv == null) {
                 JOptionPane.showMessageDialog(dlg,
-                        "Không tìm thấy tài khoản nhân viên nào khớp với Số điện thoại và Email này!\n(Gợi ý mẫu: SĐT 0901234567 - Email: minh.quanly@miopet.vn)",
+                        "Không thể xác thực thông tin tài khoản.",
                         "Thông tin không khớp", JOptionPane.ERROR_MESSAGE);
                 return;
             }

@@ -3,7 +3,6 @@ import java.awt.Insets;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import gui.LoginForm;
-import gui.MainDashboard;
 
 public class Main {
 
@@ -16,15 +15,9 @@ public class Main {
         caiDatFlatLaf();
 
         // chạy giao diện trên luồng swing cho mượt
-        SwingUtilities.invokeLater(() -> {
-            // nếu truyền cờ --dashboard thì mở thẳng vô xem thử giao diện luôn
-            if (args != null && args.length > 0 && "--dashboard".equalsIgnoreCase(args[0])) {
-                new MainDashboard().setVisible(true);
-            } else {
-                // bth thì mở login
-                new LoginForm().setVisible(true);
-            }
-        });
+        // Mọi đường khởi động đều phải đi qua xác thực. Không cho phép tham số
+        // dòng lệnh mở Dashboard trực tiếp vì sẽ bỏ qua toàn bộ RBAC.
+        SwingUtilities.invokeLater(() -> new LoginForm().setVisible(true));
     }
 
     private static void caiDatFlatLaf() {
