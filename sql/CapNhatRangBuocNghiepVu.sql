@@ -1,4 +1,4 @@
-/*
+﻿/*
   Chạy một lần trên CSDL đã tồn tại.
   Script không tự xóa dữ liệu trùng: nếu phát hiện trùng, script dừng để Quản lý
   kiểm tra và chọn đúng bản ghi cần giữ, tránh mất lịch sử nghiệp vụ.
