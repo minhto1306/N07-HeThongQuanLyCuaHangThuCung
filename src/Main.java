@@ -2,8 +2,8 @@ import java.awt.Font;
 import java.awt.Insets;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
-import views.LoginForm;
-import views.MainDashboard;
+import gui.LoginForm;
+import gui.MainDashboard;
 
 public class Main {
 

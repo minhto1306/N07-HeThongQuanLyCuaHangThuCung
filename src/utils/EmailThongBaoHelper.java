@@ -1,6 +1,6 @@
 package utils;
 
-import views.EmailPreviewDialog;
+import gui.EmailPreviewDialog;
 
 import java.awt.*;
 import java.text.DecimalFormat;
@@ -133,6 +133,28 @@ public class EmailThongBaoHelper {
                 + "</div>"
                 + "<div style='background-color: #fafafa; padding: 12px; text-align: center; font-size: 11px; color: #888; border-top: 1px solid #eee;'>"
                 + "  Phòng Tiêm Chủng Thú Y & Spa Mio • Chăm sóc sức khỏe toàn diện cho thú cưng"
+                + "</div>"
+                + "</div>";
+    }
+
+    // 5. Mẫu Email Gửi Mã OTP Khôi phục Mật khẩu Nhân viên (Bảo mật SHA-256)
+    public static String taoEmailKhoiPhucMatKhau(String hoTen, String sdt, String maTK, String maOtp) {
+        return "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ffd8be; border-radius: 8px; overflow: hidden;'>"
+                + "<div style='background-color: #e16162; color: #ffffff; padding: 18px 20px; text-align: center;'>"
+                + "  <h2 style='margin: 0; font-size: 19px;'>🔐 MIO PET SHOP - MÃ XÁC THỰC KHÔI PHỤC MẬT KHẨU</h2>"
+                + "  <p style='margin: 5px 0 0; font-size: 12px;'>Hệ thống Bảo mật Tài khoản Nhân sự Nội bộ • " + DTF.format(LocalDateTime.now()) + "</p>"
+                + "</div>"
+                + "<div style='padding: 20px; background-color: #ffffff; color: #2b2c34;'>"
+                + "  <p>Xin chào nhân viên <b>" + hoTen + "</b> (Mã TK: <b>" + maTK + "</b> - SĐT: <b>" + sdt + "</b>),</p>"
+                + "  <p>Hệ thống quản lý Cửa hàng Thú cưng Mio vừa nhận được yêu cầu đặt lại mật khẩu đăng nhập của bạn. Vui lòng sử dụng mã OTP gồm 6 chữ số dưới đây để xác nhận:</p>"
+                + "  <div style='background-color: #fff3ec; border: 2px dashed #e16162; border-radius: 8px; padding: 16px; text-align: center; margin: 18px 0;'>"
+                + "    <span style='font-size: 12px; color: #555;'>MÃ XÁC THỰC OTP CỦA BẠN (HIỆU LỰC 5 PHÚT):</span><br/>"
+                + "    <span style='display: inline-block; margin-top: 8px; padding: 8px 24px; background-color: #e16162; color: #ffffff; font-weight: bold; font-size: 24px; border-radius: 6px; letter-spacing: 6px;'>" + maOtp + "</span>"
+                + "  </div>"
+                + "  <p style='font-size: 12px; color: #666;'>⚠️ <b>Lưu ý bảo mật:</b> Tuyệt đối không chia sẻ mã OTP này cho bất kỳ ai. Mật khẩu mới sau khi cập nhật sẽ được mã hóa một chiều bằng thuật toán <b>SHA-256</b>.</p>"
+                + "</div>"
+                + "<div style='background-color: #f9f9fb; padding: 12px; text-align: center; font-size: 11px; color: #888; border-top: 1px solid #eee;'>"
+                + "  Mio Pet Care & Spa Security • 12 Nguyễn Văn Bảo, Phường 4, Gò Vấp, TP.HCM"
                 + "</div>"
                 + "</div>";
     }

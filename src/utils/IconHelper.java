@@ -67,6 +67,7 @@ public final class IconHelper {
     public static final String SHIELD = "shield";
     public static final String KEY = "key";
     public static final String FILE_TEXT = "file-text";
+    public static final String MAIL = "mail";
 
     private IconHelper() {}
 
@@ -743,6 +744,15 @@ public final class IconHelper {
                 // Điểm lấp lánh phụ
                 g2.fill(new Ellipse2D.Double(18, 16, 2, 2));
                 g2.fill(new Ellipse2D.Double(6, 17, 2, 2));
+                break;
+
+            case "mail":
+                g2.draw(new RoundRectangle2D.Double(3, 5, 18, 14, 3, 3));
+                Path2D mailEnvelope = new Path2D.Double();
+                mailEnvelope.moveTo(3, 7);
+                mailEnvelope.lineTo(12, 13);
+                mailEnvelope.lineTo(21, 7);
+                g2.draw(mailEnvelope);
                 break;
 
             case "phone":
