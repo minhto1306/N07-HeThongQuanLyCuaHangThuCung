@@ -1014,6 +1014,13 @@ public class PetHotelPanel extends JPanel {
 
         int opt = JOptionPane.showConfirmDialog(this, msg, "Xác nhận Check-out", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (opt == JOptionPane.YES_OPTION) {
+            // Lưu lịch sử lưu trú trước khi đổi trạng thái phòng
+            try {
+                new bus.PetHotelBus().luuLichSuLuuTru(p, days, tongTien);
+            } catch (Exception ex) {
+                System.err.println("[PetHotelPanel] Lỗi ghi lịch sử lưu trú: " + ex.getMessage());
+            }
+
             // Đổi trạng thái sang dọn dẹp
             p.trangThai = "ĐANG DỌN DẸP";
             luuPhongXuongDB(p);

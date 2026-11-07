@@ -328,4 +328,34 @@ public class ThuCungDAO {
             return ps.executeUpdate() > 0;
         }
     }
+
+    public String getThongTinDiUngTheoSoDienThoai(String sdt) {
+        if (sdt == null || sdt.trim().isEmpty()) return null;
+        String sql = "SELECT TOP 1 tc.tenThuCung, tc.giongLoai, sk.ghiChuTheTrang " +
+                "FROM KhachHang kh " +
+                "JOIN HoSoThuCung hs ON kh.maKhachHang = hs.maKhachHang " +
+                "JOIN ThuCung tc ON hs.maThuCung = tc.maThuCung " +
+                "LEFT JOIN HoSoSucKhoe sk ON tc.maThuCung = sk.maThuCung " +
+                "WHERE kh.soDienThoai = ? " +
+                "ORDER BY sk.ngayKiemTra DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, sdt.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String tenTC = rs.getString("tenThuCung");
+                    String giong = rs.getString("giongLoai");
+                    String ghiChu = rs.getString("ghiChuTheTrang");
+                    if (ghiChu != null && !ghiChu.trim().isEmpty()) {
+                        return "Bé " + tenTC + " (" + giong + " - " + ghiChu.trim() + ")";
+                    } else {
+                        return "Bé " + tenTC + " (" + giong + " - Sức khỏe bình thường)";
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[ThuCungDAO] Lỗi lấy thông tin dị ứng: " + e.getMessage());
+        }
+        return null;
+    }
 }

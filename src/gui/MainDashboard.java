@@ -721,8 +721,11 @@ public class MainDashboard extends JFrame {
     // =========================================================================
     public void thucHienDoiMatKhau() {
         JPasswordField txtOldPass = new JPasswordField();
+        txtOldPass.putClientProperty("FlatLaf.style", "showRevealButton: true");
         JPasswordField txtNewPass = new JPasswordField();
+        txtNewPass.putClientProperty("FlatLaf.style", "showRevealButton: true");
         JPasswordField txtConfirmPass = new JPasswordField();
+        txtConfirmPass.putClientProperty("FlatLaf.style", "showRevealButton: true");
 
         Object[] msg = {
                 "Tài khoản hiện tại: " + UserSession.getFullName() + " (" + UserSession.getRoleCode() + ")",

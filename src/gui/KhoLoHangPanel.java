@@ -464,9 +464,47 @@ public class KhoLoHangPanel extends JPanel {
 
     public void xuatBaoCaoTonKho() {
         chonTabLoHangFEFO();
-        JOptionPane.showMessageDialog(this,
-                "Đã kết xuất báo cáo kiểm kê xuất - nhập - tồn kho & Lô hàng FEFO ra tệp Excel thành công!\nTổng số lô hàng đang lưu trữ: " + DANH_SACH_LO_HANG.size() + " lô.",
-                "Xuất báo biểu kho", JOptionPane.INFORMATION_MESSAGE);
+        if (DANH_SACH_LO_HANG.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Chưa có dữ liệu lô hàng để xuất báo cáo!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        try {
+            java.util.List<java.util.List<String>> rows = new ArrayList<>();
+            rows.add(java.util.Arrays.asList(
+                    "Số lô", "Mã sản phẩm", "Tên sản phẩm", "Nhà cung cấp",
+                    "Ngày sản xuất", "Hạn sử dụng", "Giá nhập", "Số lượng nhập", "Số lượng tồn", "Đơn vị tính", "Trạng thái FEFO"
+            ));
+
+            for (LoHangRecord lo : DANH_SACH_LO_HANG) {
+                rows.add(java.util.Arrays.asList(
+                        lo.soLo != null ? lo.soLo : "",
+                        lo.maSP != null ? lo.maSP : "",
+                        lo.tenSP != null ? lo.tenSP : "",
+                        lo.nhaCungCap != null ? lo.nhaCungCap : "",
+                        lo.ngaySX != null ? lo.ngaySX : "",
+                        lo.hanSD != null ? lo.hanSD : "",
+                        lo.giaNhap != null ? lo.giaNhap : "",
+                        String.valueOf(lo.soLuongNhap),
+                        String.valueOf(lo.soLuongTon),
+                        lo.donVi != null ? lo.donVi : "",
+                        lo.trangThaiFEFO != null ? lo.trangThaiFEFO : ""
+                ));
+            }
+
+            String fileName = "BaoCaoTonKhoFEFO_" + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd")) + "_" + System.currentTimeMillis() + ".xlsx";
+            java.nio.file.Path outputPath = java.nio.file.Paths.get("export", fileName);
+            utils.LichPhanCaExcelExporter.export(outputPath, "Ton Kho FEFO", rows);
+
+            JOptionPane.showMessageDialog(this,
+                    "ĐÃ KẾT XUẤT BÁO CÁO TỒN KHO & LÔ HÀNG FEFO RA FILE EXCEL THÀNH CÔNG!\n\n" +
+                            "• Tổng số lô hàng: " + DANH_SACH_LO_HANG.size() + " lô\n" +
+                            "• Tệp đã lưu tại: " + outputPath.toAbsolutePath().toString(),
+                    "Xuất báo biểu kho thành công", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            System.err.println("[KhoLoHangPanel] Lỗi xuất Excel: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Không thể xuất file Excel: " + e.getMessage(), "Lỗi xuất file", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void moDialogQuyDoi() {

@@ -24,7 +24,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -62,7 +64,8 @@ public class BanHangPOSPanel extends JPanel {
     // ==========================================
     // DATA MODELS CHO ĐƠN CHỜ & LỊCH SỬ HÓA ĐƠN
     // ==========================================
-    public static class DonHangTam {
+    public static class DonHangTam implements java.io.Serializable {
+        private static final long serialVersionUID = 1L;
         public String maHoaDon;
         public String tenKhach;
         public String sdt;
@@ -484,6 +487,7 @@ public class BanHangPOSPanel extends JPanel {
 
         add(pnlCardContainer, BorderLayout.CENTER);
 
+        taiDsDonTamTuDisk();
         capNhatGiaoDienDonCho();
         locVaHienThiCards();
         capNhatTongTien();
@@ -2205,14 +2209,18 @@ public class BanHangPOSPanel extends JPanel {
                     }
                 }
 
-                // Cập nhật Thú cưng & Dị ứng (Mô hình 3: Allergy Guard)
+                // Cập nhật Thú cưng & Dị ứng (Mô hình 3: Allergy Guard - truy vấn động từ CSDL)
                 if (lblThuCungDangChon != null) {
-                    if ("0988111222".equals(sdt)) {
-                        lblThuCungDangChon.setText("Bé Bim Bim (Chó Corgi - ⚠️ DỊ ỨNG ĐẠM GÀ)");
-                        lblThuCungDangChon.setForeground(ThemeColors.DANGER);
-                    } else if ("0977333444".equals(sdt)) {
-                        lblThuCungDangChon.setText("Bé Miu Miu (Mèo Anh - ⚠️ DỊ ỨNG LACTOSE)");
-                        lblThuCungDangChon.setForeground(new Color(217, 119, 6));
+                    dao.ThuCungDAO tcDao = new dao.ThuCungDAO();
+                    String thongTinDiUng = tcDao.getThongTinDiUngTheoSoDienThoai(sdt);
+                    if (thongTinDiUng != null) {
+                        lblThuCungDangChon.setText(thongTinDiUng);
+                        String upper = thongTinDiUng.toUpperCase();
+                        if (upper.contains("DỊ ỨNG") || upper.contains("DI UNG")) {
+                            lblThuCungDangChon.setForeground(ThemeColors.DANGER);
+                        } else {
+                            lblThuCungDangChon.setForeground(ThemeColors.SUCCESS_TEXT);
+                        }
                     } else if (kh != null) {
                         lblThuCungDangChon.setText("Bé cưng của " + kh.getHoTen() + " (Sức khỏe bình thường)");
                         lblThuCungDangChon.setForeground(ThemeColors.SUCCESS_TEXT);
@@ -2476,6 +2484,7 @@ public class BanHangPOSPanel extends JPanel {
         }
 
         dsDonTam.add(0, don);
+        luuDsDonTamXuongDisk();
         capNhatGiaoDienDonCho();
 
         JOptionPane.showMessageDialog(this,
@@ -2879,47 +2888,55 @@ public class BanHangPOSPanel extends JPanel {
                 }
             }
 
-            // 2. CHỈ KHI TỒN KHO ĐẦY ĐỦ: NẾU CÓ ĐỔI TRẢ, LƯU PHIẾU ĐỔI TRẢ VÀO CSDL
+            // 2. CHỈ KHI TỒN KHO ĐẦY ĐỦ: NẾU CÓ ĐỔI TRẢ, LƯU PHIẾU ĐỔI TRẢ VÀO CSDL (GIAO DỊCH CHẶT CHẼ)
             if (thongTinDoiTraHienTai != null) {
-                try {
-                    entity.PhieuDoiTra pdt = new entity.PhieuDoiTra();
-                    pdt.setMaPhieuDoiTra(utils.MaTuSinhHelper.sinhMaPhieuDoiTra());
-                    entity.HoaDon hdGoc = new entity.HoaDon();
-                    hdGoc.setMaHoaDon(thongTinDoiTraHienTai.getMaHoaDonGoc());
-                    pdt.setHoaDonGoc(hdGoc);
-                    entity.NhanVien nvDT = new entity.NhanVien();
-                    nvDT.setMaNhanVien(utils.UserSession.getUserId() != null ? utils.UserSession.getUserId() : "NV001");
-                    pdt.setNhanVien(nvDT);
-                    pdt.setNgayDoiTra(LocalDateTime.now());
-                    pdt.setLyDoDoiTra("Đổi sang sản phẩm khác tại quầy POS");
-                    pdt.setTongTienHoan(java.math.BigDecimal.valueOf(tienHoanThua));
-                    pdt.setTrangThaiDoiTra("Hoàn thành");
+                entity.PhieuDoiTra pdt = new entity.PhieuDoiTra();
+                pdt.setMaPhieuDoiTra(utils.MaTuSinhHelper.sinhMaPhieuDoiTra());
+                entity.HoaDon hdGoc = new entity.HoaDon();
+                hdGoc.setMaHoaDon(thongTinDoiTraHienTai.getMaHoaDonGoc());
+                pdt.setHoaDonGoc(hdGoc);
+                entity.NhanVien nvDT = new entity.NhanVien();
+                nvDT.setMaNhanVien(utils.UserSession.getUserId() != null ? utils.UserSession.getUserId() : "NV001");
+                pdt.setNhanVien(nvDT);
+                pdt.setNgayDoiTra(LocalDateTime.now());
+                pdt.setLyDoDoiTra("Đổi sang sản phẩm khác tại quầy POS");
+                pdt.setTongTienHoan(java.math.BigDecimal.valueOf(tienHoanThua));
+                pdt.setTrangThaiDoiTra("Hoàn thành");
 
-                    int idx = 1;
-                    if (thongTinDoiTraHienTai.getDsMonTra() != null) {
-                        for (DoiTraTransferData.MonTraLai mon : thongTinDoiTraHienTai.getDsMonTra()) {
-                            pdt.addChiTietDoiTra(new entity.ChiTietDoiTra(
-                                    pdt.getMaPhieuDoiTra() + "_" + (idx++),
-                                    pdt,
-                                    new entity.SanPham(mon.maSP, null, "", ""),
-                                    mon.soLuong,
-                                    java.math.BigDecimal.valueOf(mon.thanhTien)
-                            ));
-                            if (mon.nguyenTem) {
-                                KhoLoHangPanel.congTonKho(mon.maSP, mon.soLuong);
-                                BanHangPOSPanel.congTonKhoCatalog(mon.maSP, mon.soLuong);
-                            }
-                        }
+                int idx = 1;
+                if (thongTinDoiTraHienTai.getDsMonTra() != null) {
+                    for (DoiTraTransferData.MonTraLai mon : thongTinDoiTraHienTai.getDsMonTra()) {
+                        pdt.addChiTietDoiTra(new entity.ChiTietDoiTra(
+                                pdt.getMaPhieuDoiTra() + "_" + (idx++),
+                                pdt,
+                                new entity.SanPham(mon.maSP, null, "", ""),
+                                mon.soLuong,
+                                java.math.BigDecimal.valueOf(mon.thanhTien)
+                        ));
                     }
-                    busThanhToan.luuPhieuDoiTra(pdt);
-                } catch (Exception exDT) {
-                    System.err.println("[BanHangPOSPanel] Cảnh báo lưu phiếu đổi trả CSDL: " + exDT.getMessage());
+                }
+                boolean okDT = busThanhToan.luuPhieuDoiTra(pdt);
+                if (!okDT) {
+                    throw new SQLException("Lưu phiếu đổi trả vào CSDL thất bại! Giao dịch POS đã dừng lại để bảo đảm toàn vẹn dữ liệu.");
                 }
             }
 
-            // 3. LƯU HÓA ĐƠN VÀO CSDL
+            // 3. LƯU HÓA ĐƠN VÀO CSDL VÀ TRỪ KHO FEFO (ACID TRANSACTION)
             if (!hdReal.getDsChiTiet().isEmpty()) {
-                busThanhToan.luuHoaDonPOS(hdReal);
+                boolean okHD = busThanhToan.luuHoaDonPOS(hdReal);
+                if (!okHD) {
+                    throw new SQLException("Lưu hóa đơn và trừ kho không thành công trong CSDL SQL Server!");
+                }
+            }
+
+            // 4. CHỈ KHI CSDL ĐÃ GHI NHẬN THÀNH CÔNG: MỚI CỘNG TỒN KHO HÀNG ĐỔI TRẢ VÀO BỘ NHỚ RAM
+            if (thongTinDoiTraHienTai != null && thongTinDoiTraHienTai.getDsMonTra() != null) {
+                for (DoiTraTransferData.MonTraLai mon : thongTinDoiTraHienTai.getDsMonTra()) {
+                    if (mon.nguyenTem) {
+                        KhoLoHangPanel.congTonKho(mon.maSP, mon.soLuong);
+                        BanHangPOSPanel.congTonKhoCatalog(mon.maSP, mon.soLuong);
+                    }
+                }
             }
         } catch (Exception ex) {
             System.err.println("[BanHangPOSPanel] Lỗi ghi Hóa đơn CSDL: " + ex.getMessage());
@@ -3379,6 +3396,36 @@ public class BanHangPOSPanel extends JPanel {
         return pnl;
     }
 
+    private void luuDsDonTamXuongDisk() {
+        try {
+            java.io.File file = new java.io.File("config/pos_don_tam.dat");
+            if (!file.getParentFile().exists()) file.getParentFile().mkdirs();
+            try (java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(new java.io.FileOutputStream(file))) {
+                oos.writeObject(new ArrayList<>(dsDonTam));
+            }
+        } catch (Exception e) {
+            System.err.println("[BanHangPOSPanel] Lỗi lưu đơn tạm disk: " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void taiDsDonTamTuDisk() {
+        try {
+            java.io.File file = new java.io.File("config/pos_don_tam.dat");
+            if (file.exists()) {
+                try (java.io.ObjectInputStream ois = new java.io.ObjectInputStream(new java.io.FileInputStream(file))) {
+                    List<DonHangTam> loaded = (List<DonHangTam>) ois.readObject();
+                    if (loaded != null) {
+                        dsDonTam.clear();
+                        dsDonTam.addAll(loaded);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[BanHangPOSPanel] Lỗi đọc đơn tạm disk: " + e.getMessage());
+        }
+    }
+
     private void capNhatGiaoDienDonCho() {
         try {
             if (pnlCardsDonCho == null) return;
@@ -3487,6 +3534,7 @@ public class BanHangPOSPanel extends JPanel {
                     "Hủy đơn tạm", JOptionPane.YES_NO_OPTION);
             if (opt == JOptionPane.YES_OPTION) {
                 dsDonTam.remove(don);
+                luuDsDonTamXuongDisk();
                 capNhatGiaoDienDonCho();
             }
         });
@@ -3640,6 +3688,7 @@ public class BanHangPOSPanel extends JPanel {
         capNhatTongTien();
 
         dsDonTam.remove(don);
+        luuDsDonTamXuongDisk();
         capNhatGiaoDienDonCho();
 
         chonTabPOS();
@@ -3706,6 +3755,7 @@ public class BanHangPOSPanel extends JPanel {
         final String targetNext = nextStep;
         btn.addActionListener(e -> {
             don.dsMon.get(serviceIdx)[7] = targetNext;
+            luuDsDonTamXuongDisk();
             capNhatGiaoDienDonCho();
             if (targetNext.startsWith("4.")) {
                 JOptionPane.showMessageDialog(this,
@@ -3965,10 +4015,45 @@ public class BanHangPOSPanel extends JPanel {
     }
 
     private void xuLyXuatExcel() {
-        JOptionPane.showMessageDialog(this,
-                "XUẤT BÁO CÁO DOANH THU EXCEL THÀNH CÔNG!\n" +
-                        "• Tổng số hóa đơn: " + dsLichSuHoaDon.size() + " đơn\n" +
-                        "• File đã lưu tại: export/BaoCaoDoanhThu_" + System.currentTimeMillis() + ".xlsx",
-                "Xuất Excel thành công", JOptionPane.INFORMATION_MESSAGE);
+        if (dsLichSuHoaDon.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Chưa có dữ liệu hóa đơn để xuất Excel!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        try {
+            java.util.List<java.util.List<String>> rows = new ArrayList<>();
+            rows.add(java.util.Arrays.asList(
+                    "Mã hóa đơn", "Thời gian", "Tên khách hàng", "Số điện thoại",
+                    "Thu ngân", "Tổng tiền hàng", "Giảm giá", "Thực thu", "Phương thức", "Trạng thái"
+            ));
+
+            for (HoaDonDaThanhToan hd : dsLichSuHoaDon) {
+                rows.add(java.util.Arrays.asList(
+                        hd.maHoaDon != null ? hd.maHoaDon : "",
+                        hd.thoiGian != null ? hd.thoiGian : "",
+                        hd.tenKhach != null ? hd.tenKhach : "",
+                        hd.sdt != null ? hd.sdt : "",
+                        hd.thuNgan != null ? hd.thuNgan : "",
+                        String.valueOf(hd.tongTienHang),
+                        String.valueOf(hd.giamGia),
+                        String.valueOf(hd.tongThanhToan),
+                        hd.phuongThuc != null ? hd.phuongThuc : "",
+                        hd.trangThai != null ? hd.trangThai : ""
+                ));
+            }
+
+            String fileName = "BaoCaoDoanhThu_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "_" + System.currentTimeMillis() + ".xlsx";
+            java.nio.file.Path outputPath = java.nio.file.Paths.get("export", fileName);
+            utils.LichPhanCaExcelExporter.export(outputPath, "Doanh Thu POS", rows);
+
+            JOptionPane.showMessageDialog(this,
+                    "XUẤT BÁO CÁO DOANH THU EXCEL THÀNH CÔNG!\n\n" +
+                            "• Tổng số hóa đơn: " + dsLichSuHoaDon.size() + " đơn\n" +
+                            "• Tệp đã lưu tại: " + outputPath.toAbsolutePath().toString(),
+                    "Xuất Excel thành công", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            System.err.println("[BanHangPOSPanel] Lỗi xuất Excel: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Không thể xuất file Excel: " + e.getMessage(), "Lỗi xuất file", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }

@@ -568,6 +568,16 @@ public class TongQuanPanel extends JPanel {
             public boolean isCellEditable(int row, int column) { return false; }
         };
         JTable tblLichHen = taoBangDuLieu(modelLichHen, 5);
+        tblLichHen.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        tblLichHen.setToolTipText("Nhấp đúp chuột để mở Quản lý Lịch hẹn dịch vụ");
+        tblLichHen.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && tblLichHen.getSelectedRow() != -1) {
+                    MainDashboard.dieuHuongCard(MainDashboard.CARD_LICH_HEN);
+                }
+            }
+        });
         pnlLichHen.add(new JScrollPane(tblLichHen), BorderLayout.CENTER);
 
         // Bảng phải: Cảnh báo FEFO
@@ -588,6 +598,16 @@ public class TongQuanPanel extends JPanel {
             public boolean isCellEditable(int row, int column) { return false; }
         };
         JTable tblCanhBao = taoBangDuLieu(modelCanhBaoFEFO, 5);
+        tblCanhBao.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        tblCanhBao.setToolTipText("Nhấp đúp chuột để xem chi tiết lô hàng sắp hết hạn (Kho & Lô hàng)");
+        tblCanhBao.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && tblCanhBao.getSelectedRow() != -1) {
+                    MainDashboard.dieuHuongCard("ACTION_CANH_BAO_FEFO");
+                }
+            }
+        });
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
         tblCanhBao.getColumnModel().getColumn(2).setCellRenderer(centerRenderer);
@@ -616,19 +636,29 @@ public class TongQuanPanel extends JPanel {
 
         lblStratDoanhThu = new JLabel("0 đ");
         pnlCards.add(taoTheKpiDong("TỔNG DOANH THU THỰC TẾ", lblStratDoanhThu, new JLabel("+12.5% so với kỳ trước"),
-                IconHelper.TRENDING_UP, ThemeColors.PRIMARY, ThemeColors.PRIMARY_SOFT));
+                IconHelper.TRENDING_UP, ThemeColors.PRIMARY, ThemeColors.PRIMARY_SOFT,
+                () -> {
+                    Frame topFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+                    new BaoCaoThongKeDialog(topFrame, 0).setVisible(true);
+                }));
 
         lblStratLoiNhuan = new JLabel("0 đ");
         pnlCards.add(taoTheKpiDong("LỢI NHUẬN GỘP ƯỚC TÍNH", lblStratLoiNhuan, new JLabel("Biên lợi nhuận ~42%"),
-                IconHelper.CHECK, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG));
+                IconHelper.CHECK, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG,
+                () -> {
+                    Frame topFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+                    new BaoCaoThongKeDialog(topFrame, 1).setVisible(true);
+                }));
 
         lblStratHangHoa = new JLabel("0 đ");
         pnlCards.add(taoTheKpiDong("DOANH THU HÀNG HÓA", lblStratHangHoa, new JLabel("Bán lẻ tại quầy POS"),
-                IconHelper.BOXES, ThemeColors.INFO, ThemeColors.INFO_BG));
+                IconHelper.BOXES, ThemeColors.INFO, ThemeColors.INFO_BG,
+                () -> MainDashboard.dieuHuongCard("ACTION_LICH_SU_HD_BAN_LE")));
 
         lblStratDichVu = new JLabel("0 đ");
         pnlCards.add(taoTheKpiDong("DỊCH VỤ SPA & PET HOTEL", lblStratDichVu, new JLabel("Grooming & Khách sạn"),
-                IconHelper.SCISSORS, ThemeColors.WARNING, ThemeColors.WARNING_BG));
+                IconHelper.SCISSORS, ThemeColors.WARNING, ThemeColors.WARNING_BG,
+                () -> MainDashboard.dieuHuongCard("ACTION_LICH_SU_HD_DICH_VU")));
 
         view.add(pnlCards);
         view.add(Box.createVerticalStrut(16));

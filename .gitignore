@@ -19,6 +19,7 @@ obj/
 .idea/
 *.suo
 *.user
+config/*.dat
 
 phan_chia_code_4_thanh_vien/
 *.ps1

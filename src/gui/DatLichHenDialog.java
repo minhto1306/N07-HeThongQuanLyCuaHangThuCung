@@ -289,6 +289,7 @@ public class DatLichHenDialog extends JDialog {
                         "Thông báo", JOptionPane.INFORMATION_MESSAGE);
                 cboDichVu.setSelectedIndex(0);
             }
+            capNhatSlotAvailability();
         });
         pnlContent.add(cboDichVu);
 
@@ -297,8 +298,8 @@ public class DatLichHenDialog extends JDialog {
         pnlContent.add(new JLabel("Kỹ thuật viên chăm sóc (NVCS):"));
         pnlContent.add(Box.createVerticalStrut(3));
         cboKtv = new JComboBox<>(new String[]{
-                "NV003 - Tô Thanh Đạt (Chuyên Cắt tỉa & Grooming)",
-                "NV005 - Võ Thị Hồng Ngọc (Chuyên Spa & Tắm)",
+                "NV004 - Võ Thị Hồng Ngọc (Chuyên Spa & Tắm)",
+                "NV005 - Trần Thị Thu Hà (Chuyên Cắt tỉa & Grooming)",
                 "Chờ phân công ca trực sau"
         });
         cboKtv.setPreferredSize(new Dimension(360, 30));
@@ -457,6 +458,17 @@ public class DatLichHenDialog extends JDialog {
         }
     }
 
+    private int layThoiLuongDichVuHienTai() {
+        String dvStr = (String) cboDichVu.getSelectedItem();
+        if (dvStr != null && dvStr.contains("- ") && dvStr.endsWith("p)")) {
+            int idx = dvStr.lastIndexOf("- ");
+            try {
+                return Integer.parseInt(dvStr.substring(idx + 2, dvStr.length() - 2).trim());
+            } catch (Exception ignored) {}
+        }
+        return 45;
+    }
+
     private void capNhatSlotAvailability() {
         String ktvSelected = (String) cboKtv.getSelectedItem();
         String maKtv = "";
@@ -466,6 +478,7 @@ public class DatLichHenDialog extends JDialog {
 
         List<LichHen> allHen = controller.layDanhSachLichHen();
         List<String> bookedSlots = new ArrayList<>();
+        int currentDuration = layThoiLuongDichVuHienTai();
 
         if (allHen != null && !maKtv.isEmpty()) {
             for (LichHen lh : allHen) {
@@ -485,8 +498,25 @@ public class DatLichHenDialog extends JDialog {
                     }
 
                     if (matchKtv) {
-                        String timeStr = lh.getNgayHen().format(DateTimeFormatter.ofPattern("HH:mm"));
-                        bookedSlots.add(timeStr);
+                        LocalTime lhStart = lh.getNgayHen().toLocalTime();
+                        int lhDuration = 45;
+                        if (lh.getDsChiTiet() != null && !lh.getDsChiTiet().isEmpty() && lh.getDsChiTiet().get(0).getDichVu() != null) {
+                            int d = lh.getDsChiTiet().get(0).getDichVu().getThoiLuongPhut();
+                            if (d > 0) lhDuration = d;
+                        }
+                        LocalTime lhEnd = lhStart.plusMinutes(lhDuration);
+
+                        for (String slot : slotButtons.keySet()) {
+                            try {
+                                LocalTime slotStart = LocalTime.parse(slot);
+                                LocalTime slotEnd = slotStart.plusMinutes(currentDuration);
+                                if (slotStart.isBefore(lhEnd) && slotEnd.isAfter(lhStart)) {
+                                    if (!bookedSlots.contains(slot)) {
+                                        bookedSlots.add(slot);
+                                    }
+                                }
+                            } catch (Exception ignored) {}
+                        }
                     }
                 }
             }
@@ -579,13 +609,20 @@ public class DatLichHenDialog extends JDialog {
         KhachHang kh = new KhachHang(utils.MaTuSinhHelper.sinhMaKhachHang(), hoTen, sdt, 0);
 
         String ktvSelected = (String) cboKtv.getSelectedItem();
-        String maKtv = "NV003";
-        String tenKtv = "Tô Thanh Đạt";
-        if (ktvSelected != null && ktvSelected.startsWith("NV005")) {
-            maKtv = "NV005";
-            tenKtv = "Võ Thị Hồng Ngọc";
+        NhanVien ktv = null;
+        String tenKtv = "Chưa phân công";
+        if (ktvSelected != null && ktvSelected.startsWith("NV")) {
+            String maKtv = ktvSelected.substring(0, 5);
+            tenKtv = "Kỹ thuật viên";
+            if (ktvSelected.contains("-") && ktvSelected.contains("(")) {
+                tenKtv = ktvSelected.substring(ktvSelected.indexOf("-") + 1, ktvSelected.indexOf("(")).trim();
+            } else if ("NV004".equals(maKtv)) {
+                tenKtv = "Võ Thị Hồng Ngọc";
+            } else if ("NV005".equals(maKtv)) {
+                tenKtv = "Trần Thị Thu Hà";
+            }
+            ktv = new NhanVien(maKtv, tenKtv, "Kỹ thuật viên", "", null);
         }
-        NhanVien ktv = new NhanVien(maKtv, tenKtv, "Kỹ thuật viên", "", null);
 
         String gioiTinh = radDuc.isSelected() ? "Đực" : "Cái";
         ThuCung tc = new ThuCung(utils.MaTuSinhHelper.sinhMaThuCung(), tenTc, (String) cboGiongLoai.getSelectedItem(), null, gioiTinh);
@@ -593,7 +630,8 @@ public class DatLichHenDialog extends JDialog {
         String dvStr = (String) cboDichVu.getSelectedItem();
         String maDv = dvStr.substring(0, 5);
         String tenDv = dvStr.substring(8, dvStr.indexOf("(")).trim();
-        DichVu dv = new DichVu(maDv, tenDv, new BigDecimal("200000"), 45);
+        int thoiLuong = layThoiLuongDichVuHienTai();
+        DichVu dv = new DichVu(maDv, tenDv, new BigDecimal("200000"), thoiLuong);
 
         // Giờ hẹn kết hợp
         String[] timeParts = selectedTimeSlot.split(":");

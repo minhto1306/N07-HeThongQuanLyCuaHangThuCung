@@ -204,8 +204,8 @@ public class ChonDichVuDialog extends JDialog {
             cboKtv.addItem(nv.getMaNhanVien() + " - " + nv.getHoTen() + " (" + nv.getChucVu() + ")");
         }
         if (cboKtv.getItemCount() == 0) {
-            cboKtv.addItem("NV003 - Tô Thanh Đạt (KTV Grooming)");
-            cboKtv.addItem("NV005 - Võ Thị Hồng Ngọc (Chuyên viên Spa)");
+            cboKtv.addItem("NV004 - Võ Thị Hồng Ngọc (Chuyên viên Spa)");
+            cboKtv.addItem("NV005 - Trần Thị Thu Hà (KTV Chăm sóc)");
         }
     }
 

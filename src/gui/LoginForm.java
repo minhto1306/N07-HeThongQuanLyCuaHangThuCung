@@ -34,6 +34,9 @@ public class LoginForm extends JFrame {
     }
 
     private void khoiTaoGiaoDien() {
+        // Đảm bảo nút con mắt xem mật khẩu luôn được kích hoạt
+        UIManager.put("PasswordField.showRevealButton", true);
+
         setTitle("ĐĂNG NHẬP HỆ THỐNG - CỬA HÀNG THÚ CƯNG MIO");
         setSize(880, 560);
         setMinimumSize(new Dimension(880, 560));
@@ -177,25 +180,48 @@ public class LoginForm extends JFrame {
         txtPassword.setPreferredSize(new Dimension(360, 40));
         txtPassword.putClientProperty("JTextField.placeholderText", "Nhập mật khẩu...");
         txtPassword.putClientProperty("JTextField.leadingIcon", IconHelper.getIcon(IconHelper.LOCK, 16, ThemeColors.TEXT_MUTED));
-        txtPassword.putClientProperty("JPasswordField.showRevealButton", true);
+        txtPassword.putClientProperty("FlatLaf.style", "showRevealButton: true");
         txtPassword.setBorder(new CompoundBorder(
                 new LineBorder(ThemeColors.BORDER, 1, true),
                 new EmptyBorder(6, 10, 6, 10)
         ));
         pnlFields.add(txtPassword, gbc);
 
-        // Dòng phụ trợ: Quên mật khẩu?
+        // Dòng phụ trợ: Quên mật khẩu? (Được tùy biến màu hover/click không bị trùng nền trắng)
         gbc.gridy = 4;
         gbc.insets = new Insets(2, 0, 10, 0);
         JPanel pnlForgot = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         pnlForgot.setOpaque(false);
 
-        btnForgotPassword = new JButton("Quên mật khẩu?");
+        btnForgotPassword = new JButton("Quên mật khẩu?") {
+            @Override
+            public Color getForeground() {
+                if (getModel() == null) return ThemeColors.PRIMARY_ACTIVE;
+                if (getModel().isPressed()) return ThemeColors.PRIMARY_ACTIVE;
+                if (getModel().isRollover()) return ThemeColors.PRIMARY_HOVER;
+                return ThemeColors.PRIMARY_ACTIVE;
+            }
+        };
         btnForgotPassword.setFont(new Font("Segoe UI", Font.ITALIC, 12));
         btnForgotPassword.setForeground(ThemeColors.PRIMARY_ACTIVE);
         btnForgotPassword.setBorder(null);
         btnForgotPassword.setContentAreaFilled(false);
+        btnForgotPassword.setFocusPainted(false);
+        btnForgotPassword.setOpaque(false);
         btnForgotPassword.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnForgotPassword.putClientProperty("JButton.buttonType", "borderless");
+        btnForgotPassword.putClientProperty("FlatLaf.style", "hoverForeground: #10B981; pressedForeground: #047857; focusedForeground: #047857; hoverBackground: #FFFFFF; pressedBackground: #FFFFFF;");
+        btnForgotPassword.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                btnForgotPassword.setText("<html><u>Quên mật khẩu?</u></html>");
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                btnForgotPassword.setText("Quên mật khẩu?");
+            }
+        });
         btnForgotPassword.addActionListener(e -> moHopThoaiQuenMatKhau());
         pnlForgot.add(btnForgotPassword);
         pnlFields.add(pnlForgot, gbc);
@@ -273,7 +299,7 @@ public class LoginForm extends JFrame {
      */
     private void moHopThoaiQuenMatKhau() {
         JDialog dlg = new JDialog(this, "KHÔI PHỤC MẬT KHẨU NHÂN VIÊN", true);
-        dlg.setSize(480, 420);
+        dlg.setSize(500, 560);
         dlg.setLocationRelativeTo(this);
         dlg.setResizable(false);
         dlg.setLayout(new BorderLayout());
@@ -311,14 +337,17 @@ public class LoginForm extends JFrame {
         JPasswordField txtNewPass = new JPasswordField();
         txtNewPass.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         txtNewPass.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        txtNewPass.putClientProperty("FlatLaf.style", "showRevealButton: true");
         txtNewPass.setEnabled(false);
 
         JPasswordField txtConfirmPass = new JPasswordField();
         txtConfirmPass.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         txtConfirmPass.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        txtConfirmPass.putClientProperty("FlatLaf.style", "showRevealButton: true");
         txtConfirmPass.setEnabled(false);
 
         final String[] maOtpDaGui = {""};
+        final long[] thoiGianGuiOtp = {0L};
 
         JButton btnGuiOtp = ThemeColors.createSecondaryButton("1. Gửi mã OTP xác nhận", null);
         btnGuiOtp.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -346,6 +375,7 @@ public class LoginForm extends JFrame {
 
             String otp = dangNhapBus.sinhMaOTP();
             maOtpDaGui[0] = otp;
+            thoiGianGuiOtp[0] = System.currentTimeMillis();
 
             // Hiển thị hộp thoại EmailPreviewDialog gửi mã xác thực OTP tới email nhân viên
             String maTK = nv.getTaiKhoan() != null ? nv.getTaiKhoan().getMaTaiKhoan() : nv.getMaNhanVien();
@@ -358,6 +388,7 @@ public class LoginForm extends JFrame {
             );
 
             txtOtp.setEnabled(true);
+            txtOtp.setText("");
             txtNewPass.setEnabled(true);
             txtConfirmPass.setEnabled(true);
             btnXacNhanDoiMK.setEnabled(true);
@@ -368,6 +399,13 @@ public class LoginForm extends JFrame {
         });
 
         btnXacNhanDoiMK.addActionListener(e -> {
+            if (thoiGianGuiOtp[0] == 0L || System.currentTimeMillis() - thoiGianGuiOtp[0] > 5 * 60 * 1000L) {
+                JOptionPane.showMessageDialog(dlg, "Mã OTP đã hết hiệu lực (quá thời hạn 5 phút)! Vui lòng nhấn 'Gửi lại mã OTP xác nhận'.", "OTP hết hạn", JOptionPane.WARNING_MESSAGE);
+                txtOtp.setText("");
+                txtOtp.requestFocus();
+                return;
+            }
+
             String otpNhap = txtOtp.getText().trim();
             String mkMoi = new String(txtNewPass.getPassword()).trim();
             String mkXacNhan = new String(txtConfirmPass.getPassword()).trim();
@@ -447,8 +485,14 @@ public class LoginForm extends JFrame {
 
     public static void main(String[] args) {
         try {
-            com.formdev.flatlaf.FlatLightLaf.setup();
-        } catch (Exception ignored) {}
+            com.formdev.flatlaf.themes.FlatMacLightLaf.setup();
+            UIManager.put("PasswordField.showRevealButton", true);
+        } catch (Exception ignored) {
+            try {
+                com.formdev.flatlaf.FlatLightLaf.setup();
+                UIManager.put("PasswordField.showRevealButton", true);
+            } catch (Exception ignored2) {}
+        }
 
         SwingUtilities.invokeLater(() -> new LoginForm().setVisible(true));
     }

@@ -90,16 +90,24 @@ public class PhanCaDAO {
     }
 
     public boolean insertPhanCong(BangPhanCong pc) throws SQLException {
-        String sql = "INSERT INTO BangPhanCong (maPhanCong, maNhanVien, maCa, ngayLamViec, trangThaiCa, ghiChu) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO BangPhanCong (maNhanVien, maCa, ngayLamViec, trangThaiCa, ghiChu) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, pc.getMaPhanCong());
-            ps.setString(2, pc.getNhanVien().getMaNhanVien());
-            ps.setString(3, pc.getCaLamViec().getMaCa());
-            ps.setDate(4, Date.valueOf(pc.getNgayLamViec()));
-            ps.setString(5, pc.getTrangThaiCa() != null ? pc.getTrangThaiCa() : "Đã phân công");
-            ps.setString(6, pc.getGhiChu() != null ? pc.getGhiChu() : "");
-            return ps.executeUpdate() > 0;
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, pc.getNhanVien().getMaNhanVien());
+            ps.setString(2, pc.getCaLamViec().getMaCa());
+            ps.setDate(3, Date.valueOf(pc.getNgayLamViec()));
+            ps.setString(4, pc.getTrangThaiCa() != null ? pc.getTrangThaiCa() : "Đã phân công");
+            ps.setString(5, pc.getGhiChu() != null ? pc.getGhiChu() : "");
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        pc.setMaPhanCong(String.valueOf(rs.getInt(1)));
+                    }
+                }
+                return true;
+            }
+            return false;
         }
     }
 

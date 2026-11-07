@@ -68,4 +68,28 @@ public class PhongLuuTruDAO {
             return ps.executeUpdate() > 0;
         }
     }
+
+    public boolean insertLichSuLuuTru(String maPhong, String tenThuCung, String tenChu, String sdtChu,
+                                      java.time.LocalDateTime checkIn, java.time.LocalDateTime checkOut,
+                                      long soNgay, long donGia, long phiPhatSinh, long tongTien, String ghiChu) throws SQLException {
+        String sql = "INSERT INTO LichSuLuuTru (maPhong, tenThuCung, tenChu, sdtChu, thoiGianCheckIn, thoiGianCheckOut, " +
+                     "soNgayLuuTru, donGiaNgay, phiPhatSinh, tongTien, ghiChu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            ps.setString(2, tenThuCung != null ? tenThuCung : "");
+            ps.setString(3, tenChu != null ? tenChu : "");
+            ps.setString(4, sdtChu != null ? sdtChu : "");
+            if (checkIn != null) ps.setTimestamp(5, Timestamp.valueOf(checkIn));
+            else ps.setNull(5, Types.TIMESTAMP);
+            if (checkOut != null) ps.setTimestamp(6, Timestamp.valueOf(checkOut));
+            else ps.setTimestamp(6, Timestamp.valueOf(java.time.LocalDateTime.now()));
+            ps.setInt(7, (int) soNgay);
+            ps.setBigDecimal(8, java.math.BigDecimal.valueOf(donGia));
+            ps.setBigDecimal(9, java.math.BigDecimal.valueOf(phiPhatSinh));
+            ps.setBigDecimal(10, java.math.BigDecimal.valueOf(tongTien));
+            ps.setString(11, ghiChu != null ? ghiChu : "");
+            return ps.executeUpdate() > 0;
+        }
+    }
 }

@@ -215,10 +215,14 @@ public class ThuCungDichVuPanel extends JPanel {
         if (opt == JOptionPane.OK_OPTION && !txtTen.getText().trim().isEmpty()) {
             ThuCung tc = new ThuCung(maTC, txtTen.getText().trim(),
                     txtGiong.getText().trim(), LocalDate.now().minusMonths(6), (String) cboSex.getSelectedItem());
-            controller.themThuCungTheoSdtChu(tc, txtChu.getText().trim(), txtSdt.getText().trim(), txtChip.getText().trim());
-            napDuLieuHoSoThuCung();
-            napDuLieuKhachHang();
-            JOptionPane.showMessageDialog(this, "Đã tạo hồ sơ thú cưng [" + maTC + "] và cấp mã Microchip thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            boolean ok = controller.themThuCungTheoSdtChu(tc, txtChu.getText().trim(), txtSdt.getText().trim(), txtChip.getText().trim());
+            if (ok) {
+                napDuLieuHoSoThuCung();
+                napDuLieuKhachHang();
+                JOptionPane.showMessageDialog(this, "Đã tạo hồ sơ thú cưng [" + maTC + "] và cấp mã Microchip thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Không thể lưu hồ sơ thú cưng vào CSDL! Vui lòng kiểm tra lại thông tin.", "Lỗi lưu trữ", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -328,7 +332,8 @@ public class ThuCungDichVuPanel extends JPanel {
                 return;
             }
 
-            entity.NhanVien nvKiemTra = new entity.NhanVien("NV001", "Lê Khải Minh", "NVQL", null, null);
+            entity.NhanVien cur = utils.UserSession.getCurrentUser();
+            entity.NhanVien nvKiemTra = (cur != null) ? cur : new entity.NhanVien("NV001", "Lê Khãi Minh", "NVQL", null, null);
 
             HoSoSucKhoe sk = new HoSoSucKhoe(
                     maSK,
@@ -342,9 +347,13 @@ public class ThuCungDichVuPanel extends JPanel {
                     LocalDateTime.now()
             );
             
-            controller.themHoSoSucKhoe(sk);
-            napDuLieuSucKhoe();
-            JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ sức khỏe [" + maSK + "] và thể trạng thú cưng!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            boolean okSK = controller.themHoSoSucKhoe(sk);
+            if (okSK) {
+                napDuLieuSucKhoe();
+                JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ sức khỏe [" + maSK + "] và thể trạng thú cưng!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Không thể lưu hồ sơ sức khỏe vào CSDL!", "Lỗi lưu trữ", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 

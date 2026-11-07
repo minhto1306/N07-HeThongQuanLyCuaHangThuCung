@@ -121,7 +121,7 @@ public class QuanLyNhanVienPanel extends JPanel {
         JPanel pnlChips = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         pnlChips.setOpaque(false);
 
-        String[] roles = {"TẤT CẢ", "Quản lý (NVQL)", "Thủ kho (NVKHO)", "Thu ngân (NVTN)", "Bán hàng (NVBH)", "Chăm sóc (NVCS)"};
+        String[] roles = {"TẤT CẢ", "Quản lý (NVQL)", "Thu ngân (NVTN)", "Bán hàng (NVBH)", "Chăm sóc (NVCS)"};
         for (String r : roles) {
             JButton btnChip = taoFilterChip(r);
             filterButtons.add(btnChip);
@@ -186,7 +186,6 @@ public class QuanLyNhanVienPanel extends JPanel {
 
             boolean matchRole = true;
             if ("Quản lý (NVQL)".equalsIgnoreCase(currentRoleFilter)) matchRole = "NVQL".equalsIgnoreCase(vaiTro);
-            else if ("Thủ kho (NVKHO)".equalsIgnoreCase(currentRoleFilter)) matchRole = "NVKHO".equalsIgnoreCase(vaiTro);
             else if ("Thu ngân (NVTN)".equalsIgnoreCase(currentRoleFilter)) matchRole = "NVTN".equalsIgnoreCase(vaiTro);
             else if ("Bán hàng (NVBH)".equalsIgnoreCase(currentRoleFilter)) matchRole = "NVBH".equalsIgnoreCase(vaiTro);
             else if ("Chăm sóc (NVCS)".equalsIgnoreCase(currentRoleFilter)) matchRole = "NVCS".equalsIgnoreCase(vaiTro);
@@ -404,7 +403,8 @@ public class QuanLyNhanVienPanel extends JPanel {
         txtEmail.putClientProperty("JTextField.placeholderText", "Hòm thư nhận OTP khôi phục mật khẩu...");
 
         JPasswordField txtPass = new JPasswordField("123456");
-        JComboBox<String> cboRole = new JComboBox<>(new String[]{"NVCS", "NVBH", "NVTN", "NVKHO", "NVQL"});
+        txtPass.putClientProperty("FlatLaf.style", "showRevealButton: true");
+        JComboBox<String> cboRole = new JComboBox<>(new String[]{"NVCS", "NVBH", "NVTN", "NVQL"});
 
         Object[] fields = {
                 "Mã nhân viên (Hệ thống tự sinh):", txtMaNV,
@@ -444,7 +444,7 @@ public class QuanLyNhanVienPanel extends JPanel {
         TaiKhoan tk = nv.getTaiKhoan();
         if (tk == null) return;
 
-        String[] roles = {"NVQL", "NVKHO", "NVTN", "NVBH", "NVCS"};
+        String[] roles = {"NVQL", "NVTN", "NVBH", "NVCS"};
         JComboBox<String> cbo = new JComboBox<>(roles);
         cbo.setSelectedItem(tk.getVaiTro());
 
@@ -464,6 +464,7 @@ public class QuanLyNhanVienPanel extends JPanel {
 
     private void moDialogResetMatKhau(NhanVien nv) {
         JPasswordField txtNewPass = new JPasswordField("123456");
+        txtNewPass.putClientProperty("FlatLaf.style", "showRevealButton: true");
         int opt = JOptionPane.showConfirmDialog(this,
                 new Object[]{"Cấp lại mật khẩu cho nhân viên [" + nv.getHoTen() + " - " + nv.getSoDienThoai() + "]:", txtNewPass},
                 "CẤP LẠI MẬT KHẨU (BĂM SHA-256)", JOptionPane.OK_CANCEL_OPTION);

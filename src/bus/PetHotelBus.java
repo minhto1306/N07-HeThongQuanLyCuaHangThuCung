@@ -45,6 +45,23 @@ public class PetHotelBus {
     }
 
     /**
+     * Lưu lịch sử lưu trú vào CSDL khi khách làm thủ tục Check-out.
+     */
+    public boolean luuLichSuLuuTru(PhongLuuTru p, long soNgay, long tongTien) {
+        if (p == null) return false;
+        try {
+            return phongLuuTruDAO.insertLichSuLuuTru(
+                    p.maPhong, p.tenThuCung, p.tenChu, p.sdtChu,
+                    p.thoiGianCheckIn, java.time.LocalDateTime.now(),
+                    soNgay, p.donGiaNgay, p.phiDichVuPhatSinh, tongTien, p.ghiChuChamSoc
+            );
+        } catch (SQLException e) {
+            System.err.println("[PetHotelBus] Lỗi luuLichSuLuuTru CSDL: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Đếm số phòng đang có thú cưng lưu trú (phục vụ KPI và thống kê).
      */
     public int demSoPhongDangLuuTru() {

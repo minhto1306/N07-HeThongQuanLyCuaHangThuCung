@@ -33,7 +33,7 @@ public final class UserSession {
             if (roleStr == null) return NVTN;
             String normalized = roleStr.trim().toUpperCase();
 
-            if (normalized.contains("QL") || normalized.contains("ADMIN") || normalized.contains("QUANLY")) {
+            if (normalized.contains("QL") || normalized.contains("ADMIN") || normalized.contains("QUANLY") || normalized.contains("KHO")) {
                 return NVQL;
             } else if (normalized.contains("BH") || normalized.contains("BANHANG")) {
                 return NVBH;

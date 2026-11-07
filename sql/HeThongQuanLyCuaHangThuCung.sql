@@ -29,13 +29,13 @@ GO
 -- ======================================================================================
 -- PHẦN I: KHỞI TẠO CẤU TRÚC BẢNG (SCHEMA DEFINITION TOÀN BỘ CÁC PHÂN HỆ)
 -- ======================================================================================
--- 1. Bảng Tài khoản người dùng (Phân quyền RBAC 4 vai trò: NVQL, NVTN, NVKHO, NVCS)
+-- 1. Bảng Tài khoản người dùng (Phân quyền RBAC 4 vai trò chuẩn: NVQL, NVTN, NVBH, NVCS)
 CREATE TABLE TaiKhoan (
     maTaiKhoan NVARCHAR(20) PRIMARY KEY,       -- Tự động tăng: NV001, NV002, ... (khớp maNhanVien)
     soDienThoai NVARCHAR(15) NOT NULL UNIQUE,  -- Dùng để nhân viên đăng nhập
     email NVARCHAR(100) NOT NULL UNIQUE,       -- Dùng để xác thực quên mật khẩu
     matKhau NVARCHAR(64) NOT NULL,             -- Chuỗi băm SHA-256 (64 ký tự hex)
-    vaiTro NVARCHAR(20) NOT NULL,              -- NVQL, NVTN, NVKHO, NVCS, NVBH
+    vaiTro NVARCHAR(20) NOT NULL CHECK (vaiTro IN ('NVQL', 'NVTN', 'NVBH', 'NVCS')), -- 4 vai trò cốt lõi
     trangThaiHoatDong BIT NOT NULL DEFAULT 1   -- 1: Đang làm việc, 0: Khóa/Đã nghỉ
 );
 GO
@@ -104,7 +104,7 @@ CREATE TABLE KhachHang (
     maKhachHang NVARCHAR(20) PRIMARY KEY,
     hoTen NVARCHAR(100) NOT NULL,
     soDienThoai NVARCHAR(15) NOT NULL UNIQUE,
-    diemTichLuy INT NOT NULL DEFAULT 0,
+    diemTichLuy INT NOT NULL DEFAULT 0 CHECK (diemTichLuy >= 0),
     email NVARCHAR(100) NULL,
     diaChi NVARCHAR(255) NULL
 );
@@ -200,7 +200,7 @@ CREATE TABLE SanPham (
     tenSanPham NVARCHAR(100) NOT NULL,
     maVach NVARCHAR(30) NULL UNIQUE,
     donViCoSo NVARCHAR(30) NOT NULL DEFAULT N'Đơn vị',
-    giaBanCoSo DECIMAL(18,2) NOT NULL DEFAULT 0,
+    giaBanCoSo DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK (giaBanCoSo >= 0),
     moTa NVARCHAR(255),
     CONSTRAINT FK_SanPham_DanhMuc FOREIGN KEY (maDanhMuc) REFERENCES DanhMucHang(maDanhMuc)
 );
@@ -218,9 +218,9 @@ CREATE TABLE QuyDoiDonVi (
     maQuyDoi NVARCHAR(20) PRIMARY KEY,
     maSanPham NVARCHAR(20) NOT NULL,
     maDonVi NVARCHAR(20) NOT NULL,
-    tyLeQuyDoi INT NOT NULL,
+    tyLeQuyDoi INT NOT NULL CHECK (tyLeQuyDoi > 0),
     laDonViCoSo BIT NOT NULL DEFAULT 0,
-    giaBan DECIMAL(18,2) NOT NULL,
+    giaBan DECIMAL(18,2) NOT NULL CHECK (giaBan >= 0),
     CONSTRAINT FK_QuyDoi_SanPham FOREIGN KEY (maSanPham) REFERENCES SanPham(maSanPham),
     CONSTRAINT FK_QuyDoi_DonVi FOREIGN KEY (maDonVi) REFERENCES DonViTinh(maDonVi)
 );
@@ -243,9 +243,9 @@ CREATE TABLE LoHang (
     ngaySanXuat DATE NOT NULL,
     hanSuDung DATE NOT NULL,
     ngayNhap DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
-    donGiaNhapCoSo DECIMAL(18,2) NOT NULL,
-    soLuongNhap INT NOT NULL,
-    soLuongTon INT NOT NULL,
+    donGiaNhapCoSo DECIMAL(18,2) NOT NULL CHECK (donGiaNhapCoSo >= 0),
+    soLuongNhap INT NOT NULL CHECK (soLuongNhap >= 0),
+    soLuongTon INT NOT NULL CHECK (soLuongTon >= 0),
     CONSTRAINT FK_LoHang_SanPham FOREIGN KEY (maSanPham) REFERENCES SanPham(maSanPham),
     CONSTRAINT FK_LoHang_NhaCungCap FOREIGN KEY (maNhaCungCap) REFERENCES NhaCungCap(maNhaCungCap)
 );
@@ -360,6 +360,38 @@ CREATE TABLE PhongLuuTru (
 );
 GO
 
+-- 26. Bảng Thẻ Gói Spa Pass (Punch Card định kỳ tích hợp POS)
+CREATE TABLE TheSpaPass (
+    maThe NVARCHAR(50) PRIMARY KEY,
+    sdtKhachHang NVARCHAR(15) NOT NULL,
+    tenKhachHang NVARCHAR(100) NOT NULL,
+    tenGoi NVARCHAR(100) NOT NULL,
+    tongSoBuoi INT NOT NULL CHECK (tongSoBuoi > 0),
+    soBuoiDaDung INT NOT NULL DEFAULT 0 CHECK (soBuoiDaDung >= 0),
+    donGiaGoi DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK (donGiaGoi >= 0),
+    ngayKichHoat DATE NOT NULL,
+    ngayHetHan DATE NOT NULL,
+    trangThai NVARCHAR(50) NOT NULL DEFAULT N'ĐANG HOẠT ĐỘNG'
+);
+GO
+
+-- 27. Bảng Lịch sử lưu trú Khách sạn thú cưng (Pet Hotel Checkout History)
+CREATE TABLE LichSuLuuTru (
+    maLuuTru INT IDENTITY(1,1) PRIMARY KEY,
+    maPhong NVARCHAR(20) NOT NULL,
+    tenThuCung NVARCHAR(100),
+    tenChu NVARCHAR(100),
+    sdtChu NVARCHAR(20),
+    thoiGianCheckIn DATETIME2,
+    thoiGianCheckOut DATETIME2,
+    soNgayLuuTru INT CHECK (soNgayLuuTru >= 0),
+    donGiaNgay DECIMAL(18,2) CHECK (donGiaNgay >= 0),
+    phiPhatSinh DECIMAL(18,2) CHECK (phiPhatSinh >= 0),
+    tongTien DECIMAL(18,2) CHECK (tongTien >= 0),
+    ghiChu NVARCHAR(500)
+);
+GO
+
 PRINT N'-> Hoàn thành tạo cấu trúc bảng (Schema) thành công!';
 GO
 
@@ -369,14 +401,14 @@ GO
 -- 1. Tài khoản & Nhân viên (4 thành viên phụ trách 4 phân hệ cốt lõi + KTV + NV nghỉ việc)
 INSERT INTO TaiKhoan (maTaiKhoan, soDienThoai, email, matKhau, vaiTro, trangThaiHoatDong) VALUES
 ('NV001', '0901234567', 'minh.quanly@miopet.vn', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVQL',  1),
-('NV002', '0923456789', 'dat.kho@miopet.vn',      '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVKHO', 1),
+('NV002', '0923456789', 'dat.kho@miopet.vn',      '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVQL',  1),
 ('NV003', '0912345678', 'minh.thungan@miopet.vn',  '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVTN',  1),
 ('NV004', '0945678901', 'ngoc.spa@miopet.vn',      '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVCS',  1),
 ('NV005', '0934567890', 'ha.ktv@miopet.vn',        '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVCS',  1),
 ('NV006', '0956789012', 'hung.banhang@miopet.vn',  '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVBH',  0);
 INSERT INTO NhanVien (maNhanVien, hoTen, chucVu, soDienThoai, email, maTaiKhoan) VALUES
 ('NV001', N'Lê Khãi Minh',    N'Quản lý hệ thống',        '0901234567', 'minh.quanly@miopet.vn', 'NV001'),
-('NV002', N'Tô Thành Đạt',     N'Thủ kho & Lô hàng',       '0923456789', 'dat.kho@miopet.vn',      'NV002'),
+('NV002', N'Tô Thành Đạt',     N'Quản lý kho & Lô hàng',   '0923456789', 'dat.kho@miopet.vn',      'NV002'),
 ('NV003', N'Lê Anh Minh',      N'Thu ngân trưởng ca',      '0912345678', 'minh.thungan@miopet.vn',  'NV003'),
 ('NV004', N'Võ Thị Hồng Ngọc', N'Chuyên viên Spa & Hotel', '0945678901', 'ngoc.spa@miopet.vn',      'NV004'),
 ('NV005', N'Trần Thị Thu Hà',  N'Kỹ thuật viên chăm sóc',  '0934567890', 'ha.ktv@miopet.vn',        'NV005'),
@@ -649,6 +681,12 @@ INSERT INTO PhongLuuTru (maPhong, loaiPhong, donGiaNgay, trangThai, tenThuCung, 
 ('C304', N'Condo cho Mèo', 200000, N'TRỐNG', '', '', '', '', NULL, NULL, '', 0, 0, 0, 0);
 GO
 
+-- 26. Thẻ Spa Pass mẫu kiểm thử quầy POS
+INSERT INTO TheSpaPass (maThe, sdtKhachHang, tenKhachHang, tenGoi, tongSoBuoi, soBuoiDaDung, donGiaGoi, ngayKichHoat, ngayHetHan, trangThai) VALUES
+('PASS_0988111222_01', '0988111222', N'Nguyễn Văn An', N'Gói Spa Chăm Sóc Thư Giãn (5 Buổi)', 5, 2, 900000, DATEADD(day, -20, CAST(GETDATE() AS DATE)), DATEADD(day, 70, CAST(GETDATE() AS DATE)), N'ĐANG HOẠT ĐỘNG'),
+('PASS_0977333444_01', '0977333444', N'Trần Thị Mai', N'Gói Spa Toàn Diện & Cắt Tỉa (10 Buổi)', 10, 8, 1600000, DATEADD(day, -45, CAST(GETDATE() AS DATE)), DATEADD(day, 45, CAST(GETDATE() AS DATE)), N'ĐANG HOẠT ĐỘNG');
+GO
+
 -- ======================================================================================
 -- KIỂM TRA TÍNH TOÀN VẸN VÀ THỐNG KÊ DỮ LIỆU ĐÃ NẠP
 -- ======================================================================================
@@ -704,6 +742,10 @@ SELECT 'PhieuDoiTra', COUNT(*) FROM PhieuDoiTra
 UNION ALL
 SELECT 'ChiTietDoiTra', COUNT(*) FROM ChiTietDoiTra
 UNION ALL
-SELECT 'PhongLuuTru', COUNT(*) FROM PhongLuuTru;
+SELECT 'PhongLuuTru', COUNT(*) FROM PhongLuuTru
+UNION ALL
+SELECT 'TheSpaPass', COUNT(*) FROM TheSpaPass
+UNION ALL
+SELECT 'LichSuLuuTru', COUNT(*) FROM LichSuLuuTru;
 GO
 

@@ -80,6 +80,9 @@ public class Main {
             UIManager.put("Button.default.foreground", java.awt.Color.WHITE);
             UIManager.put("Button.default.hoverForeground", java.awt.Color.WHITE);
 
+            // Bật nút con mắt xem mật khẩu (FlatLaf reveal button) cho toàn bộ hệ thống
+            UIManager.put("PasswordField.showRevealButton", true);
+
         } catch (Throwable t) {
             // lỡ máy ko có thư viện flatlaf thì dùng tạm giao diện mặc định của máy
             try {
