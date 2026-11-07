@@ -1,7 +1,7 @@
 package utils;
 
-import models.entity.NhanVien;
-import models.entity.TaiKhoan;
+import entity.NhanVien;
+import entity.TaiKhoan;
 
 // lưu thông tin người đang đăng nhập và check quyền
 public final class UserSession {

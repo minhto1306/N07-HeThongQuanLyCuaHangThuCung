@@ -1,4 +1,4 @@
-package views;
+package gui;
 
 import utils.IconHelper;
 import utils.ThemeColors;

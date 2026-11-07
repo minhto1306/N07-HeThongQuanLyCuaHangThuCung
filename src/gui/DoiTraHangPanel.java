@@ -1,8 +1,9 @@
-package views;
+package gui;
 
-import controllers.BanHangController;
-import models.entity.DoiTraTransferData;
-import models.entity.KhachHang;
+import bus.BanHangBus;
+import bus.DoiTraBus;
+import entity.DoiTraTransferData;
+import entity.KhachHang;
 import utils.IconHelper;
 import utils.ThemeColors;
 
@@ -27,6 +28,8 @@ import java.util.List;
  * 2. Kịch bản B: Đổi sang món khác (Bù/hoàn chênh lệch, Cập nhật kho cả món cũ và mới).
  */
 public class DoiTraHangPanel extends JPanel {
+
+    private final DoiTraBus doiTraBus = new DoiTraBus();
 
     private final DecimalFormat df = new DecimalFormat("#,### đ");
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
@@ -547,7 +550,7 @@ public class DoiTraHangPanel extends JPanel {
 
     private void hienThiHoaDon(BanHangPOSPanel.HoaDonDaThanhToan hd) {
         this.currentHoaDon = hd;
-        this.currentKhachHang = new BanHangController().timKhachHang(hd.sdt);
+        this.currentKhachHang = new BanHangBus().timKhachHang(hd.sdt);
 
         int diem = currentKhachHang != null ? currentKhachHang.getDiemTichLuy() : 0;
         String vipBadge = diem >= 100 ? " (VIP)" : "";
@@ -559,7 +562,7 @@ public class DoiTraHangPanel extends JPanel {
         lblInfoTongTien.setText("• Tổng thanh toán: " + df.format(hd.tongThanhToan) + " (" + hd.phuongThuc + ")");
 
         // Tra cứu số lượng đã đổi trả ở các lần trước từ CSDL để chống trả lố / trả trùng
-        java.util.Map<String, Integer> mapDaTra = new models.dao.HoaDonDAO().layMapSoLuongDaTra(hd.maHoaDon);
+        java.util.Map<String, Integer> mapDaTra = doiTraBus.layMapSoLuongDaTra(hd.maHoaDon);
 
         // Đổ sản phẩm vào bảng
         modelSanPham.setRowCount(0);
@@ -644,34 +647,24 @@ public class DoiTraHangPanel extends JPanel {
             lblKetQuaKho.setText("Tồn kho hoàn lại: +" + tongSlNguyenTem + " món nguyên tem");
 
             if (radKichBanB.isSelected()) {
-                // Nếu chưa tích chọn món nào ở bảng trên thì không tính tiền bù
-                if (tongTienTra == 0) {
-                    lblKetQuaChenhLech.setText("<html><span style='color:#D97706; font-style:italic;'>Vui lòng tích chọn món cần đổi/trả ở bảng trên</span></html>");
-                    if (btnXacNhanInPhieu != null) {
-                        btnXacNhanInPhieu.setEnabled(false); // Khóa nút chuyển sang POS
-                    }
-                } else {
-                    if (btnXacNhanInPhieu != null) {
-                        btnXacNhanInPhieu.setEnabled(true);
-                    }
-                    BanHangPOSPanel.SanPhamDoiTra spMoi = (BanHangPOSPanel.SanPhamDoiTra) cboSanPhamMoi.getSelectedItem();
-                    int slMoi = (Integer) spnSoLuongMoi.getValue();
-                    long giaTriMonMoi = spMoi != null ? spMoi.donGia * slMoi : 0;
-                    long chenhLech = giaTriMonMoi - tongTienTra;
+                BanHangPOSPanel.SanPhamDoiTra spMoi = (BanHangPOSPanel.SanPhamDoiTra) cboSanPhamMoi.getSelectedItem();
+                int slMoi = (Integer) spnSoLuongMoi.getValue();
+                long giaTriMonMoi = spMoi != null ? spMoi.donGia * slMoi : 0;
+                long chenhLech = giaTriMonMoi - tongTienTra;
 
-                    if (chenhLech > 0) {
-                        lblKetQuaChenhLech.setText("<html>Khách cần thanh toán thêm: <b style='color:#33272A; font-size:14px;'>+" + df.format(chenhLech) + "</b></html>");
-                    } else if (chenhLech < 0) {
-                        lblKetQuaChenhLech.setText("<html>Cửa hàng hoàn lại cho khách: <b style='color:#E53E3E; font-size:14px;'>-" + df.format(Math.abs(chenhLech)) + "</b></html>");
-                    } else {
-                        lblKetQuaChenhLech.setText("Đổi ngang giá (Chênh lệch: 0 đ)");
-                    }
+                if (chenhLech > 0) {
+                    lblKetQuaChenhLech.setText("<html>Khách cần thanh toán thêm: <b style='color:#33272A; font-size:14px;'>+" + df.format(chenhLech) + "</b></html>");
+                } else if (chenhLech < 0) {
+                    lblKetQuaChenhLech.setText("<html>Cửa hàng hoàn lại cho khách: <b style='color:#E53E3E; font-size:14px;'>-" + df.format(Math.abs(chenhLech)) + "</b></html>");
+                } else {
+                    lblKetQuaChenhLech.setText("Đổi ngang giá (Chênh lệch: 0 đ)");
                 }
             }
         } finally {
             dangCapNhatBang = false;
         }
     }
+
     private long parseGia(Object obj) {
         if (obj == null) return 0;
         String s = obj.toString().replaceAll("[^0-9]", "");
@@ -839,18 +832,18 @@ public class DoiTraHangPanel extends JPanel {
         }
 
         if (currentHoaDon.sdt != null && !currentHoaDon.sdt.trim().isEmpty()) {
-            BanHangController.luuHoacCapNhatKhachHang(currentHoaDon.sdt, currentHoaDon.tenKhach, diemMoi);
+            BanHangBus.luuHoacCapNhatKhachHang(currentHoaDon.sdt, currentHoaDon.tenKhach, diemMoi);
         }
 
         // Lưu Phiếu Đổi Trả vào SQL Server
+        String maPhieu = utils.MaTuSinhHelper.sinhMaPhieuDoiTra();
         try {
-            models.dao.HoaDonDAO hdDao = new models.dao.HoaDonDAO();
-            models.entity.PhieuDoiTra pdt = new models.entity.PhieuDoiTra();
-            pdt.setMaPhieuDoiTra(utils.MaTuSinhHelper.sinhMaPhieuDoiTra());
-            models.entity.HoaDon hdGoc = new models.entity.HoaDon();
+            entity.PhieuDoiTra pdt = new entity.PhieuDoiTra();
+            pdt.setMaPhieuDoiTra(maPhieu);
+            entity.HoaDon hdGoc = new entity.HoaDon();
             hdGoc.setMaHoaDon(currentHoaDon.maHoaDon);
             pdt.setHoaDonGoc(hdGoc);
-            models.entity.NhanVien nv = new models.entity.NhanVien();
+            entity.NhanVien nv = new entity.NhanVien();
             nv.setMaNhanVien(utils.UserSession.getUserId() != null ? utils.UserSession.getUserId() : "NV001");
             pdt.setNhanVien(nv);
             pdt.setNgayDoiTra(LocalDateTime.now());
@@ -862,13 +855,13 @@ public class DoiTraHangPanel extends JPanel {
                 String ma = (String) mon[0];
                 int sl = (Integer) mon[3];
                 long thanhTien = (Long) mon[5];
-                pdt.addChiTietDoiTra(new models.entity.ChiTietDoiTra(
+                pdt.addChiTietDoiTra(new entity.ChiTietDoiTra(
                         pdt.getMaPhieuDoiTra() + "_" + (idx++),
-                        pdt, new models.entity.SanPham(ma, null, "", ""), sl,
+                        pdt, new entity.SanPham(ma, null, "", ""), sl,
                         java.math.BigDecimal.valueOf(thanhTien)
                 ));
             }
-            hdDao.luuPhieuDoiTra(pdt);
+            doiTraBus.luuPhieuDoiTra(pdt);
         } catch (Exception ex) {
             System.err.println("[DoiTraHangPanel] Lỗi lưu phiếu đổi trả CSDL: " + ex.getMessage());
         }
@@ -877,13 +870,12 @@ public class DoiTraHangPanel extends JPanel {
         TongQuanPanel.lamMoiDuLieuDashboardAll();
 
         // 5. In Phiếu Đổi Trả nhiệt 80mm
-        hienThiPhieuDoiTraDialog(dsMonTra, laKichBanA, spMoi, slMoi, giaTriMonMoi, chenhLech, tongTienTra, diemKhauTru, diemMoi);
+        hienThiPhieuDoiTraDialog(maPhieu, dsMonTra, laKichBanA, spMoi, slMoi, giaTriMonMoi, chenhLech, tongTienTra, diemKhauTru, diemMoi);
     }
 
-    private void hienThiPhieuDoiTraDialog(List<Object[]> dsMonTra, boolean laKichBanA,
+    private void hienThiPhieuDoiTraDialog(String maPhieu, List<Object[]> dsMonTra, boolean laKichBanA,
                                           BanHangPOSPanel.SanPhamDoiTra spMoi, int slMoi, long giaTriMonMoi,
                                           long chenhLech, long tongTienTra, int diemKhauTru, int diemMoi) {
-        String maPhieu = "DT" + System.currentTimeMillis() % 1000000;
         String thoiGian = LocalDateTime.now().format(dtf);
 
         StringBuilder sb = new StringBuilder();
@@ -990,11 +982,11 @@ public class DoiTraHangPanel extends JPanel {
         BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
 
         int diemKhauTru = (int) (tienHoan / 100000L);
-        KhachHang kh = new BanHangController().timKhachHang(target.sdt);
+        KhachHang kh = new BanHangBus().timKhachHang(target.sdt);
         int diemCu = kh != null ? kh.getDiemTichLuy() : 0;
         int diemMoi = Math.max(0, diemCu - diemKhauTru);
         if (target.sdt != null) {
-            BanHangController.luuHoacCapNhatKhachHang(target.sdt, target.tenKhach, diemMoi);
+            BanHangBus.luuHoacCapNhatKhachHang(target.sdt, target.tenKhach, diemMoi);
         }
 
         return true;

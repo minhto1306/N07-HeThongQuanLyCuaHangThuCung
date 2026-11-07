@@ -1,6 +1,6 @@
-package models.dao;
+package dao;
 
-import models.entity.*;
+import entity.*;
 import utils.DBConnection;
 
 import java.math.BigDecimal;
@@ -42,8 +42,8 @@ public class HoaDonDAO {
         String sqlHoaDon = "INSERT INTO HoaDon (maHoaDon, maKhachHang, maNhanVien, ngayLap, thoiGianThanhToan, giamGia, thanhTien, phuongThucThanhToan, trangThaiHoaDon) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        String sqlCTHoaDon = "INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, soLuong, donGiaLucBan, thanhTien) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+        String sqlCTHoaDon = "INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, maSanPham, maDichVu, soLuong, donGiaLucBan, thanhTien) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         String sqlCTXuatLo = "INSERT INTO ChiTietXuatLo (maChiTiet, soLo, maQuyDoi, soLuongXuatCoSo) VALUES (?, ?, ?, ?)";
 
@@ -86,13 +86,43 @@ public class HoaDonDAO {
                 String maChiTiet = hoaDon.getMaHoaDon() + "_CT" + (index++);
                 ct.setMaChiTiet(maChiTiet);
 
+                String maSP = null;
+                if (ct.getSanPham() != null && ct.getSanPham().getMaSanPham() != null) {
+                    maSP = ct.getSanPham().getMaSanPham();
+                } else if (ct instanceof ChiTietXuatLo) {
+                    ChiTietXuatLo xl = (ChiTietXuatLo) ct;
+                    if (xl.getLoHang() != null && xl.getLoHang().getSanPham() != null) {
+                        maSP = xl.getLoHang().getSanPham().getMaSanPham();
+                    }
+                }
+
+                String maDV = null;
+                if (ct.getDichVu() != null && ct.getDichVu().getMaDichVu() != null) {
+                    maDV = ct.getDichVu().getMaDichVu();
+                } else if (ct instanceof ChiTietDichVu) {
+                    ChiTietDichVu dv = (ChiTietDichVu) ct;
+                    if (dv.getDichVu() != null) {
+                        maDV = dv.getDichVu().getMaDichVu();
+                    }
+                }
+
                 // Thêm bảng cha ChiTietHoaDon
                 psCTHoaDon.setString(1, maChiTiet);
                 psCTHoaDon.setString(2, hoaDon.getMaHoaDon());
                 psCTHoaDon.setString(3, ct.getLoaiChiTiet());
-                psCTHoaDon.setInt(4, ct.getSoLuong());
-                psCTHoaDon.setBigDecimal(5, ct.getDonGiaLucBan());
-                psCTHoaDon.setBigDecimal(6, ct.getThanhTien());
+                if (maSP != null) {
+                    psCTHoaDon.setString(4, maSP);
+                } else {
+                    psCTHoaDon.setNull(4, Types.NVARCHAR);
+                }
+                if (maDV != null) {
+                    psCTHoaDon.setString(5, maDV);
+                } else {
+                    psCTHoaDon.setNull(5, Types.NVARCHAR);
+                }
+                psCTHoaDon.setInt(6, ct.getSoLuong());
+                psCTHoaDon.setBigDecimal(7, ct.getDonGiaLucBan());
+                psCTHoaDon.setBigDecimal(8, ct.getThanhTien());
                 psCTHoaDon.executeUpdate();
 
                 // Xử lý đa hình
@@ -191,17 +221,17 @@ public class HoaDonDAO {
 
         if (map.isEmpty()) return list;
 
-        String sqlAllCT = "SELECT ct.*, " +
-                "xl.soLo, xl.maQuyDoi, xl.soLuongXuatCoSo, l.maSanPham, s.tenSanPham, dvt.tenDonVi, " +
-                "dv.maDichVu, d.tenDichVu, d.thoiLuongPhut, dv.maThuCung, tc.tenThuCung, dv.maKtvThucHien, dv.tienHoaHong " +
+        String sqlAllCT = "SELECT ct.maChiTiet, ct.maHoaDon, ct.loaiChiTiet, ct.soLuong, ct.donGiaLucBan, ct.thanhTien, " +
+                "xl.soLo, xl.maQuyDoi, xl.soLuongXuatCoSo, COALESCE(ct.maSanPham, l.maSanPham) AS maSanPham, s.tenSanPham, dvt.tenDonVi, " +
+                "COALESCE(ct.maDichVu, dv.maDichVu) AS maDichVu, d.tenDichVu, d.thoiLuongPhut, dv.maThuCung, tc.tenThuCung, dv.maKtvThucHien, dv.tienHoaHong " +
                 "FROM ChiTietHoaDon ct " +
                 "LEFT JOIN ChiTietXuatLo xl ON ct.maChiTiet = xl.maChiTiet " +
                 "LEFT JOIN LoHang l ON xl.soLo = l.soLo " +
-                "LEFT JOIN SanPham s ON l.maSanPham = s.maSanPham " +
+                "LEFT JOIN SanPham s ON COALESCE(ct.maSanPham, l.maSanPham) = s.maSanPham " +
                 "LEFT JOIN QuyDoiDonVi qd ON xl.maQuyDoi = qd.maQuyDoi " +
                 "LEFT JOIN DonViTinh dvt ON qd.maDonVi = dvt.maDonVi " +
                 "LEFT JOIN ChiTietDichVu dv ON ct.maChiTiet = dv.maChiTiet " +
-                "LEFT JOIN DichVu d ON dv.maDichVu = d.maDichVu " +
+                "LEFT JOIN DichVu d ON COALESCE(ct.maDichVu, dv.maDichVu) = d.maDichVu " +
                 "LEFT JOIN ThuCung tc ON dv.maThuCung = tc.maThuCung " +
                 "ORDER BY ct.maChiTiet ASC";
 
@@ -252,17 +282,17 @@ public class HoaDonDAO {
      */
     public List<ChiTietHoaDon> getChiTietByHoaDon(String maHoaDon) throws SQLException {
         List<ChiTietHoaDon> list = new ArrayList<>();
-        String sql = "SELECT ct.*, " +
-                "xl.soLo, xl.maQuyDoi, xl.soLuongXuatCoSo, l.maSanPham, s.tenSanPham, dvt.tenDonVi, " +
-                "dv.maDichVu, d.tenDichVu, d.thoiLuongPhut, dv.maThuCung, tc.tenThuCung, dv.maKtvThucHien, dv.tienHoaHong " +
+        String sql = "SELECT ct.maChiTiet, ct.maHoaDon, ct.loaiChiTiet, ct.soLuong, ct.donGiaLucBan, ct.thanhTien, " +
+                "xl.soLo, xl.maQuyDoi, xl.soLuongXuatCoSo, COALESCE(ct.maSanPham, l.maSanPham) AS maSanPham, s.tenSanPham, dvt.tenDonVi, " +
+                "COALESCE(ct.maDichVu, dv.maDichVu) AS maDichVu, d.tenDichVu, d.thoiLuongPhut, dv.maThuCung, tc.tenThuCung, dv.maKtvThucHien, dv.tienHoaHong " +
                 "FROM ChiTietHoaDon ct " +
                 "LEFT JOIN ChiTietXuatLo xl ON ct.maChiTiet = xl.maChiTiet " +
                 "LEFT JOIN LoHang l ON xl.soLo = l.soLo " +
-                "LEFT JOIN SanPham s ON l.maSanPham = s.maSanPham " +
+                "LEFT JOIN SanPham s ON COALESCE(ct.maSanPham, l.maSanPham) = s.maSanPham " +
                 "LEFT JOIN QuyDoiDonVi qd ON xl.maQuyDoi = qd.maQuyDoi " +
                 "LEFT JOIN DonViTinh dvt ON qd.maDonVi = dvt.maDonVi " +
                 "LEFT JOIN ChiTietDichVu dv ON ct.maChiTiet = dv.maChiTiet " +
-                "LEFT JOIN DichVu d ON dv.maDichVu = d.maDichVu " +
+                "LEFT JOIN DichVu d ON COALESCE(ct.maDichVu, dv.maDichVu) = d.maDichVu " +
                 "LEFT JOIN ThuCung tc ON dv.maThuCung = tc.maThuCung " +
                 "WHERE ct.maHoaDon = ?";
 
@@ -308,6 +338,7 @@ public class HoaDonDAO {
                     lo,
                     qd
             );
+            c.setSanPham(sp);
             c.setSoLuongXuatCoSo(rs.getInt("soLuongXuatCoSo"));
             return c;
         } else if ("DICH_VU".equalsIgnoreCase(loai) || "ChiTietDichVu".equalsIgnoreCase(loai)) {
@@ -374,7 +405,7 @@ public class HoaDonDAO {
      * Lưu phiếu đổi trả hàng hóa vào CSDL (Transaction JDBC an toàn)
      */
     public boolean luuPhieuDoiTra(PhieuDoiTra pdt) throws SQLException {
-        String sqlPhieu = "INSERT INTO PhieuDoiTra (maPhieuDoiTra, maHoaDonGoc, maNhanVien, ngayDoiTra, lyDoDoiTra, tongTienHoan, trangThaiDoiTra) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sqlPhieu = "INSERT INTO PhieuDoiTra (maPhieuDoiTra, maHoaDonGoc, maNhanVienTiepNhan, ngayDoiTra, lyDoDoiTra, tongTienHoan, trangThaiDoiTra) VALUES (?, ?, ?, ?, ?, ?, ?)";
         String sqlCT = "INSERT INTO ChiTietDoiTra (maChiTietDoiTra, maPhieuDoiTra, maSanPham, soLuongDoiTra, tienHoanLai) VALUES (?, ?, ?, ?, ?)";
 
         Connection conn = null;

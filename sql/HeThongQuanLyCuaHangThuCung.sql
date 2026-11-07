@@ -5,7 +5,6 @@
 -- GVHD: ThS. PHẠM THANH HÙNG
 -- TẬP TIN DUY NHẤT: KHỞI TẠO CSDL TOÀN DIỆN VÀ NẠP DỮ LIỆU MẪU MỌI TRƯỜNG HỢP KIỂM THỬ
 -- ======================================================================================
-
 USE master;
 GO
 
@@ -30,24 +29,26 @@ GO
 -- ======================================================================================
 -- PHẦN I: KHỞI TẠO CẤU TRÚC BẢNG (SCHEMA DEFINITION TOÀN BỘ CÁC PHÂN HỆ)
 -- ======================================================================================
-
 -- 1. Bảng Tài khoản người dùng (Phân quyền RBAC 4 vai trò: NVQL, NVTN, NVKHO, NVCS)
 CREATE TABLE TaiKhoan (
-    tenDangNhap NVARCHAR(50) PRIMARY KEY,
-    matKhau NVARCHAR(255) NOT NULL,
-    vaiTro NVARCHAR(20) NOT NULL, -- NVQL: Quản lý, NVTN: Thu ngân, NVKHO: Thủ kho, NVCS: Kỹ thuật viên/Spa
-    trangThaiHoatDong BIT NOT NULL DEFAULT 1 -- 1: Đang làm việc, 0: Khóa/Đã nghỉ
+    maTaiKhoan NVARCHAR(20) PRIMARY KEY,       -- Tự động tăng: NV001, NV002, ... (khớp maNhanVien)
+    soDienThoai NVARCHAR(15) NOT NULL UNIQUE,  -- Dùng để nhân viên đăng nhập
+    email NVARCHAR(100) NOT NULL UNIQUE,       -- Dùng để xác thực quên mật khẩu
+    matKhau NVARCHAR(64) NOT NULL,             -- Chuỗi băm SHA-256 (64 ký tự hex)
+    vaiTro NVARCHAR(20) NOT NULL,              -- NVQL, NVTN, NVKHO, NVCS, NVBH
+    trangThaiHoatDong BIT NOT NULL DEFAULT 1   -- 1: Đang làm việc, 0: Khóa/Đã nghỉ
 );
 GO
 
 -- 2. Bảng Nhân viên
 CREATE TABLE NhanVien (
-    maNhanVien NVARCHAR(20) PRIMARY KEY,
+    maNhanVien NVARCHAR(20) PRIMARY KEY,       -- Tự động tăng: NV001, NV002, ...
     hoTen NVARCHAR(100) NOT NULL,
     chucVu NVARCHAR(50) NOT NULL,
-    soDienThoai NVARCHAR(15),
-    tenDangNhap NVARCHAR(50) NOT NULL UNIQUE,
-    CONSTRAINT FK_NhanVien_TaiKhoan FOREIGN KEY (tenDangNhap) REFERENCES TaiKhoan(tenDangNhap) ON DELETE CASCADE
+    soDienThoai NVARCHAR(15) NOT NULL UNIQUE,
+    email NVARCHAR(100) NOT NULL,
+    maTaiKhoan NVARCHAR(20) NOT NULL UNIQUE,
+    CONSTRAINT FK_NhanVien_TaiKhoan FOREIGN KEY (maTaiKhoan) REFERENCES TaiKhoan(maTaiKhoan) ON DELETE CASCADE
 );
 GO
 
@@ -66,6 +67,7 @@ CREATE TABLE BangPhanCong (
     maNhanVien NVARCHAR(20) NOT NULL,
     maCa NVARCHAR(20) NOT NULL,
     ngayLamViec DATE NOT NULL,
+    trangThaiCa NVARCHAR(50) DEFAULT N'Đã phân công',
     ghiChu NVARCHAR(255) NULL,
     CONSTRAINT FK_PhanCong_NhanVien FOREIGN KEY (maNhanVien) REFERENCES NhanVien(maNhanVien),
     CONSTRAINT FK_PhanCong_CaLamViec FOREIGN KEY (maCa) REFERENCES CaLamViec(maCa),
@@ -196,6 +198,9 @@ CREATE TABLE SanPham (
     maSanPham NVARCHAR(20) PRIMARY KEY,
     maDanhMuc NVARCHAR(20) NOT NULL,
     tenSanPham NVARCHAR(100) NOT NULL,
+    maVach NVARCHAR(30) NULL UNIQUE,
+    donViCoSo NVARCHAR(30) NOT NULL DEFAULT N'Đơn vị',
+    giaBanCoSo DECIMAL(18,2) NOT NULL DEFAULT 0,
     moTa NVARCHAR(255),
     CONSTRAINT FK_SanPham_DanhMuc FOREIGN KEY (maDanhMuc) REFERENCES DanhMucHang(maDanhMuc)
 );
@@ -249,7 +254,7 @@ GO
 -- 19. Bảng Hóa đơn bán hàng POS
 CREATE TABLE HoaDon (
     maHoaDon NVARCHAR(20) PRIMARY KEY,
-    maKhachHang NVARCHAR(20) NOT NULL,
+    maKhachHang NVARCHAR(20) NULL,
     maNhanVien NVARCHAR(20) NOT NULL,
     ngayLap DATETIME2 NOT NULL,
     thoiGianThanhToan DATETIME2,
@@ -267,10 +272,14 @@ CREATE TABLE ChiTietHoaDon (
     maChiTiet NVARCHAR(50) PRIMARY KEY,
     maHoaDon NVARCHAR(20) NOT NULL,
     loaiChiTiet NVARCHAR(20) NOT NULL, -- SAN_PHAM, DICH_VU
+    maSanPham NVARCHAR(20) NULL,
+    maDichVu NVARCHAR(20) NULL,
     soLuong INT NOT NULL,
     donGiaLucBan DECIMAL(18,2) NOT NULL,
     thanhTien DECIMAL(18,2) NOT NULL,
-    CONSTRAINT FK_CTHD_HoaDon FOREIGN KEY (maHoaDon) REFERENCES HoaDon(maHoaDon) ON DELETE CASCADE
+    CONSTRAINT FK_CTHD_HoaDon FOREIGN KEY (maHoaDon) REFERENCES HoaDon(maHoaDon) ON DELETE CASCADE,
+    CONSTRAINT FK_CTHD_SanPham FOREIGN KEY (maSanPham) REFERENCES SanPham(maSanPham),
+    CONSTRAINT FK_CTHD_DichVu FOREIGN KEY (maDichVu) REFERENCES DichVu(maDichVu)
 );
 GO
 
@@ -310,6 +319,7 @@ CREATE TABLE PhieuDoiTra (
     ngayDoiTra DATETIME2 NOT NULL,
     tongTienHoan DECIMAL(18,2) NOT NULL,
     lyDoDoiTra NVARCHAR(255),
+    trangThaiDoiTra NVARCHAR(50) DEFAULT N'Hoàn thành',
     CONSTRAINT FK_DoiTra_HoaDon FOREIGN KEY (maHoaDonGoc) REFERENCES HoaDon(maHoaDon),
     CONSTRAINT FK_DoiTra_NhanVien FOREIGN KEY (maNhanVienTiepNhan) REFERENCES NhanVien(maNhanVien)
 );
@@ -317,11 +327,13 @@ GO
 
 -- 24. Bảng Chi tiết đổi trả
 CREATE TABLE ChiTietDoiTra (
-    maChiTietDoiTra INT IDENTITY(1,1) PRIMARY KEY,
+    maChiTietDoiTra NVARCHAR(50) PRIMARY KEY,
     maPhieuDoiTra NVARCHAR(20) NOT NULL,
     maSanPham NVARCHAR(20) NOT NULL,
-    soLuong INT NOT NULL,
-    donGiaHoan DECIMAL(18,2) NOT NULL,
+    soLuongDoiTra INT NOT NULL DEFAULT 1,
+    tienHoanLai DECIMAL(18,2) NOT NULL DEFAULT 0,
+    soLuong INT NULL,
+    donGiaHoan DECIMAL(18,2) NULL,
     lyDoChiTiet NVARCHAR(255),
     CONSTRAINT FK_CTDoiTra_Phieu FOREIGN KEY (maPhieuDoiTra) REFERENCES PhieuDoiTra(maPhieuDoiTra) ON DELETE CASCADE,
     CONSTRAINT FK_CTDoiTra_SanPham FOREIGN KEY (maSanPham) REFERENCES SanPham(maSanPham)
@@ -354,23 +366,21 @@ GO
 -- ======================================================================================
 -- PHẦN II: NẠP DỮ LIỆU MẪU KIỂM THỬ MỌI KỊCH BẢN VÀ TRƯỜNG HỢP NGHIỆP VỤ (SEED DATA)
 -- ======================================================================================
-
 -- 1. Tài khoản & Nhân viên (4 thành viên phụ trách 4 phân hệ cốt lõi + KTV + NV nghỉ việc)
-INSERT INTO TaiKhoan (tenDangNhap, matKhau, vaiTro, trangThaiHoatDong) VALUES
-('admin',     '123456', 'NVQL',  1), -- Lê Khải Minh (Trưởng nhóm / Quản lý)
-('kho01',     '123456', 'NVKHO', 1), -- Tô Thành Đạt (Thủ kho)
-('thungan01', '123456', 'NVTN',  1), -- Lê Anh Minh (Thu ngân)
-('spa01',     '123456', 'NVCS',  1), -- Võ Thị Hồng Ngọc (Chăm sóc thú cưng & Hotel)
-('ktv01',     '123456', 'NVCS',  1), -- Kỹ thuật viên Spa hỗ trợ
-('nv_nghiviec','123456','NVBH',  0); -- Tài khoản nhân viên cũ đã khóa để kiểm thử bộ lọc
-
-INSERT INTO NhanVien (maNhanVien, hoTen, chucVu, soDienThoai, tenDangNhap) VALUES
-('NV001', N'Lê Khãi Minh',    N'Quản lý hệ thống',        '0901234567', 'admin'),
-('NV002', N'Tô Thành Đạt',     N'Thủ kho & Lô hàng',       '0923456789', 'kho01'),
-('NV003', N'Lê Anh Minh',      N'Thu ngân trưởng ca',      '0912345678', 'thungan01'),
-('NV004', N'Võ Thị Hồng Ngọc', N'Chuyên viên Spa & Hotel', '0945678901', 'spa01'),
-('NV005', N'Trần Thị Thu Hà',  N'Kỹ thuật viên chăm sóc',  '0934567890', 'ktv01'),
-('NV006', N'Nguyễn Văn Hùng',  N'Nhân viên bán hàng (Cũ)', '0956789012', 'nv_nghiviec');
+INSERT INTO TaiKhoan (maTaiKhoan, soDienThoai, email, matKhau, vaiTro, trangThaiHoatDong) VALUES
+('NV001', '0901234567', 'minh.quanly@miopet.vn', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVQL',  1),
+('NV002', '0923456789', 'dat.kho@miopet.vn',      '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVKHO', 1),
+('NV003', '0912345678', 'minh.thungan@miopet.vn',  '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVTN',  1),
+('NV004', '0945678901', 'ngoc.spa@miopet.vn',      '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVCS',  1),
+('NV005', '0934567890', 'ha.ktv@miopet.vn',        '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVCS',  1),
+('NV006', '0956789012', 'hung.banhang@miopet.vn',  '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVBH',  0);
+INSERT INTO NhanVien (maNhanVien, hoTen, chucVu, soDienThoai, email, maTaiKhoan) VALUES
+('NV001', N'Lê Khãi Minh',    N'Quản lý hệ thống',        '0901234567', 'minh.quanly@miopet.vn', 'NV001'),
+('NV002', N'Tô Thành Đạt',     N'Thủ kho & Lô hàng',       '0923456789', 'dat.kho@miopet.vn',      'NV002'),
+('NV003', N'Lê Anh Minh',      N'Thu ngân trưởng ca',      '0912345678', 'minh.thungan@miopet.vn',  'NV003'),
+('NV004', N'Võ Thị Hồng Ngọc', N'Chuyên viên Spa & Hotel', '0945678901', 'ngoc.spa@miopet.vn',      'NV004'),
+('NV005', N'Trần Thị Thu Hà',  N'Kỹ thuật viên chăm sóc',  '0934567890', 'ha.ktv@miopet.vn',        'NV005'),
+('NV006', N'Nguyễn Văn Hùng',  N'Nhân viên bán hàng (Cũ)', '0956789012', 'hung.banhang@miopet.vn',  'NV006');
 GO
 
 -- 2. Ca làm việc cố định
@@ -408,19 +418,16 @@ INSERT INTO BangGiaoCa (maGiaoCa, maNhanVien, maCa, tienDauCa, tienCuoiCaHeThong
  N'Khớp két 100%, không phát sinh sai lệch', 
  DATEADD(day, -2, DATEADD(hour, 11, DATEADD(minute, 30, CAST(CAST(GETDATE() AS DATE) AS DATETIME2)))), 
  'DA_DUYET', 'NV001', DATEADD(day, -2, DATEADD(hour, 11, DATEADD(minute, 45, CAST(CAST(GETDATE() AS DATE) AS DATETIME2))))),
-
 -- Ca 2: ĐANG CHỜ DUYỆT (CHO_DUYET), bị THIẾU 50.000đ do thu ngân thối nhầm tiền -> Dùng để demo chức năng Duyệt ca & in K80
 ('GC002', 'NV005', 'CA02', 3500000, 5200000, 5150000, -50000, 1700000, 450000, 20000, 
  N'Thối nhầm tiền thừa 50.000đ cho khách mua hạt Royal Canin', 
  DATEADD(day, -1, DATEADD(hour, 15, DATEADD(minute, 35, CAST(CAST(GETDATE() AS DATE) AS DATETIME2)))), 
  'CHO_DUYET', NULL, NULL),
-
 -- Ca 3: ĐÃ DUYỆT, có phát sinh giao dịch hoàn tiền trả hàng
 ('GC003', 'NV003', 'CA03', 2000000, 4800000, 4800000, 0, 2800000, 1200000, 65000, 
  N'Đã hoàn tiền đổi trả 1 túi cát vệ sinh cho khách Mai', 
  DATEADD(day, -1, DATEADD(hour, 19, DATEADD(minute, 30, CAST(CAST(GETDATE() AS DATE) AS DATETIME2)))), 
  'DA_DUYET', 'NV001', DATEADD(day, -1, DATEADD(hour, 19, DATEADD(minute, 40, CAST(CAST(GETDATE() AS DATE) AS DATETIME2))))),
-
 -- Ca 4: ĐANG MỞ (DANG_MO) của ca trực hiện tại -> Để thu ngân thao tác Bàn giao ca trực tiếp trên giao diện
 ('GC004', 'NV003', 'CA01', 1500000, 1500000, 1500000, 0, 0, 0, 0, 
  N'Ca trực hiện tại đang phục vụ khách hàng', 
@@ -458,15 +465,12 @@ INSERT INTO HoSoSucKhoe (maSucKhoe, maThuCung, maNhanVienKiemTra, canNang, nhiet
 -- Trường hợp 1: Thể trạng hoàn hảo, đủ điều kiện làm spa
 ('SK001', 'TC001', 'NV004', 4.20, 38.50, N'Không có ve rận, da sạch', 1, 
  N'Thể trạng tốt, lông mượt, phản xạ lanh lợi', DATEADD(day, -5, GETDATE())),
-
 -- Trường hợp 2: BÉ CHƯA TIÊM PHÒNG DẠI + CÓ VE RẬN -> Để kiểm thử cảnh báo y tế và gửi email nhắc tiêm kèm voucher
 ('SK002', 'TC002', 'NV004', 5.80, 38.70, N'Có ve rận nhẹ ở kẽ tai', 0, 
  N'QUÁ HẠN TIÊM DẠI - Đã tư vấn chủ tiêm bổ sung và tắm thảo dược trị ve', DATEADD(day, -2, GETDATE())),
-
 -- Trường hợp 3: Thể trạng chó con nhỏ cần nhiệt độ ấm
 ('SK003', 'TC003', 'NV004', 2.40, 38.40, N'Sạch sẽ, da hồng hào', 1, 
  N'Bé nhỏ hiếu động, sấy ấm mức vừa phải', DATEADD(day, -1, GETDATE())),
-
 -- Trường hợp 4: Cân nặng lớn (28kg)
 ('SK004', 'TC005', 'NV004', 28.00, 38.60, N'Sạch sẽ', 1, 
  N'Chó lớn ngoan ngoãn, lông dày cần chải kỹ lớp lót', DATEADD(day, -10, GETDATE()));
@@ -484,26 +488,26 @@ INSERT INTO DichVu (maDichVu, tenDichVu, giaDichVu, thoiLuongPhut) VALUES
 ('DV008', N'Lưu Trú Khách Sạn Pet Hotel VIP',  250000, 1440);
 GO
 
--- 9. Lịch hẹn dịch vụ Spa (Đầy đủ 4 trạng thái: Đã đặt, Đang phục vụ, Hoàn thành, Đã hủy)
+-- 9. Lịch hẹn dịch vụ Spa (Đầy đủ các trạng thái: Đã đặt, Đang phục vụ, Quá giờ, Hoàn thành, Đã hủy)
 INSERT INTO LichHen (maLichHen, maKhachHang, maNhanVienTiepNhan, ngayHen, trangThaiLichHen, ghiChu) VALUES
 -- Trạng thái: Đã đặt (Chờ tiếp nhận) -> Có nút gửi email nhắc lịch
-('LH001', 'KH001', 'NV004', DATEADD(hour, 2, GETDATE()), N'Đã đặt', N'Cắt tỉa gọn vùng mặt và chân cho bé Miu Miu'),
-
--- Trạng thái: Đang phục vụ (Kỹ thuật viên đang làm)
+('LH001', 'KH001', 'NV004', DATEADD(hour, 16, CAST(CAST(GETDATE() AS DATE) AS DATETIME)), N'Đã đặt', N'Cắt tỉa gọn vùng mặt và chân cho bé Miu Miu'),
+-- Trạng thái: Đang phục vụ đúng tiến độ (Kỹ thuật viên đang làm, mới 40p / 90p)
 ('LH002', 'KH002', 'NV004', DATEADD(minute, -40, GETDATE()), N'Đang phục vụ', N'Đang sấy tạo kiểu lông xù cho bé Lu Lu'),
-
 -- Trạng thái: Hoàn thành (Sẵn sàng bấm Chuyển sang POS thanh toán)
-('LH003', 'KH003', 'NV004', DATEADD(hour, -3, GETDATE()), N'Hoàn thành', N'Đã hoàn thành tắm thảo dược khử mùi'),
-
+('LH003', 'KH003', 'NV004', DATEADD(hour, 9, CAST(CAST(GETDATE() AS DATE) AS DATETIME)), N'Hoàn thành', N'Đã hoàn thành tắm thảo dược khử mùi'),
 -- Trạng thái: Đã hủy (Khách bận việc gia đình)
-('LH004', 'KH004', 'NV004', DATEADD(day, -1, GETDATE()), N'Hủy', N'Khách dời lịch sang tuần sau');
+('LH004', 'KH004', 'NV004', DATEADD(day, -1, GETDATE()), N'Hủy', N'Khách dời lịch sang tuần sau'),
+-- Trạng thái: Đang phục vụ nhưng QUÁ GIỜ (đã 95p so với thời lượng chuẩn 60p của DV005) -> Kiểm thử bộ lọc ⚠️ Quá giờ
+('LH005', 'KH001', 'NV004', DATEADD(minute, -95, GETDATE()), N'Đang phục vụ', N'Gỡ rối lông dày và tắm thảo dược trị ve cho bé Bim Bim');
 GO
 
 INSERT INTO ChiTietLichHen (maChiTietLichHen, maLichHen, maThuCung, maDichVu, maKtvChiDinh) VALUES
 ('CTLH01', 'LH001', 'TC001', 'DV001', 'NV004'),
 ('CTLH02', 'LH002', 'TC002', 'DV001', 'NV005'),
 ('CTLH03', 'LH003', 'TC003', 'DV005', 'NV004'),
-('CTLH04', 'LH004', 'TC005', 'DV004', 'NV005');
+('CTLH04', 'LH004', 'TC005', 'DV004', 'NV005'),
+('CTLH05', 'LH005', 'TC004', 'DV005', 'NV004');
 GO
 
 -- 10. Danh mục hàng hóa & Sản phẩm bán lẻ
@@ -513,16 +517,16 @@ INSERT INTO DanhMucHang (maDanhMuc, tenDanhMuc, moTa) VALUES
 ('DM03', N'Vệ sinh & Chăm sóc', N'Cát vệ sinh, sữa tắm trị ve, xịt khử mùi hôi');
 GO
 
-INSERT INTO SanPham (maSanPham, maDanhMuc, tenSanPham, moTa) VALUES
-('SP001', 'DM01', N'Hạt Royal Canin Kitten 2kg',       N'Thức ăn hạt dinh dưỡng cho mèo con dưới 12 tháng'),
-('SP002', 'DM01', N'Pate Whiskas Vị Cá Thu 85g',       N'Pate túi thơm ngon bổ sung taurine và omega'),
-('SP003', 'DM01', N'Thuốc Nhỏ Gáy Trị Ve Frontline',   N'Tuýp nhỏ gáy đặc trị ve rận bọ chét cho chó mèo'),
-('SP004', 'DM02', N'Vòng Cổ Chuông Nơ Thú Cưng',       N'Vòng cổ thời trang vải nhung chuông đồng chống lạc'),
-('SP005', 'DM03', N'Sữa Tắm Dưỡng Lông Bio-Care 500ml', N'Sữa tắm thảo mộc dưỡng lông mượt không cay mắt'),
-('SP006', 'DM03', N'Cát Vệ Sinh Mèo Hương Táo 5kg',    N'Cát đất sét bentonite vón cục nhanh khử mùi tốt');
+INSERT INTO SanPham (maSanPham, maDanhMuc, tenSanPham, maVach, donViCoSo, giaBanCoSo, moTa) VALUES
+('SP001', 'DM01', N'Hạt Royal Canin Kitten 2kg',       '893600000001', N'Gói',    380000, N'Thức ăn hạt dinh dưỡng cho mèo con dưới 12 tháng'),
+('SP002', 'DM01', N'Pate Whiskas Vị Cá Thu 85g',       '893600000002', N'Lon',     20000, N'Pate túi thơm ngon bổ sung taurine và omega'),
+('SP003', 'DM01', N'Thuốc Nhỏ Gáy Trị Ve Frontline',   '893600000003', N'Tuýp',    75000, N'Tuýp nhỏ gáy đặc trị ve rận bọ chét cho chó mèo'),
+('SP004', 'DM02', N'Vòng Cổ Chuông Nơ Thú Cưng',       '893600000004', N'Chiếc',   45000, N'Vòng cổ thời trang vải nhung chuông đồng chống lạc'),
+('SP005', 'DM03', N'Sữa Tắm Dưỡng Lông Bio-Care 500ml', '893600000005', N'Chai',    85000, N'Sữa tắm thảo mộc dưỡng lông mượt không cay mắt'),
+('SP006', 'DM03', N'Cát Vệ Sinh Mèo Hương Táo 5kg',    '893600000006', N'Túi 5kg', 65000, N'Cát đất sét bentonite vón cục nhanh khử mùi tốt');
 GO
 
--- 11. Đơn vị tính & Bảng Quy đổi ĐVT đa cấp (Thùng -> Lốc/Hộp -> Gói/Lon/Tuýp)
+-- 11. Đơn vị tính & Bảng Quy đổi ĐVT đa cấp
 INSERT INTO DonViTinh (maDonVi, tenDonVi) VALUES
 ('DVT01', N'Gói'),
 ('DVT02', N'Lon'),
@@ -538,22 +542,17 @@ GO
 INSERT INTO QuyDoiDonVi (maQuyDoi, maSanPham, maDonVi, tyLeQuyDoi, laDonViCoSo, giaBan) VALUES
 -- SP001: Hạt Royal Canin Kitten 2kg
 ('QD001', 'SP001', 'DVT01', 1,  1, 380000), -- Đơn vị cơ sở: Gói
-
 -- SP002: Pate Whiskas (Đa cấp: Lon lẻ -> Lốc 6 lon -> Thùng 24 lon)
 ('QD002', 'SP002', 'DVT02', 1,  1, 20000),  -- Đơn vị cơ sở: Lon lẻ (20k)
 ('QD003', 'SP002', 'DVT03', 6,  0, 115000), -- Lốc 6 lon (tiết kiệm 5k)
 ('QD004', 'SP002', 'DVT04', 24, 0, 450000), -- Thùng 24 lon (tiết kiệm 30k)
-
 -- SP003: Thuốc nhỏ gáy Frontline (Tuýp lẻ -> Hộp 3 tuýp)
 ('QD005', 'SP003', 'DVT08', 1,  1, 75000),  -- Đơn vị cơ sở: Tuýp (75k)
 ('QD006', 'SP003', 'DVT09', 3,  0, 210000), -- Hộp 3 tuýp (tiết kiệm 15k)
-
 -- SP004: Vòng cổ
 ('QD007', 'SP004', 'DVT05', 1,  1, 45000),
-
 -- SP005: Sữa tắm Bio-Care
 ('QD008', 'SP005', 'DVT06', 1,  1, 85000),
-
 -- SP006: Cát vệ sinh mèo
 ('QD009', 'SP006', 'DVT07', 1,  1, 65000);
 GO
@@ -567,22 +566,16 @@ GO
 INSERT INTO LoHang (soLo, maSanPham, maNhaCungCap, ngaySanXuat, hanSuDung, ngayNhap, donGiaNhapCoSo, soLuongNhap, soLuongTon) VALUES
 -- Lô 1: Còn hạn dài, tồn kho dồi dào
 ('LO_RC_2026_01', 'SP001', 'NCC01', '2026-01-10', '2027-01-10', DATEADD(day, -45, GETDATE()), 280000, 50, 42),
-
 -- Lô 2: CẬN HẠN (Hết hạn trong vòng 20 ngày) -> Báo động đỏ trên bảng Kho và xuất trước theo FEFO!
 ('LO_WS_CANHAN',  'SP002', 'NCC01', '2025-06-01', DATEADD(day, 20, GETDATE()), DATEADD(day, -60, GETDATE()), 14000, 100, 15),
-
 -- Lô 3: Còn hạn dài (xuất sau lô cận hạn theo thuật toán FEFO)
 ('LO_WS_DAIHAN',  'SP002', 'NCC01', '2026-02-01', '2027-08-01', DATEADD(day, -10, GETDATE()), 14000, 200, 190),
-
 -- Lô 4: DƯỚI ĐỊNH MỨC AN TOÀN (ROP - Tồn chỉ còn 4 tuýp trong khi ROP là 10) -> Để test Báo cáo Đề xuất nhập hàng tự động
 ('LO_FL_SAP_HET', 'SP003', 'NCC02', '2026-01-01', '2027-12-31', DATEADD(day, -30, GETDATE()), 50000, 30, 4),
-
 -- Lô 5: Phụ kiện vòng cổ (Hạn 3 năm)
 ('LO_PK_2026_01', 'SP004', 'NCC02', '2026-01-01', '2029-01-01', DATEADD(day, -25, GETDATE()), 25000, 100, 75),
-
 -- Lô 6: Sữa tắm Bio-Care
 ('LO_BC_2026_01', 'SP005', 'NCC01', '2026-02-15', '2028-02-15', DATEADD(day, -15, GETDATE()), 55000, 50, 38),
-
 -- Lô 7: Cát vệ sinh
 ('LO_CAT_2026_01','SP006', 'NCC01', '2026-03-01', '2028-03-01', DATEADD(day, -5, GETDATE()),  42000, 100, 65);
 GO
@@ -590,48 +583,36 @@ GO
 -- 13. Hóa đơn bán hàng POS & 7 Báo biểu thống kê (Có Tiền mặt, VietQR, Đổi điểm thưởng VIP, Dịch vụ Spa)
 -- Hóa đơn 1: Hôm nay, thanh toán VietQR Napas, có giảm giá điểm VIP 20k
 INSERT INTO HoaDon (maHoaDon, maKhachHang, maNhanVien, ngayLap, thoiGianThanhToan, giamGia, thanhTien, phuongThucThanhToan, trangThaiHoaDon)
-VALUES ('HD261103-01', 'KH001', 'NV003', DATEADD(hour, -2, GETDATE()), DATEADD(hour, -2, GETDATE()), 20000, 475000, N'Chuyển khoản QR', N'Đã thanh toán');
-
-INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, soLuong, donGiaLucBan, thanhTien) VALUES
-('HD261103-01_CT1', 'HD261103-01', 'SAN_PHAM', 1, 380000, 380000), -- 1 gói hạt Royal Canin
-('HD261103-01_CT2', 'HD261103-01', 'SAN_PHAM', 1, 115000, 115000); -- 1 lốc 6 lon pate Whiskas
-
+VALUES ('HD261103-01', 'KH001', 'NV003', DATEADD(hour, 9, CAST(CAST(GETDATE() AS DATE) AS DATETIME)), DATEADD(hour, 9, CAST(CAST(GETDATE() AS DATE) AS DATETIME)), 20000, 475000, N'Chuyển khoản QR', N'Đã thanh toán');
+INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, maSanPham, maDichVu, soLuong, donGiaLucBan, thanhTien) VALUES
+('HD261103-01_CT1', 'HD261103-01', 'SAN_PHAM', 'SP001', NULL, 1, 380000, 380000), -- 1 gói hạt Royal Canin
+('HD261103-01_CT2', 'HD261103-01', 'SAN_PHAM', 'SP002', NULL, 1, 115000, 115000); -- 1 lốc 6 lon pate Whiskas
 INSERT INTO ChiTietXuatLo (maChiTiet, soLo, maQuyDoi, soLuongXuatCoSo) VALUES
 ('HD261103-01_CT1', 'LO_RC_2026_01', 'QD001', 1),
 ('HD261103-01_CT2', 'LO_WS_CANHAN',  'QD003', 6); -- Xuất lô cận hạn trước theo đúng FEFO
-
 -- Hóa đơn 2: Hôm nay, thanh toán Tiền mặt dịch vụ Spa Cắt tỉa (KTV Ngọc nhận 10% hoa hồng = 30k)
 INSERT INTO HoaDon (maHoaDon, maKhachHang, maNhanVien, ngayLap, thoiGianThanhToan, giamGia, thanhTien, phuongThucThanhToan, trangThaiHoaDon)
-VALUES ('HD261103-02', 'KH002', 'NV003', DATEADD(hour, -1, GETDATE()), DATEADD(hour, -1, GETDATE()), 0, 300000, N'Tiền mặt', N'Đã thanh toán');
-
-INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, soLuong, donGiaLucBan, thanhTien) VALUES
-('HD261103-02_CT1', 'HD261103-02', 'DICH_VU', 1, 300000, 300000);
-
+VALUES ('HD261103-02', 'KH002', 'NV003', DATEADD(hour, 10, CAST(CAST(GETDATE() AS DATE) AS DATETIME)), DATEADD(hour, 10, CAST(CAST(GETDATE() AS DATE) AS DATETIME)), 0, 300000, N'Tiền mặt', N'Đã thanh toán');
+INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, maSanPham, maDichVu, soLuong, donGiaLucBan, thanhTien) VALUES
+('HD261103-02_CT1', 'HD261103-02', 'DICH_VU', NULL, 'DV001', 1, 300000, 300000);
 INSERT INTO ChiTietDichVu (maChiTiet, maDichVu, maThuCung, maKtvThucHien, tienHoaHong) VALUES
 ('HD261103-02_CT1', 'DV001', 'TC002', 'NV004', 30000);
-
 -- Hóa đơn 3: Hôm qua, kết hợp vừa mua sữa tắm vừa làm dịch vụ ngâm sục Ozone
 INSERT INTO HoaDon (maHoaDon, maKhachHang, maNhanVien, ngayLap, thoiGianThanhToan, giamGia, thanhTien, phuongThucThanhToan, trangThaiHoaDon)
 VALUES ('HD261102-01', 'KH003', 'NV003', DATEADD(day, -1, GETDATE()), DATEADD(day, -1, GETDATE()), 0, 335000, N'Chuyển khoản QR', N'Đã thanh toán');
-
-INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, soLuong, donGiaLucBan, thanhTien) VALUES
-('HD261102-01_CT1', 'HD261102-01', 'SAN_PHAM', 1, 85000, 85000),
-('HD261102-01_CT2', 'HD261102-01', 'DICH_VU',  1, 250000, 250000);
-
+INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, maSanPham, maDichVu, soLuong, donGiaLucBan, thanhTien) VALUES
+('HD261102-01_CT1', 'HD261102-01', 'SAN_PHAM', 'SP005', NULL,    1, 85000, 85000),
+('HD261102-01_CT2', 'HD261102-01', 'DICH_VU',  NULL,    'DV006', 1, 250000, 250000);
 INSERT INTO ChiTietXuatLo (maChiTiet, soLo, maQuyDoi, soLuongXuatCoSo) VALUES
 ('HD261102-01_CT1', 'LO_BC_2026_01', 'QD008', 1);
-
 INSERT INTO ChiTietDichVu (maChiTiet, maDichVu, maThuCung, maKtvThucHien, tienHoaHong) VALUES
 ('HD261102-01_CT2', 'DV006', 'TC003', 'NV005', 25000);
-
 -- Hóa đơn 4: Cách đây 3 ngày, hóa đơn mua cát và đồ chơi phụ kiện
 INSERT INTO HoaDon (maHoaDon, maKhachHang, maNhanVien, ngayLap, thoiGianThanhToan, giamGia, thanhTien, phuongThucThanhToan, trangThaiHoaDon)
 VALUES ('HD261031-01', 'KH004', 'NV003', DATEADD(day, -3, GETDATE()), DATEADD(day, -3, GETDATE()), 0, 110000, N'Tiền mặt', N'Đã thanh toán');
-
-INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, soLuong, donGiaLucBan, thanhTien) VALUES
-('HD261031-01_CT1', 'HD261031-01', 'SAN_PHAM', 1, 65000, 65000),
-('HD261031-01_CT2', 'HD261031-01', 'SAN_PHAM', 1, 45000, 45000);
-
+INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, maSanPham, maDichVu, soLuong, donGiaLucBan, thanhTien) VALUES
+('HD261031-01_CT1', 'HD261031-01', 'SAN_PHAM', 'SP006', NULL, 1, 65000, 65000),
+('HD261031-01_CT2', 'HD261031-01', 'SAN_PHAM', 'SP004', NULL, 1, 45000, 45000);
 INSERT INTO ChiTietXuatLo (maChiTiet, soLo, maQuyDoi, soLuongXuatCoSo) VALUES
 ('HD261031-01_CT1', 'LO_CAT_2026_01', 'QD009', 1),
 ('HD261031-01_CT2', 'LO_PK_2026_01',  'QD007', 1);
@@ -640,9 +621,8 @@ GO
 -- 14. Phiếu đổi trả hàng mẫu (Khách đổi trả 1 lon pate bị móp vỏ, hoàn kho lại nguyên vẹn)
 INSERT INTO PhieuDoiTra (maPhieuDoiTra, maHoaDonGoc, maNhanVienTiepNhan, ngayDoiTra, tongTienHoan, lyDoDoiTra)
 VALUES ('DT001', 'HD261103-01', 'NV003', DATEADD(minute, -30, GETDATE()), 20000, N'Khách mua nhầm vị cá thu, đổi sang pate cá hồi');
-
-INSERT INTO ChiTietDoiTra (maPhieuDoiTra, maSanPham, soLuong, donGiaHoan, lyDoChiTiet)
-VALUES ('DT001', 'SP002', 1, 20000, N'Hàng nguyên vẹn, còn nguyên tem hạn sử dụng');
+INSERT INTO ChiTietDoiTra (maChiTietDoiTra, maPhieuDoiTra, maSanPham, soLuongDoiTra, tienHoanLai, soLuong, donGiaHoan, lyDoChiTiet)
+VALUES ('CTDT001', 'DT001', 'SP002', 1, 20000, 1, 20000, N'Hàng nguyên vẹn, còn nguyên tem hạn sử dụng');
 GO
 
 -- 15. Khách sạn lưu trú thú cưng (Pet Hotel - 12 Phòng đủ 3 phân hạng và 3 trạng thái kiểm thử)
@@ -650,33 +630,22 @@ INSERT INTO PhongLuuTru (maPhong, loaiPhong, donGiaNgay, trangThai, tenThuCung, 
 -- Phân hạng 1: Phòng Tiêu chuẩn (150.000đ/ngày)
 ('P101', N'Phòng Tiêu chuẩn', 150000, N'ĐANG CÓ KHÁCH', N'Bim Bim', N'Corgi Chân Ngắn (9.5kg)', N'Nguyễn Văn An', '0988111222', 
  DATEADD(day, -2, GETDATE()), DATEADD(day, 1, GETDATE()), N'Ăn hạt Royal Canin ngâm mềm, dắt đi dạo 2 lần/ngày', 1, 1, 1, 0),
-
 ('P102', N'Phòng Tiêu chuẩn', 150000, N'TRỐNG', '', '', '', '', NULL, NULL, '', 0, 0, 0, 0),
-
 ('P103', N'Phòng Tiêu chuẩn', 150000, N'ĐANG CÓ KHÁCH', N'Bơ', N'Poodle Nâu Đỏ (3.5kg)', N'Trần Thị Mai', '0977333444', 
  DATEADD(day, -1, GETDATE()), DATEADD(day, 2, GETDATE()), N'Ăn kèm pate gà, chải lông mỗi chiều, có phụ thu nhỏ gáy ve', 1, 0, 1, 75000),
-
 ('P104', N'Phòng Tiêu chuẩn', 150000, N'ĐANG DỌN DẸP', '', '', '', '', NULL, NULL, '', 0, 0, 0, 0),
-
 -- Phân hạng 2: Phòng VIP Suite (250.000đ/ngày)
 ('V201', N'Phòng VIP Suite', 250000, N'ĐANG CÓ KHÁCH', N'Golden Sam', N'Golden Retriever (28kg)', N'Đặng Quốc Bảo', '0933555777', 
  DATEADD(day, -3, GETDATE()), DATEADD(day, 1, GETDATE()), N'Camera VIP bật 24/7 cho chủ xem, ăn 3 bữa thịt bò tươi', 1, 1, 1, 100000),
-
 ('V202', N'Phòng VIP Suite', 250000, N'TRỐNG', '', '', '', '', NULL, NULL, '', 0, 0, 0, 0),
-
 ('V203', N'Phòng VIP Suite', 250000, N'TRỐNG', '', '', '', '', NULL, NULL, '', 0, 0, 0, 0),
-
 ('V204', N'Phòng VIP Suite', 250000, N'ĐANG CÓ KHÁCH', N'Lu Lu', N'Poodle Tiny (5.8kg)', N'Trần Thị Mai', '0977333444', 
  DATEADD(hour, -10, GETDATE()), DATEADD(day, 3, GETDATE()), N'Bật điều hòa 24 độ C liên tục, sấy ấm đệm ngủ', 1, 0, 1, 0),
-
 -- Phân hạng 3: Condo cho Mèo (200.000đ/ngày)
 ('C301', N'Condo cho Mèo', 200000, N'ĐANG CÓ KHÁCH', N'Miu Miu', N'Mèo Anh Lông Ngắn (4.2kg)', N'Lê Hoàng Yến', '0912345678', 
  DATEADD(day, -1, GETDATE()), DATEADD(day, 2, GETDATE()), N'Ăn hạt Orijen + súp thưởng Ciao lúc 15h chiều', 1, 0, 1, 30000),
-
 ('C302', N'Condo cho Mèo', 200000, N'TRỐNG', '', '', '', '', NULL, NULL, '', 0, 0, 0, 0),
-
 ('C303', N'Condo cho Mèo', 200000, N'TRỐNG', '', '', '', '', NULL, NULL, '', 0, 0, 0, 0),
-
 ('C304', N'Condo cho Mèo', 200000, N'TRỐNG', '', '', '', '', NULL, NULL, '', 0, 0, 0, 0);
 GO
 
@@ -687,7 +656,6 @@ PRINT N'==================================================================';
 PRINT N'    HỆ THỐNG CƠ SỞ DỮ LIỆU QUẢN LÝ CỬA HÀNG THÚ CƯNG MIO (IUH)    ';
 PRINT N'       KHỞI TẠO VÀ NẠP DỮ LIỆU MẪU MỌI KỊCH BẢN THÀNH CÔNG!       ';
 PRINT N'==================================================================';
-
 SELECT 'TaiKhoan' AS TenBang, COUNT(*) AS SoLuongBanGhi FROM TaiKhoan
 UNION ALL
 SELECT 'NhanVien', COUNT(*) FROM NhanVien
@@ -738,3 +706,4 @@ SELECT 'ChiTietDoiTra', COUNT(*) FROM ChiTietDoiTra
 UNION ALL
 SELECT 'PhongLuuTru', COUNT(*) FROM PhongLuuTru;
 GO
+

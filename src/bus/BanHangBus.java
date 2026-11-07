@@ -1,18 +1,19 @@
-package controllers;
+package bus;
 
-import models.dao.HoaDonDAO;
-import models.dao.KhachHangDAO;
-import models.dao.LoHangDAO;
-import models.entity.*;
+import dao.HoaDonDAO;
+import dao.KhachHangDAO;
+import dao.LoHangDAO;
+import entity.*;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 // controller xử lý bán hàng và khách hàng
-public class BanHangController {
+public class BanHangBus {
 
     // list tạm lưu khách trên ram để tìm cho nhanh đỡ lag
     private static final List<KhachHang> DANH_SACH_KHACH_HANG = new ArrayList<>();
@@ -36,7 +37,7 @@ public class BanHangController {
     private final KhachHangDAO khachHangDAO;
     private HoaDon hoaDonHienTai;
 
-    public BanHangController() {
+    public BanHangBus() {
         this.hoaDonDAO = new HoaDonDAO();
         this.loHangDAO = new LoHangDAO();
         this.khachHangDAO = new KhachHangDAO();
@@ -68,6 +69,133 @@ public class BanHangController {
     public HoaDon getHoaDonHienTai() {
         return hoaDonHienTai;
     }
+
+    /**
+     * DTO đại diện cho một mặt hàng hoặc dịch vụ trên danh mục POS.
+     */
+    public static class CatalogItem {
+        public String ma;
+        public String ten;
+        public String moTa;
+        public long gia;
+        public String dvt;
+        public int tyLe;
+        public int tonCoSo;
+        public int tonTheoQuyCach;
+        public String tenHienThi;
+        public boolean laDichVu;
+        public int thoiLuongPhut;
+        public String maVach;
+
+        public CatalogItem() {}
+    }
+
+    /**
+     * Lấy toàn bộ danh mục sản phẩm (kèm tỷ lệ quy đổi và tồn kho) cùng các dịch vụ Spa cho POS.
+     * Tuân thủ kiến trúc N-Tier: Gọi qua SanPhamDAO và DichVuDAO, không truy vấn SQL trực tiếp tại tầng BUS.
+     */
+    public List<CatalogItem> layDanhSachMatHangCatalog() {
+        List<CatalogItem> result = new ArrayList<>();
+        try {
+            dao.SanPhamDAO spDao = new dao.SanPhamDAO();
+            for (Object[] row : spDao.layDanhSachSanPhamCatalogPOS()) {
+                CatalogItem item = new CatalogItem();
+                item.ma = (String) row[0];
+                item.ten = (String) row[1];
+                item.moTa = (String) row[2];
+                item.maVach = (String) row[3];
+                item.gia = (Long) row[5];
+                item.dvt = (String) row[6];
+                item.tyLe = (Integer) row[7];
+                item.tonCoSo = (Integer) row[8];
+                item.tonTheoQuyCach = item.tyLe > 0 ? (item.tonCoSo / item.tyLe) : item.tonCoSo;
+                item.tenHienThi = item.tyLe > 1 ? (item.ten + " (" + item.dvt + ")") : item.ten;
+                item.laDichVu = false;
+                result.add(item);
+            }
+
+            dao.DichVuDAO dvDao = new dao.DichVuDAO();
+            for (DichVu dv : dvDao.getAllDichVu()) {
+                CatalogItem item = new CatalogItem();
+                item.ma = dv.getMaDichVu();
+                item.ten = dv.getTenDichVu();
+                item.moTa = "Dịch vụ Grooming / Spa / Khách sạn thú cưng";
+                item.gia = dv.getGiaDichVu() != null ? dv.getGiaDichVu().longValue() : 0L;
+                item.dvt = "Lượt";
+                item.tyLe = 1;
+                item.tonCoSo = 999;
+                item.tonTheoQuyCach = 999;
+                item.tenHienThi = item.ten;
+                item.laDichVu = true;
+                item.thoiLuongPhut = dv.getThoiLuongPhut();
+                result.add(item);
+            }
+        } catch (SQLException e) {
+            System.err.println("[BanHangBus] Lỗi đọc danh mục hàng hóa POS: " + e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * Lấy toàn bộ danh sách hóa đơn từ CSDL.
+     */
+    public List<HoaDon> layTatCaHoaDon() {
+        try {
+            return hoaDonDAO.getAllHoaDon();
+        } catch (SQLException e) {
+            System.err.println("[BanHangBus] Lỗi layTatCaHoaDon: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Thực hiện thanh toán và lưu hóa đơn POS cùng chi tiết xuất lô, trừ kho FEFO.
+     */
+    public boolean luuHoaDonPOS(HoaDon hd) {
+        try {
+            return hoaDonDAO.thanhToanHoaDon(hd);
+        } catch (SQLException e) {
+            System.err.println("[BanHangBus] Lỗi luuHoaDonPOS: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Lưu phiếu đổi trả liên kết với đơn POS.
+     */
+    public boolean luuPhieuDoiTra(PhieuDoiTra pdt) {
+        try {
+            return hoaDonDAO.luuPhieuDoiTra(pdt);
+        } catch (SQLException e) {
+            System.err.println("[BanHangBus] Lỗi luuPhieuDoiTra: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Lấy danh sách lô hàng FEFO cho một sản phẩm.
+     */
+    public List<LoHang> layDanhSachLoHangFEFO(String maSP) {
+        try {
+            return loHangDAO.getAvailableLotsFEFO(maSP);
+        } catch (SQLException e) {
+            System.err.println("[BanHangBus] Lỗi layDanhSachLoHangFEFO: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Lấy toàn bộ danh sách lô hàng trong hệ thống.
+     */
+    public List<LoHang> layTatCaLoHang() {
+        try {
+            return loHangDAO.getAllLoHang();
+        } catch (SQLException e) {
+            System.err.println("[BanHangBus] Lỗi layTatCaLoHang: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
 
     /**
      * Tra cứu khách hàng thành viên theo số điện thoại, mã KH hoặc tên trực tiếp từ CSDL
@@ -152,7 +280,7 @@ public class BanHangController {
                 try {
                     STATIC_KH_DAO.update(kh);
                 } catch (SQLException e) {
-                    System.err.println("[BanHangController] Lỗi update KhachHang CSDL: " + e.getMessage());
+                    System.err.println("[BanHangBus] Lỗi update KhachHang CSDL: " + e.getMessage());
                 }
                 return kh;
             }
@@ -167,7 +295,7 @@ public class BanHangController {
         try {
             STATIC_KH_DAO.insert(khMoi);
         } catch (SQLException e) {
-            System.err.println("[BanHangController] Lỗi insert KhachHang CSDL: " + e.getMessage());
+            System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
         }
         // Thêm ngay vào bộ nhớ đệm RAM để đồng bộ dữ liệu tức thì
         DANH_SACH_KHACH_HANG.add(khMoi);
@@ -198,7 +326,7 @@ public class BanHangController {
                     STATIC_KH_DAO.update(kh);
                     return true;
                 } catch (SQLException e) {
-                    System.err.println("[BanHangController] Lỗi capNhatThongTinKhachHang CSDL: " + e.getMessage());
+                    System.err.println("[BanHangBus] Lỗi capNhatThongTinKhachHang CSDL: " + e.getMessage());
                     return false;
                 }
             }
@@ -228,7 +356,7 @@ public class BanHangController {
                 try {
                     STATIC_KH_DAO.update(kh);
                 } catch (SQLException e) {
-                    System.err.println("[BanHangController] Lỗi update KhachHang CSDL: " + e.getMessage());
+                    System.err.println("[BanHangBus] Lỗi update KhachHang CSDL: " + e.getMessage());
                 }
                 return kh;
             }
@@ -242,7 +370,7 @@ public class BanHangController {
         try {
             STATIC_KH_DAO.insert(khMoi);
         } catch (SQLException e) {
-            System.err.println("[BanHangController] Lỗi insert KhachHang CSDL: " + e.getMessage());
+            System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
         }
         DANH_SACH_KHACH_HANG.add(khMoi);
         return khMoi;
@@ -253,7 +381,7 @@ public class BanHangController {
         try {
             STATIC_KH_DAO.delete(maKH);
         } catch (SQLException e) {
-            System.err.println("[BanHangController] Lỗi xoaKhachHang CSDL: " + e.getMessage());
+            System.err.println("[BanHangBus] Lỗi xoaKhachHang CSDL: " + e.getMessage());
             return false;
         }
         return DANH_SACH_KHACH_HANG.removeIf(kh -> kh.getMaKhachHang().equalsIgnoreCase(maKH));
@@ -374,5 +502,75 @@ public class BanHangController {
             dongBoKhachHangTuDatabase();
         }
         return ok;
+    }
+
+    /**
+     * Tra cứu nhanh sản phẩm bán lẻ theo Mã vạch (Barcode EAN-13) hoặc Mã sản phẩm (VD: SP001).
+     */
+    public CatalogItem timSanPhamTheoMaVachHoacMaSP(String maInput) {
+        if (maInput == null || maInput.trim().isEmpty()) {
+            return null;
+        }
+        String kw = maInput.trim();
+        List<CatalogItem> catalog = layDanhSachMatHangCatalog();
+        for (CatalogItem item : catalog) {
+            if (!item.laDichVu && item.tyLe == 1) {
+                if ((item.maVach != null && item.maVach.equalsIgnoreCase(kw))
+                        || (item.ma != null && item.ma.equalsIgnoreCase(kw))) {
+                    return item;
+                }
+            }
+        }
+        for (CatalogItem item : catalog) {
+            if (!item.laDichVu) {
+                if ((item.maVach != null && item.maVach.equalsIgnoreCase(kw))
+                        || (item.ma != null && item.ma.equalsIgnoreCase(kw))) {
+                    return item;
+                }
+            }
+        }
+        String kwLower = kw.toLowerCase();
+        for (CatalogItem item : catalog) {
+            if (!item.laDichVu) {
+                if ((item.maVach != null && item.maVach.toLowerCase().contains(kwLower))
+                        || (item.ma != null && item.ma.toLowerCase().contains(kwLower))
+                        || (item.ten != null && item.ten.toLowerCase().contains(kwLower))) {
+                    return item;
+                }
+            }
+        }
+        return null;
+    }
+
+    public KhachHang timKhachHangTheoSDT(String sdt) {
+        return timKhachHang(sdt);
+    }
+
+    public static long tinhThanhTienTungDong(int soLuong, long donGia) {
+        if (soLuong <= 0 || donGia < 0) return 0L;
+        return (long) soLuong * donGia;
+    }
+
+    public static long tinhGiamGiaVIP(long tongTienHang, boolean isVIP) {
+        if (!isVIP || tongTienHang <= 0) return 0L;
+        return Math.round(tongTienHang * 0.05);
+    }
+
+    public static long tinhTienGiamTuDiem(int soDiemMuonDung, int diemHienCo, long tongTienSauVIP) {
+        if (soDiemMuonDung <= 0 || diemHienCo <= 0 || tongTienSauVIP <= 0) return 0L;
+        int diemHopLe = Math.max(0, Math.min(soDiemMuonDung, diemHienCo));
+        return Math.min(tongTienSauVIP, diemHopLe * 1000L);
+    }
+
+    public static long tinhTongThanhToan(long tongTienHang, long tienGiamVIP, long tienDoiDiem, long tienKhauTruDoiTra) {
+        return Math.max(0L, tongTienHang - tienGiamVIP - tienDoiDiem - tienKhauTruDoiTra);
+    }
+
+    public static int tinhDiemThuongMoi(long tongThanhToan) {
+        if (tongThanhToan <= 0) return 0;
+        return (int) (tongThanhToan / 100000L);
+    }
+
+    private void unusedEndMarker() {
     }
 }
