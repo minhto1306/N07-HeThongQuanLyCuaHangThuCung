@@ -101,14 +101,17 @@ public class BaoCaoThongKeDAO {
 
     public List<DoanhThuRow> getDoanhThu(LocalDateTime tu, LocalDateTime den) throws SQLException {
         String sql =
-                "WITH CT AS (" +
+                "WITH CT_Rev AS (" +
                 " SELECT ct.maHoaDon," +
                 " SUM(CASE WHEN ct.loaiChiTiet IN ('SAN_PHAM','XUAT_LO','ChiTietXuatLo') THEN CAST(ct.thanhTien AS BIGINT) ELSE 0 END) doanhThuHang," +
-                " SUM(CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN CAST(ct.thanhTien AS BIGINT) ELSE 0 END) doanhThuDV," +
-                " SUM(CASE" +
-                "   WHEN ct.loaiChiTiet IN ('SAN_PHAM','XUAT_LO','ChiTietXuatLo') THEN CAST(COALESCE(xl.soLuongXuatCoSo, ct.soLuong) AS BIGINT) * CAST(COALESCE(l.donGiaNhapCoSo,0) AS BIGINT)" +
-                "   WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN CAST(COALESCE(dv.tienHoaHong,0) AS BIGINT)" +
-                "   ELSE 0 END) giaVon" +
+                " SUM(CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN CAST(ct.thanhTien AS BIGINT) ELSE 0 END) doanhThuDV" +
+                " FROM ChiTietHoaDon ct" +
+                " GROUP BY ct.maHoaDon" +
+                ")," +
+                "CT_Cost AS (" +
+                " SELECT ct.maHoaDon," +
+                " SUM(CASE WHEN ct.loaiChiTiet IN ('SAN_PHAM','XUAT_LO','ChiTietXuatLo') THEN CAST(COALESCE(xl.soLuongXuatCoSo, ct.soLuong) AS BIGINT) * CAST(COALESCE(l.donGiaNhapCoSo,0) AS BIGINT) ELSE 0 END) giaVonHang," +
+                " SUM(CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN CAST(COALESCE(dv.tienHoaHong,0) AS BIGINT) ELSE 0 END) giaVonDV" +
                 " FROM ChiTietHoaDon ct" +
                 " LEFT JOIN ChiTietXuatLo xl ON xl.maChiTiet=ct.maChiTiet" +
                 " LEFT JOIN LoHang l ON l.soLo=xl.soLo" +
@@ -119,13 +122,15 @@ public class BaoCaoThongKeDAO {
                 " COALESCE(kh.hoTen,N'Khách vãng lai') khachHang, COALESCE(nv.hoTen,N'Không xác định') thuNgan," +
                 " CAST(COALESCE(h.thanhTien,0)+COALESCE(h.giamGia,0) AS BIGINT) tienHang," +
                 " CAST(COALESCE(h.giamGia,0) AS BIGINT) giamGia, CAST(COALESCE(h.thanhTien,0) AS BIGINT) doanhThuThuan," +
-                " CAST(COALESCE(ct.doanhThuHang,0) AS BIGINT) doanhThuHang," +
-                " CAST(COALESCE(ct.doanhThuDV,0) AS BIGINT) doanhThuDV, CAST(COALESCE(ct.giaVon,0) AS BIGINT) giaVon," +
+                " CAST(COALESCE(rev.doanhThuHang,0) AS BIGINT) doanhThuHang," +
+                " CAST(COALESCE(rev.doanhThuDV,0) AS BIGINT) doanhThuDV," +
+                " CAST(COALESCE(cost.giaVonHang,0) + COALESCE(cost.giaVonDV,0) AS BIGINT) giaVon," +
                 " COALESCE(h.phuongThucThanhToan,N'Không xác định') phuongThuc" +
                 " FROM HoaDon h" +
                 " LEFT JOIN KhachHang kh ON kh.maKhachHang=h.maKhachHang" +
                 " LEFT JOIN NhanVien nv ON nv.maNhanVien=h.maNhanVien" +
-                " LEFT JOIN CT ct ON ct.maHoaDon=h.maHoaDon" +
+                " LEFT JOIN CT_Rev rev ON rev.maHoaDon=h.maHoaDon" +
+                " LEFT JOIN CT_Cost cost ON cost.maHoaDon=h.maHoaDon" +
                 " WHERE h.trangThaiHoaDon=N'Đã thanh toán'" +
                 " AND COALESCE(h.thoiGianThanhToan,h.ngayLap)>=? AND COALESCE(h.thoiGianThanhToan,h.ngayLap)<?" +
                 " ORDER BY thoiGian DESC";
@@ -158,26 +163,21 @@ public class BaoCaoThongKeDAO {
 
     public List<TopBanChayRow> getTopBanChay(LocalDateTime tu, LocalDateTime den) throws SQLException {
         String sql =
-                "SELECT CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN dv.maDichVu ELSE l.maSanPham END ma," +
-                " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN d.tenDichVu ELSE sp.tenSanPham END ten," +
+                "SELECT COALESCE(ct.maDichVu, ct.maSanPham) ma," +
+                " COALESCE(d.tenDichVu, sp.tenSanPham, N'Sản phẩm') ten," +
                 " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN N'Dịch vụ' ELSE N'Hàng hóa' END phanNhom," +
-                " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN N'Lượt' ELSE COALESCE(dvt.tenDonVi,N'Đơn vị') END donViTinh," +
+                " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN N'Lượt' ELSE COALESCE(sp.donViCoSo, N'Đơn vị') END donViTinh," +
                 " SUM(ct.soLuong) soLuong, SUM(CAST(ct.thanhTien AS BIGINT)) doanhThu" +
                 " FROM ChiTietHoaDon ct" +
                 " JOIN HoaDon h ON h.maHoaDon=ct.maHoaDon" +
-                " LEFT JOIN ChiTietXuatLo xl ON xl.maChiTiet=ct.maChiTiet" +
-                " LEFT JOIN LoHang l ON l.soLo=xl.soLo" +
-                " LEFT JOIN SanPham sp ON sp.maSanPham=l.maSanPham" +
-                " LEFT JOIN QuyDoiDonVi qd ON qd.maQuyDoi=xl.maQuyDoi" +
-                " LEFT JOIN DonViTinh dvt ON dvt.maDonVi=qd.maDonVi" +
-                " LEFT JOIN ChiTietDichVu dv ON dv.maChiTiet=ct.maChiTiet" +
-                " LEFT JOIN DichVu d ON d.maDichVu=dv.maDichVu" +
+                " LEFT JOIN SanPham sp ON sp.maSanPham=ct.maSanPham" +
+                " LEFT JOIN DichVu d ON d.maDichVu=ct.maDichVu" +
                 " WHERE h.trangThaiHoaDon=N'Đã thanh toán'" +
                 " AND COALESCE(h.thoiGianThanhToan,h.ngayLap)>=? AND COALESCE(h.thoiGianThanhToan,h.ngayLap)<?" +
-                " GROUP BY CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN dv.maDichVu ELSE l.maSanPham END," +
-                " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN d.tenDichVu ELSE sp.tenSanPham END," +
+                " GROUP BY COALESCE(ct.maDichVu, ct.maSanPham)," +
+                " COALESCE(d.tenDichVu, sp.tenSanPham, N'Sản phẩm')," +
                 " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN N'Dịch vụ' ELSE N'Hàng hóa' END," +
-                " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN N'Lượt' ELSE COALESCE(dvt.tenDonVi,N'Đơn vị') END" +
+                " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN N'Lượt' ELSE COALESCE(sp.donViCoSo, N'Đơn vị') END" +
                 " ORDER BY doanhThu DESC, soLuong DESC";
         List<TopBanChayRow> rows = new ArrayList<>();
         try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
@@ -279,10 +279,23 @@ public class BaoCaoThongKeDAO {
     }
 
     public DoiTraSummary getDoiTraSummary(LocalDateTime tu, LocalDateTime den) throws SQLException {
-        String sql = "SELECT COUNT(DISTINCT p.maPhieuDoiTra) soPhieu,COALESCE(SUM(ct.soLuongDoiTra),0) soLuong," +
-                " COALESCE(SUM(CAST(ct.tienHoanLai AS BIGINT)),0) tongHoan" +
-                " FROM PhieuDoiTra p LEFT JOIN ChiTietDoiTra ct ON ct.maPhieuDoiTra=p.maPhieuDoiTra" +
-                " WHERE p.ngayDoiTra>=? AND p.ngayDoiTra<?";
+        String sql =
+                "WITH P AS (" +
+                " SELECT p.maPhieuDoiTra, p.tongTienHoan" +
+                " FROM PhieuDoiTra p" +
+                " WHERE p.ngayDoiTra>=? AND p.ngayDoiTra<?" +
+                ")," +
+                "CT AS (" +
+                " SELECT ct.maPhieuDoiTra, SUM(ct.soLuongDoiTra) soLuong" +
+                " FROM ChiTietDoiTra ct" +
+                " WHERE ct.maPhieuDoiTra IN (SELECT maPhieuDoiTra FROM P)" +
+                " GROUP BY ct.maPhieuDoiTra" +
+                ")" +
+                " SELECT COUNT(p.maPhieuDoiTra) soPhieu," +
+                " COALESCE(SUM(ct.soLuong),0) soLuong," +
+                " COALESCE(SUM(CAST(p.tongTienHoan AS BIGINT)),0) tongHoan" +
+                " FROM P p" +
+                " LEFT JOIN CT ct ON ct.maPhieuDoiTra=p.maPhieuDoiTra";
         DoiTraSummary r = new DoiTraSummary();
         try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             setRange(ps, tu, den);

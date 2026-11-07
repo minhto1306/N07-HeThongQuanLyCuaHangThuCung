@@ -153,7 +153,7 @@ public class DatLichHenDialog extends JDialog {
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.35;
         form.add(new JLabel("Họ tên khách:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
-        txtKhachHang = new JTextField("Nguyễn Văn An");
+        txtKhachHang = new JTextField();
         txtKhachHang.setBorder(ThemeColors.createInputBorder());
         txtKhachHang.setPreferredSize(new Dimension(0, 30));
         form.add(txtKhachHang, gbc);
@@ -634,7 +634,22 @@ public class DatLichHenDialog extends JDialog {
         String maDv = dvStr.substring(0, 5);
         String tenDv = dvStr.substring(8, dvStr.indexOf("(")).trim();
         int thoiLuong = layThoiLuongDichVuHienTai();
-        DichVu dv = new DichVu(maDv, tenDv, new BigDecimal("200000"), thoiLuong);
+        BigDecimal giaDv = new BigDecimal("150000");
+        try {
+            entity.DichVu dvDb = new dao.DichVuDAO().getDichVuById(maDv);
+            if (dvDb != null && dvDb.getGiaDichVu() != null) {
+                giaDv = dvDb.getGiaDichVu();
+            } else if (dvStr.contains("(") && dvStr.contains("đ")) {
+                String pricePart = dvStr.substring(dvStr.indexOf("(") + 1, dvStr.indexOf("đ")).replaceAll("[^0-9]", "").trim();
+                if (!pricePart.isEmpty()) giaDv = new BigDecimal(pricePart);
+            }
+        } catch (Exception e) {
+            if (dvStr.contains("(") && dvStr.contains("đ")) {
+                String pricePart = dvStr.substring(dvStr.indexOf("(") + 1, dvStr.indexOf("đ")).replaceAll("[^0-9]", "").trim();
+                if (!pricePart.isEmpty()) giaDv = new BigDecimal(pricePart);
+            }
+        }
+        DichVu dv = new DichVu(maDv, tenDv, giaDv, thoiLuong);
 
         // Giờ hẹn kết hợp
         String[] timeParts = selectedTimeSlot.split(":");
@@ -682,10 +697,10 @@ public class DatLichHenDialog extends JDialog {
                     if (khDb != null && khDb.getEmail() != null && !khDb.getEmail().isEmpty()) {
                         emailChu = khDb.getEmail();
                     } else {
-                        emailChu = "khachhang.an@gmail.com";
+                        emailChu = "";
                     }
                 } catch (Exception ignored) {
-                    emailChu = "khachhang.an@gmail.com";
+                    emailChu = "";
                 }
                 String html = utils.EmailThongBaoHelper.taoEmailXacNhanLichHen(
                         hoTen, sdt, maLH, tenDv, tenTc, tenKtv,

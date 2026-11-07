@@ -273,8 +273,16 @@ public class PhanCaBus {
     public boolean xoaPhanCong(String maPC) {
         BangPhanCong pc = timPhanCongTheoMa(maPC);
         if (pc != null) {
-            try { phanCaDAO.deletePhanCong(maPC); } catch (Exception ignored) {}
-            return danhSachPhanCong.remove(pc);
+            try {
+                boolean ok = phanCaDAO.deletePhanCong(maPC);
+                if (ok) {
+                    return danhSachPhanCong.remove(pc);
+                }
+                return false;
+            } catch (Exception e) {
+                System.err.println("[PhanCaBus] Lỗi xóa phân công: " + e.getMessage());
+                return false;
+            }
         }
         return false;
     }
@@ -307,9 +315,17 @@ public class PhanCaBus {
     public boolean capNhatGhiChuPhanCong(String maPC, String ghiChu) {
         BangPhanCong pc = timPhanCongTheoMa(maPC);
         if (pc != null) {
-            pc.setGhiChu(ghiChu != null ? ghiChu : "");
-            try { phanCaDAO.updateGhiChu(maPC, pc.getGhiChu()); } catch (Exception ignored) {}
-            return true;
+            String noteMoi = ghiChu != null ? ghiChu : "";
+            try {
+                if (phanCaDAO.updateGhiChu(maPC, noteMoi)) {
+                    pc.setGhiChu(noteMoi);
+                    return true;
+                }
+                return false;
+            } catch (Exception e) {
+                System.err.println("[PhanCaBus] Lỗi cập nhật ghi chú phân công: " + e.getMessage());
+                return false;
+            }
         }
         return false;
     }

@@ -57,16 +57,20 @@ public class DBConnection {
 
     // hàm tạo chuỗi kết nối
     private static String buildUrl(boolean usePort) {
+        return buildUrl(usePort, password);
+    }
+
+    private static String buildUrl(boolean usePort, String pass) {
         if (usePort && port != null && !port.isEmpty()) {
             // kết nối qua port 1433
             return String.format(
                     "jdbc:sqlserver://%s:%s;databaseName=%s;user=%s;password=%s;encrypt=true;trustServerCertificate=true;loginTimeout=%d;",
-                    host, port, databaseName, user, password, loginTimeout);
+                    host, port, databaseName, user, pass, loginTimeout);
         } else {
             // kết nối qua sqlexpress
             return String.format(
                     "jdbc:sqlserver://%s;instanceName=%s;databaseName=%s;user=%s;password=%s;encrypt=true;trustServerCertificate=true;loginTimeout=%d;",
-                    host, instance, databaseName, user, password, loginTimeout);
+                    host, instance, databaseName, user, pass, loginTimeout);
         }
     }
 
@@ -87,13 +91,12 @@ public class DBConnection {
                 : new String[]{"sapassword", "123456", "sa"};
 
         for (String p : passCandidates) {
-            String oldPass = password;
-            password = p;
             // 1. Thử qua port 1433
             try {
-                String url1 = buildUrl(true);
+                String url1 = buildUrl(true, p);
                 Connection conn = DriverManager.getConnection(url1);
                 dbAvailable = true;
+                password = p;
                 return conn;
             } catch (SQLException e1) {
                 lastEx = e1;
@@ -101,14 +104,14 @@ public class DBConnection {
 
             // 2. Thử qua instance SQLEXPRESS
             try {
-                String url2 = buildUrl(false);
+                String url2 = buildUrl(false, p);
                 Connection conn = DriverManager.getConnection(url2);
                 dbAvailable = true;
+                password = p;
                 return conn;
             } catch (SQLException e2) {
                 lastEx = e2;
             }
-            password = oldPass;
         }
 
         dbAvailable = false;

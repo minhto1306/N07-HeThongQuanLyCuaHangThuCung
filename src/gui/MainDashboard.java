@@ -241,7 +241,7 @@ public class MainDashboard extends JFrame {
         mnuBaoBieu.add(taoMenuItem("4. Phân tích Khách hàng VIP & Tích điểm", IconHelper.SPARKLES, null, UserSession.canAccessNhom5TimKiemKhachVIP(), e -> {
             BaoCaoThongKeDialog.moHopThoaiBaoCao(this, 3);
         }));
-        mnuBaoBieu.add(taoMenuItem("5. Thống kê Lưu trú Pet Hotel & Đổi trả hàng", IconHelper.HOME, null, UserSession.canAccess(CARD_PET_HOTEL), e -> {
+        mnuBaoBieu.add(taoMenuItem("5. Thống kê Lưu trú Pet Hotel & Đổi trả hàng", IconHelper.HOME, null, UserSession.isQuanLy(), e -> {
             BaoCaoThongKeDialog.moHopThoaiBaoCao(this, 4);
         }));
         mnuBaoBieu.addSeparator();

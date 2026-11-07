@@ -478,14 +478,21 @@ public class BanGiaoCaPanel extends JPanel {
 
             try {
                 BangGiaoCa caBanGiaoGanNhat = giaoCaBus.layCaBanGiaoGanNhat();
-                if (caBanGiaoGanNhat != null) {
+                LocalDateTime mocBatDauCa;
+                if (caBanGiaoGanNhat != null && caBanGiaoGanNhat.getGioKetThucThucTe() != null) {
                     tienDauCa = caBanGiaoGanNhat.getTienCuoiCaThucTe() != null
                             ? caBanGiaoGanNhat.getTienCuoiCaThucTe().longValue()
                             : TIEN_DAU_CA_KHI_CHUA_CO_BAN_GIAO;
+                    // B06: Dùng mốc kết thúc của ca trước nếu cùng ngày để đảm bảo liền mạch không trùng lặp
+                    if (caBanGiaoGanNhat.getGioKetThucThucTe().toLocalDate().isEqual(LocalDate.now())) {
+                        mocBatDauCa = caBanGiaoGanNhat.getGioKetThucThucTe();
+                    } else {
+                        mocBatDauCa = layMocBatDauCaDangChon();
+                    }
                 } else {
                     tienDauCa = TIEN_DAU_CA_KHI_CHUA_CO_BAN_GIAO;
+                    mocBatDauCa = layMocBatDauCaDangChon();
                 }
-                LocalDateTime mocBatDauCa = layMocBatDauCaDangChon();
                 LocalDateTime now = LocalDateTime.now();
                 String maNV = UserSession.getUserId();
                 tienHeThongGhiNhan = giaoCaBus.tinhDoanhThuTrongCa(mocBatDauCa, now, maNV, true);
@@ -526,7 +533,7 @@ public class BanGiaoCaPanel extends JPanel {
     }
 
     private long tinhTongLyThuyetHienTai() {
-        return Math.max(0L, tienDauCa + tienHeThongGhiNhan - tienHoanTraKhach);
+        return (tienDauCa + tienHeThongGhiNhan - tienHoanTraKhach);
     }
 
     private LocalDateTime layMocBatDauCaDangChon() {

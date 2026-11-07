@@ -360,9 +360,9 @@ public class TongQuanPanel extends JPanel {
                 tongDT += r.doanhThuThuan;
                 tongGV += r.giaVon;
             }
-            loiNhuan = tongDT > 0 ? (tongDT - tongGV) : Math.round(doanhThuHomNay * 0.42);
+            loiNhuan = (tongDT - tongGV);
         } catch (Exception ignored) {
-            loiNhuan = Math.round(doanhThuHomNay * 0.42);
+            loiNhuan = 0L;
         }
         if (lblStratLoiNhuan != null) lblStratLoiNhuan.setText(dfMoney.format(loiNhuan));
         if (lblStratHangHoa != null) lblStratHangHoa.setText(dfMoney.format(dtHangHoa));
@@ -454,14 +454,30 @@ public class TongQuanPanel extends JPanel {
 
         if (modelAnalytROP != null) {
             modelAnalytROP.setRowCount(0);
+            Map<String, Object[]> spMap = new LinkedHashMap<>();
             for (KhoLoHangPanel.LoHangRecord lo : dsLo) {
-                String danhGia = lo.soLuongTon <= 10 ? "Cần nhập gấp" : (lo.soLuongTon <= 20 ? "Chạm ngưỡng ROP" : "An toàn");
+                if (lo.maSP == null || lo.maSP.trim().isEmpty()) continue;
+                if (!spMap.containsKey(lo.maSP)) {
+                    spMap.put(lo.maSP, new Object[]{lo.maSP, lo.tenSP, lo.soLuongTon, lo.donVi});
+                } else {
+                    Object[] cur = spMap.get(lo.maSP);
+                    cur[2] = (int) cur[2] + lo.soLuongTon;
+                }
+            }
+            for (Object[] r : spMap.values()) {
+                String maSP = (String) r[0];
+                String tenSP = (String) r[1];
+                int tongTon = (int) r[2];
+                String donVi = (String) r[3];
+                int ropDiem = 20;
+                String danhGia = tongTon <= 10 ? "Cần nhập gấp" : (tongTon <= ropDiem ? "Chạm ngưỡng ROP" : "An toàn");
+                String deXuat = tongTon < ropDiem ? ("+" + (ropDiem - tongTon)) : "0 (Đủ tồn)";
                 modelAnalytROP.addRow(new Object[]{
-                        lo.maSP,
-                        lo.tenSP,
-                        lo.soLuongTon + " " + lo.donVi,
-                        "20 " + lo.donVi,
-                        (lo.soLuongTon < 20 ? "+" + (20 - lo.soLuongTon) : "0 (Đủ tồn)"),
+                        maSP,
+                        tenSP,
+                        tongTon + " " + donVi,
+                        ropDiem + " " + donVi,
+                        deXuat,
                         danhGia
                 });
             }

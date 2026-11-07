@@ -130,7 +130,7 @@ public class BanHangPOSPanel extends JPanel {
                         for (entity.ChiTietHoaDon ct : hdDb.getDsChiTiet()) {
                             long dg = ct.getDonGiaLucBan() != null ? ct.getDonGiaLucBan().longValue() : 0L;
                             int sl = ct.getSoLuong();
-                            long tt = dg * sl;
+                            long tt = ct.getThanhTien() != null ? ct.getThanhTien().longValue() : (dg * sl);
                             if (ct instanceof entity.ChiTietXuatLo) {
                                 entity.ChiTietXuatLo ctx = (entity.ChiTietXuatLo) ct;
                                 String maSP = (ctx.getLoHang() != null && ctx.getLoHang().getSanPham() != null)
@@ -196,11 +196,19 @@ public class BanHangPOSPanel extends JPanel {
         return false;
     }
 
+    public static boolean laHoaDonHopLe(HoaDonDaThanhToan hd) {
+        if (hd == null) return false;
+        if (hd.trangThai != null && (hd.trangThai.toLowerCase().contains("hủy") || hd.trangThai.toLowerCase().contains("huy"))) {
+            return false;
+        }
+        return true;
+    }
+
     public static long tinhTongDoanhThuHomNay() {
         dongBoLichSuHoaDonNeuCan();
         long sum = 0;
         for (HoaDonDaThanhToan hd : dsLichSuHoaDon) {
-            if (!laHoaDonHomNay(hd)) continue;
+            if (!laHoaDonHomNay(hd) || !laHoaDonHopLe(hd)) continue;
             sum += hd.tongThanhToan;
         }
         return sum;
@@ -210,7 +218,7 @@ public class BanHangPOSPanel extends JPanel {
         dongBoLichSuHoaDonNeuCan();
         int count = 0;
         for (HoaDonDaThanhToan hd : dsLichSuHoaDon) {
-            if (laHoaDonHomNay(hd)) count++;
+            if (laHoaDonHomNay(hd) && laHoaDonHopLe(hd)) count++;
         }
         return count;
     }
@@ -219,7 +227,7 @@ public class BanHangPOSPanel extends JPanel {
         dongBoLichSuHoaDonNeuCan();
         int count = 0;
         for (HoaDonDaThanhToan hd : dsLichSuHoaDon) {
-            if (!laHoaDonHomNay(hd)) continue;
+            if (!laHoaDonHomNay(hd) || !laHoaDonHopLe(hd)) continue;
             if (coSanPhamBanLe(hd)) count++;
         }
         return count;
@@ -229,7 +237,7 @@ public class BanHangPOSPanel extends JPanel {
         dongBoLichSuHoaDonNeuCan();
         int count = 0;
         for (HoaDonDaThanhToan hd : dsLichSuHoaDon) {
-            if (!laHoaDonHomNay(hd)) continue;
+            if (!laHoaDonHomNay(hd) || !laHoaDonHopLe(hd)) continue;
             if (coDichVuSpa(hd)) count++;
         }
         return count;
@@ -245,7 +253,7 @@ public class BanHangPOSPanel extends JPanel {
         dongBoLichSuHoaDonNeuCan();
         long sum = 0;
         for (HoaDonDaThanhToan hd : dsLichSuHoaDon) {
-            if (!laHoaDonHomNay(hd)) continue;
+            if (!laHoaDonHomNay(hd) || !laHoaDonHopLe(hd)) continue;
             for (Object[] mon : hd.dsMon) {
                 String ma = mon.length > 1 && mon[1] != null ? mon[1].toString() : "";
                 if (ma.startsWith("DV") && mon.length > 6) {
@@ -260,10 +268,10 @@ public class BanHangPOSPanel extends JPanel {
         dongBoLichSuHoaDonNeuCan();
         long sum = 0;
         for (HoaDonDaThanhToan hd : dsLichSuHoaDon) {
-            if (!laHoaDonHomNay(hd)) continue;
+            if (!laHoaDonHomNay(hd) || !laHoaDonHopLe(hd)) continue;
             for (Object[] mon : hd.dsMon) {
                 String ma = mon.length > 1 && mon[1] != null ? mon[1].toString() : "";
-                if (ma.startsWith("SP") && !ma.equalsIgnoreCase("SP004") && !ma.equalsIgnoreCase("SP006") && mon.length > 6) {
+                if (ma.startsWith("SP") && mon.length > 6) {
                     sum += parseTienMon(mon[6]);
                 }
             }
@@ -275,10 +283,10 @@ public class BanHangPOSPanel extends JPanel {
         dongBoLichSuHoaDonNeuCan();
         long sum = 0;
         for (HoaDonDaThanhToan hd : dsLichSuHoaDon) {
-            if (!laHoaDonHomNay(hd)) continue;
+            if (!laHoaDonHomNay(hd) || !laHoaDonHopLe(hd)) continue;
             for (Object[] mon : hd.dsMon) {
                 String ma = mon.length > 1 && mon[1] != null ? mon[1].toString() : "";
-                if ((ma.equalsIgnoreCase("SP004") || ma.equalsIgnoreCase("SP006") || (!ma.startsWith("SP") && !ma.startsWith("DV"))) && mon.length > 6) {
+                if (!ma.startsWith("SP") && !ma.startsWith("DV") && mon.length > 6) {
                     sum += parseTienMon(mon[6]);
                 }
             }
@@ -613,7 +621,17 @@ public class BanHangPOSPanel extends JPanel {
 
     private void capNhatTienDoiDiemTuSpinner() {
         if (spnDiemDung == null) return;
+        try {
+            spnDiemDung.commitEdit();
+        } catch (Exception ignored) {}
         int soDiemChon = ((Number) spnDiemDung.getValue()).intValue();
+        if (soDiemChon < 0) {
+            soDiemChon = 0;
+            spnDiemDung.setValue(0);
+        } else if (diemHienCo > 0 && soDiemChon > diemHienCo) {
+            soDiemChon = diemHienCo;
+            spnDiemDung.setValue(diemHienCo);
+        }
         tienDoiDiem = soDiemChon * 1000L;
         if (lblTienDoiDiemInfo != null) {
             lblTienDoiDiemInfo.setText("(-" + df.format(tienDoiDiem) + ")");
@@ -2081,9 +2099,14 @@ public class BanHangPOSPanel extends JPanel {
         String tenDangNhap = txtTenKhachHang.getText().trim();
         KhachHang khHienTai = controller.timKhachHang(sdtDangNhap);
 
+        boolean isManager = utils.UserSession.isQuanLy();
         JTextField txtSdt = new JTextField(khHienTai != null ? khHienTai.getSoDienThoai() : sdtDangNhap);
         JTextField txtHoTen = new JTextField(khHienTai != null ? khHienTai.getHoTen() : tenDangNhap);
         JTextField txtDiem = new JTextField(khHienTai != null ? String.valueOf(khHienTai.getDiemTichLuy()) : "0");
+        txtDiem.setEditable(isManager);
+        if (!isManager) {
+            txtDiem.setToolTipText("Chỉ Quản lý mới có quyền điều chỉnh điểm thủ công");
+        }
 
         String trangThaiKH = khHienTai != null
                 ? ("KHÁCH CŨ [" + khHienTai.getMaKhachHang() + "] - Hạng: " + BanHangBus.xepHangThanhVien(khHienTai.getDiemTichLuy()))
@@ -2097,7 +2120,7 @@ public class BanHangPOSPanel extends JPanel {
                 "Phân loại: " + trangThaiKH,
                 "Số điện thoại (10 chữ số) (*):", txtSdt,
                 "Họ và tên khách hàng (*):", txtHoTen,
-                "Điểm tích lũy hiện có:", txtDiem
+                "Điểm tích lũy hiện có" + (isManager ? ":" : " (Chỉ xem - Quyền Quản lý mới được sửa):"), txtDiem
         };
 
         int choice = JOptionPane.showOptionDialog(this, msg,
@@ -2112,29 +2135,39 @@ public class BanHangPOSPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ Số điện thoại và Họ tên khách hàng!", "Nhắc nhở", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            int diemMoi = 0;
-            try {
-                diemMoi = Math.max(0, Integer.parseInt(txtDiem.getText().trim()));
-            } catch (NumberFormatException ignored) {
+            int diemMoi = khHienTai != null ? khHienTai.getDiemTichLuy() : 0;
+            if (isManager) {
+                try {
+                    diemMoi = Math.max(0, Integer.parseInt(txtDiem.getText().trim()));
+                } catch (NumberFormatException ignored) {}
             }
+            boolean ok = false;
             if (khHienTai != null) {
-                BanHangBus.capNhatThongTinKhachHang(khHienTai.getMaKhachHang(), tenMoi, sdtMoi, diemMoi);
+                ok = BanHangBus.capNhatThongTinKhachHang(khHienTai.getMaKhachHang(), tenMoi, sdtMoi, diemMoi);
             } else {
-                BanHangBus.luuHoacCapNhatKhachHang(sdtMoi, tenMoi, diemMoi);
+                ok = (BanHangBus.luuHoacCapNhatKhachHang(sdtMoi, tenMoi, diemMoi) != null);
             }
-            txtSdtKhachHang.setText(sdtMoi);
-            traCuuKhachHang();
-            JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ khách hàng [" + tenMoi + " - " + sdtMoi + "] thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            if (ok) {
+                txtSdtKhachHang.setText(sdtMoi);
+                traCuuKhachHang();
+                JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ khách hàng [" + tenMoi + " - " + sdtMoi + "] thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Lỗi: Không thể lưu hồ sơ khách hàng xuống CSDL. Vui lòng kiểm tra lại thông tin hoặc kết nối CSDL!", "Lỗi lưu dữ liệu", JOptionPane.ERROR_MESSAGE);
+            }
         } else if (khHienTai != null && choice == 1) {
             int cf = JOptionPane.showConfirmDialog(this,
                     "Bạn có chắc chắn muốn xóa khách hàng [" + khHienTai.getHoTen() + " - " + khHienTai.getSoDienThoai() + "]?",
                     "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
             if (cf == JOptionPane.YES_OPTION) {
-                BanHangBus.xoaKhachHang(khHienTai.getMaKhachHang());
-                txtSdtKhachHang.setText("");
-                txtTenKhachHang.setText("");
-                traCuuKhachHang();
-                JOptionPane.showMessageDialog(this, "Đã xóa thông tin khách hàng khỏi hệ thống.", "Đã xóa", JOptionPane.INFORMATION_MESSAGE);
+                boolean xoaOk = BanHangBus.xoaKhachHang(khHienTai.getMaKhachHang());
+                if (xoaOk) {
+                    txtSdtKhachHang.setText("");
+                    txtTenKhachHang.setText("");
+                    traCuuKhachHang();
+                    JOptionPane.showMessageDialog(this, "Đã xóa thông tin khách hàng khỏi hệ thống.", "Đã xóa", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Không thể xóa khách hàng này do đã phát sinh hóa đơn/giao dịch trong hệ thống (Ràng buộc toàn vẹn)!", "Không thể xóa", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }
@@ -2486,15 +2519,22 @@ public class BanHangPOSPanel extends JPanel {
         }
 
         dsDonTam.add(0, don);
-        luuDsDonTamXuongDisk();
+        boolean diskOk = luuDsDonTamXuongDisk();
         capNhatGiaoDienDonCho();
 
-        JOptionPane.showMessageDialog(this,
-                "ĐÃ LƯU TẠM ĐƠN HÀNG [" + don.maHoaDon + "] THÀNH CÔNG!\n" +
-                        "• Khách: " + don.tenKhach + "\n" +
-                        "• Món: " + don.dsMon.size() + " món · " + df.format(don.khachCanTra) + "\n\n" +
-                        "Đơn đã được chuyển vào Tab 'Hóa đơn chờ phục vụ' để bạn phục vụ khách tiếp theo.",
-                "Lưu tạm thành công", JOptionPane.INFORMATION_MESSAGE);
+        if (diskOk) {
+            JOptionPane.showMessageDialog(this,
+                    "ĐÃ LƯU TẠM ĐƠN HÀNG [" + don.maHoaDon + "] THÀNH CÔNG!\n" +
+                            "• Khách: " + don.tenKhach + "\n" +
+                            "• Món: " + don.dsMon.size() + " món · " + df.format(don.khachCanTra) + "\n\n" +
+                            "Đơn đã được chuyển vào Tab 'Hóa đơn chờ phục vụ' để bạn phục vụ khách tiếp theo.",
+                    "Lưu tạm thành công", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Đơn hàng [" + don.maHoaDon + "] đã được lưu tạm trên RAM nhưng không thể ghi xuống file config/pos_don_tam.dat!\n" +
+                            "Vui lòng lưu ý không tắt ứng dụng trước khi xử lý xong đơn này.",
+                    "Cảnh báo lưu tạm", JOptionPane.WARNING_MESSAGE);
+        }
 
         lamSachKhungHoaDon();
     }
@@ -2555,18 +2595,37 @@ public class BanHangPOSPanel extends JPanel {
         }
         traCuuKhachHang();
 
-        String maDV = "DV001";
-        long giaDV = 150000L;
+        String maDV = null;
+        long giaDV = 0L;
         String dvt = "45 phút";
         for (CatalogItem it : allItems) {
             if (it.loai.toLowerCase().contains("dịch vụ") || it.loai.toLowerCase().contains("spa") || it.loai.toLowerCase().contains("grooming")) {
-                if (it.ten.equalsIgnoreCase(tenDichVu) || tenDichVu.contains(it.ten) || it.ten.contains(tenDichVu)) {
+                if (it.ten.equalsIgnoreCase(tenDichVu) || tenDichVu.contains(it.ten) || it.ten.contains(tenDichVu) || (it.ma != null && it.ma.equalsIgnoreCase(tenDichVu))) {
                     maDV = it.ma;
                     giaDV = it.donGia;
                     dvt = it.dvt;
                     break;
                 }
             }
+        }
+        if (maDV == null) {
+            try {
+                dao.DichVuDAO dvDao = new dao.DichVuDAO();
+                for (entity.DichVu dv : dvDao.getAllDichVu()) {
+                    if (dv.getTenDichVu().equalsIgnoreCase(tenDichVu) || dv.getMaDichVu().equalsIgnoreCase(tenDichVu)
+                            || tenDichVu.contains(dv.getTenDichVu()) || dv.getTenDichVu().contains(tenDichVu)) {
+                        maDV = dv.getMaDichVu();
+                        giaDV = dv.getGiaDichVu() != null ? dv.getGiaDichVu().longValue() : 0L;
+                        dvt = dv.getThoiLuongPhut() > 0 ? (dv.getThoiLuongPhut() + " phút") : "45 phút";
+                        break;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        if (maDV == null) {
+            maDV = "DV001";
+            giaDV = 300000L;
+            dvt = "90 phút";
         }
 
         int stt = modelGioHang.getRowCount() + 1;
@@ -2770,7 +2829,12 @@ public class BanHangPOSPanel extends JPanel {
         String nowStr = LocalDateTime.now().format(dtf);
 
         // Tính điểm đã dùng, điểm thưởng mới và khấu trừ điểm trả hàng (Chuẩn hệ thống: 100.000 đ = 1 điểm)
+        try {
+            if (spnDiemDung != null) spnDiemDung.commitEdit();
+        } catch (Exception ignored) {}
         int diemDaDung = (spnDiemDung != null && diemHienCo > 0) ? ((Number) spnDiemDung.getValue()).intValue() : 0;
+        if (diemDaDung < 0) diemDaDung = 0;
+        if (diemDaDung > diemHienCo) diemDaDung = diemHienCo;
         int diemThuongMoi = (int) (canTra / 100000L);
         int diemKhauTruDT = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getDiemKhauTru() : 0;
         int tongDiemMoi = Math.max(0, diemHienCo - diemDaDung - diemKhauTruDT) + diemThuongMoi;
@@ -2853,6 +2917,9 @@ public class BanHangPOSPanel extends JPanel {
                             if (candidate.getSanPham() != null
                                     && candidate.getSanPham().getMaSanPham().equalsIgnoreCase(ma)
                                     && candidate.getSoLuongTon() > 0) {
+                                if (candidate.getHanSuDung() != null && candidate.getHanSuDung().isBefore(java.time.LocalDate.now())) {
+                                    continue; // Bỏ qua lô đã hết hạn sử dụng theo chuẩn FEFO an toàn
+                                }
                                 int take = Math.min(remainingCoSo, candidate.getSoLuongTon());
                                 candidate.setSoLuongTon(candidate.getSoLuongTon() - take);
 
@@ -2860,8 +2927,24 @@ public class BanHangPOSPanel extends JPanel {
                                 java.math.BigDecimal ctTotal = (take == soLuongCoSoCanXuat) ? itemTotal
                                         : itemTotal.multiply(java.math.BigDecimal.valueOf(take)).divide(java.math.BigDecimal.valueOf(soLuongCoSoCanXuat), 0, java.math.RoundingMode.HALF_UP);
 
+                                int slXuat;
+                                java.math.BigDecimal donGiaXuat = dg;
+                                entity.QuyDoiDonVi qdXuat = qd;
+                                if (take == soLuongCoSoCanXuat) {
+                                    slXuat = sl;
+                                } else if (tyLe > 1 && take % tyLe == 0) {
+                                    slXuat = take / tyLe;
+                                } else if (tyLe > 1) {
+                                    // Bán lẻ theo đơn vị cơ sở vì lô chia không tròn quy cách hộp/thùng
+                                    slXuat = take;
+                                    donGiaXuat = dg.divide(java.math.BigDecimal.valueOf(tyLe), 0, java.math.RoundingMode.HALF_UP);
+                                    qdXuat = null;
+                                } else {
+                                    slXuat = take;
+                                }
+
                                 entity.ChiTietXuatLo ct = new entity.ChiTietXuatLo(
-                                        maHD + "_CT" + (ctSeq++), hdReal, (take == soLuongCoSoCanXuat ? sl : take), dg, candidate, qd
+                                        maHD + "_CT" + (ctSeq++), hdReal, slXuat, donGiaXuat, candidate, qdXuat
                                 );
                                 ct.setSoLuongXuatCoSo(take);
                                 ct.setThanhTien(ctTotal);
@@ -2883,12 +2966,38 @@ public class BanHangPOSPanel extends JPanel {
                     if (actualMaDv.startsWith("DV-HOTEL-")) {
                         actualMaDv = "DV008"; // Ánh xạ mã dịch vụ Pet Hotel vào mã chuẩn CSDL
                     } else if (actualMaDv.equals("DV_SPAPASS") || actualMaDv.startsWith("GOI_SPA")) {
-                        actualMaDv = "DV001"; // Ánh xạ thành mã dịch vụ chuẩn có sẵn trong CSDL (VD: DV001)
+                        actualMaDv = "DV004"; // Ánh xạ sang mã dịch vụ Tắm Sấy Chuẩn (DV004) thay vì DV001 Cắt tỉa
                     }
                     entity.DichVu dv = new entity.DichVu();
                     dv.setMaDichVu(actualMaDv);
+
+                    // Trích xuất KTV thực hiện dịch vụ từ dòng giỏ hàng (chống ghi nhận thu ngân thành KTV)
+                    entity.NhanVien ktvThucHien = nv;
+                    String tenDong = String.valueOf(modelGioHang.getValueAt(i, 2));
+                    try {
+                        List<entity.NhanVien> dsAllNV = new bus.NhanVienBus().layDanhSachNhanVien();
+                        for (entity.NhanVien n : dsAllNV) {
+                            if (tenDong.contains(n.getHoTen()) || tenDong.contains(n.getMaNhanVien())) {
+                                ktvThucHien = n;
+                                break;
+                            }
+                        }
+                        if (ktvThucHien == nv) {
+                            // Nếu vẫn là thu ngân quầy, tìm nhân viên chuyên viên Spa (NVCS/KTV) để phân bổ
+                            for (entity.NhanVien n : dsAllNV) {
+                                if (n.getChucVu() != null && (n.getChucVu().contains("Spa") || n.getChucVu().contains("KTV") || n.getChucVu().contains("Chăm sóc"))) {
+                                    ktvThucHien = n;
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {}
+
+                    java.math.BigDecimal hoaHong = dg.multiply(java.math.BigDecimal.valueOf(sl))
+                            .multiply(new java.math.BigDecimal("0.10")).setScale(0, java.math.RoundingMode.HALF_UP);
+
                     entity.ChiTietDichVu ct = new entity.ChiTietDichVu(
-                            maHD + "_CT" + (ctSeq++), hdReal, sl, dg, dv, null, nv, java.math.BigDecimal.ZERO
+                            maHD + "_CT" + (ctSeq++), hdReal, sl, dg, dv, null, ktvThucHien, hoaHong
                     );
                     hdReal.addChiTiet(ct);
                 }
@@ -3380,15 +3489,17 @@ public class BanHangPOSPanel extends JPanel {
         return pnl;
     }
 
-    private void luuDsDonTamXuongDisk() {
+    private boolean luuDsDonTamXuongDisk() {
         try {
             java.io.File file = new java.io.File("config/pos_don_tam.dat");
-            if (!file.getParentFile().exists()) file.getParentFile().mkdirs();
+            if (file.getParentFile() != null && !file.getParentFile().exists()) file.getParentFile().mkdirs();
             try (java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(new java.io.FileOutputStream(file))) {
                 oos.writeObject(new ArrayList<>(dsDonTam));
             }
+            return true;
         } catch (Exception e) {
             System.err.println("[BanHangPOSPanel] Lỗi lưu đơn tạm disk: " + e.getMessage());
+            return false;
         }
     }
 

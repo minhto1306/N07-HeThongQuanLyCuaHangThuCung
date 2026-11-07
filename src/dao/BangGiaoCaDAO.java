@@ -154,7 +154,7 @@ public class BangGiaoCaDAO {
                      "bgc LEFT JOIN NhanVien nv ON bgc.maNhanVien = nv.maNhanVien " +
                      "LEFT JOIN CaLamViec c ON bgc.maCa = c.maCa " +
                       "LEFT JOIN NhanVien ql ON bgc.maQuanLyDuyet = ql.maNhanVien " +
-                     "WHERE bgc.gioKetThucThucTe IS NOT NULL AND bgc.trangThai = 'DA_DUYET' " +
+                     "WHERE bgc.gioKetThucThucTe IS NOT NULL " +
                      "ORDER BY bgc.gioKetThucThucTe DESC, bgc.maGiaoCa DESC";
 
         try (Connection conn = DBConnection.getConnection();
@@ -224,8 +224,10 @@ public class BangGiaoCaDAO {
     }
 
     public long tinhHoanTraTrongCa(LocalDateTime batDau, LocalDateTime ketThuc, String maNhanVien) {
-        String sql = "SELECT ISNULL(SUM(tongTienHoan),0) tong FROM PhieuDoiTra "
-                + "WHERE ngayDoiTra>=? AND ngayDoiTra<=? AND maNhanVienTiepNhan=?";
+        String sql = "SELECT ISNULL(SUM(p.tongTienHoan),0) tong FROM PhieuDoiTra p "
+                + "LEFT JOIN HoaDon hd ON p.maHoaDonGoc = hd.maHoaDon "
+                + "WHERE p.ngayDoiTra>=? AND p.ngayDoiTra<=? AND p.maNhanVienTiepNhan=? "
+                + "AND (hd.phuongThucThanhToan LIKE N'%Tiền mặt%' OR hd.phuongThucThanhToan IS NULL)";
         return tinhTongTrongKhoang(sql, batDau, ketThuc, maNhanVien);
     }
 
@@ -239,7 +241,7 @@ public class BangGiaoCaDAO {
             try (ResultSet rs = ps.executeQuery()) { return rs.next() ? rs.getLong("tong") : 0L; }
         } catch (SQLException e) {
             System.err.println("[BangGiaoCaDAO] Lỗi tính doanh thu đúng ca/thu ngân: " + e.getMessage());
-            return 0L;
+            throw new RuntimeException("Lỗi CSDL khi tính toán dữ liệu ca trực: " + e.getMessage(), e);
         }
     }
 

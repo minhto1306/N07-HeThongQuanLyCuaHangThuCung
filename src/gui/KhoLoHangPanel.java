@@ -359,7 +359,7 @@ public class KhoLoHangPanel extends JPanel {
             } else if (idx == 2) {
                 sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Nguy cấp", 9));
             } else if (idx == 3) {
-                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Hết hạn|Quá hạn|Đã hết", 9));
+                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Hết hạn|Quá hạn", 9));
             }
         });
 
@@ -454,6 +454,7 @@ public class KhoLoHangPanel extends JPanel {
 
             // 2. Đồng bộ toàn diện Kho, POS Catalog và Dashboard từ CSDL
             dongBoLoHangTuDatabase();
+            lamMoiBangSanPhamTuDatabase();
             BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
             TongQuanPanel.lamMoiDuLieuDashboardAll();
             return true;

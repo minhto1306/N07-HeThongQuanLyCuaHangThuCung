@@ -61,7 +61,7 @@ public class HoaDonDAO {
                 luuHoaDonTrongTransaction(conn, hoaDon);
                 truDiemTrongTransaction(conn, hoaDon, diemSuDung, diemThuHoiDoTraHang);
                 xuLySpaPassTrongTransaction(conn, hoaDon, maTheSuDung, theMoi);
-                hoanTatHotelTrongTransaction(conn, hoaDon.getMaHoaDon(), dsMaPhongHotel);
+                hoanTatHotelTrongTransaction(conn, hoaDon, dsMaPhongHotel);
                 conn.commit();
                 hoaDon.setTrangThaiHoaDon("Đã thanh toán");
                 return true;
@@ -107,21 +107,42 @@ public class HoaDonDAO {
         }
     }
 
-    private void hoanTatHotelTrongTransaction(Connection conn, String maHoaDon,
+    private void hoanTatHotelTrongTransaction(Connection conn, HoaDon hoaDon,
                                                List<String> dsMaPhongHotel) throws SQLException {
         if (dsMaPhongHotel == null || dsMaPhongHotel.isEmpty()) return;
+
+        int soNgayHD = 1;
+        BigDecimal tongTienHD = null;
+        if (hoaDon != null && hoaDon.getDsChiTiet() != null) {
+            for (ChiTietHoaDon ct : hoaDon.getDsChiTiet()) {
+                if (ct.getDichVu() != null && "DV008".equalsIgnoreCase(ct.getDichVu().getMaDichVu())) {
+                    if (ct.getSoLuong() > 0) soNgayHD = ct.getSoLuong();
+                    if (ct.getThanhTien() != null && ct.getThanhTien().compareTo(BigDecimal.ZERO) > 0) {
+                        tongTienHD = ct.getThanhTien();
+                    }
+                    break;
+                }
+            }
+        }
+
         String sqlLichSu = "INSERT INTO LichSuLuuTru (maPhong,tenThuCung,tenChu,sdtChu,thoiGianCheckIn,thoiGianCheckOut,soNgayLuuTru,donGiaNgay,phiPhatSinh,tongTien,ghiChu,maHoaDon,trangThaiThanhToan) "
                 + "SELECT maPhong,tenThuCung,tenChu,sdtChu,thoiGianCheckIn,SYSDATETIME(),"
-                + "CASE WHEN DATEDIFF(DAY,CAST(thoiGianCheckIn AS DATE),CAST(GETDATE() AS DATE))<1 THEN 1 ELSE DATEDIFF(DAY,CAST(thoiGianCheckIn AS DATE),CAST(GETDATE() AS DATE)) END,"
+                + "?,"
                 + "donGiaNgay,phiDichVuPhatSinh,"
-                + "(CASE WHEN DATEDIFF(DAY,CAST(thoiGianCheckIn AS DATE),CAST(GETDATE() AS DATE))<1 THEN 1 ELSE DATEDIFF(DAY,CAST(thoiGianCheckIn AS DATE),CAST(GETDATE() AS DATE)) END)*donGiaNgay+phiDichVuPhatSinh,"
+                + "COALESCE(?, (CASE WHEN DATEDIFF(DAY,CAST(thoiGianCheckIn AS DATE),CAST(GETDATE() AS DATE))<1 THEN 1 ELSE DATEDIFF(DAY,CAST(thoiGianCheckIn AS DATE),CAST(GETDATE() AS DATE)) END)*donGiaNgay+phiDichVuPhatSinh),"
                 + "ghiChuChamSoc,?,N'DA_THANH_TOAN' FROM PhongLuuTru WHERE maPhong=? AND trangThai=N'ĐANG CÓ KHÁCH'";
         String sqlPhong = "UPDATE PhongLuuTru SET trangThai=N'ĐANG DỌN DẸP' WHERE maPhong=? AND trangThai=N'ĐANG CÓ KHÁCH'";
         try (PreparedStatement psLichSu = conn.prepareStatement(sqlLichSu);
              PreparedStatement psPhong = conn.prepareStatement(sqlPhong)) {
             for (String maPhong : dsMaPhongHotel) {
-                psLichSu.setString(1, maHoaDon);
-                psLichSu.setString(2, maPhong);
+                psLichSu.setInt(1, soNgayHD);
+                if (tongTienHD != null) {
+                    psLichSu.setBigDecimal(2, tongTienHD);
+                } else {
+                    psLichSu.setNull(2, Types.DECIMAL);
+                }
+                psLichSu.setString(3, hoaDon != null ? hoaDon.getMaHoaDon() : "");
+                psLichSu.setString(4, maPhong);
                 if (psLichSu.executeUpdate() != 1) {
                     throw new SQLException("Phòng " + maPhong + " không còn khách hoặc dữ liệu checkout không hợp lệ");
                 }
@@ -538,23 +559,28 @@ public class HoaDonDAO {
                 if (ct.getSanPham() == null || ct.getSanPham().getMaSanPham() == null) {
                     throw new IllegalArgumentException("Chi tiết đổi trả chưa xác định sản phẩm");
                 }
-                if (ct.getSoLo() == null || ct.getSoLo().isBlank() || ct.getSoLuongCoSoHoan() <= 0) {
-                    throw new IllegalArgumentException("Hàng trả phải xác định đúng lô gốc và số lượng cơ sở");
-                }
+                boolean canHoanKho = (ct.getSoLo() != null && !ct.getSoLo().isBlank() && ct.getSoLuongCoSoHoan() > 0);
                 psCT.setString(1, ct.getMaChiTietDoiTra());
                 psCT.setString(2, pdt.getMaPhieuDoiTra());
                 psCT.setString(3, ct.getSanPham().getMaSanPham());
                 psCT.setInt(4, ct.getSoLuongDoiTra());
                 psCT.setBigDecimal(5, ct.getTienHoanLai());
-                psCT.setString(6, ct.getSoLo());
-                psCT.setInt(7, ct.getSoLuongCoSoHoan());
+                if (canHoanKho) {
+                    psCT.setString(6, ct.getSoLo());
+                    psCT.setInt(7, ct.getSoLuongCoSoHoan());
+                } else {
+                    psCT.setNull(6, Types.NVARCHAR);
+                    psCT.setInt(7, 0);
+                }
                 psCT.executeUpdate();
 
-                psKho.setInt(1, ct.getSoLuongCoSoHoan());
-                psKho.setString(2, ct.getSoLo());
-                psKho.setString(3, ct.getSanPham().getMaSanPham());
-                if (psKho.executeUpdate() != 1) {
-                    throw new SQLException("Không tìm thấy đúng lô gốc " + ct.getSoLo() + " để hoàn kho");
+                if (canHoanKho) {
+                    psKho.setInt(1, ct.getSoLuongCoSoHoan());
+                    psKho.setString(2, ct.getSoLo());
+                    psKho.setString(3, ct.getSanPham().getMaSanPham());
+                    if (psKho.executeUpdate() != 1) {
+                        throw new SQLException("Không tìm thấy đúng lô gốc " + ct.getSoLo() + " để hoàn kho");
+                    }
                 }
             }
         }

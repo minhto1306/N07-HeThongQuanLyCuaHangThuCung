@@ -307,10 +307,11 @@ public class BanHangBus {
                 kh.setDiemTichLuy(Math.max(0, diemMoi));
                 try {
                     STATIC_KH_DAO.update(kh);
+                    return kh;
                 } catch (SQLException e) {
                     System.err.println("[BanHangBus] Lỗi update KhachHang CSDL: " + e.getMessage());
+                    return null;
                 }
-                return kh;
             }
         }
 
@@ -322,12 +323,12 @@ public class BanHangBus {
         KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi));
         try {
             STATIC_KH_DAO.insert(khMoi);
+            DANH_SACH_KHACH_HANG.add(khMoi);
+            return khMoi;
         } catch (SQLException e) {
             System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
+            return null;
         }
-        // Thêm ngay vào bộ nhớ đệm RAM để đồng bộ dữ liệu tức thì
-        DANH_SACH_KHACH_HANG.add(khMoi);
-        return khMoi;
     }
 
     // Gọi MaTuSinhHelper để sinh mã khách hàng tự tăng dạng KH0001 dựa trên mã lớn nhất trong CSDL
@@ -383,10 +384,11 @@ public class BanHangBus {
                 if (diaChi != null && !diaChi.trim().isEmpty()) kh.setDiaChi(diaChi.trim());
                 try {
                     STATIC_KH_DAO.update(kh);
+                    return kh;
                 } catch (SQLException e) {
                     System.err.println("[BanHangBus] Lỗi update KhachHang CSDL: " + e.getMessage());
+                    return null;
                 }
-                return kh;
             }
         }
 
@@ -397,11 +399,12 @@ public class BanHangBus {
         KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi), email, diaChi);
         try {
             STATIC_KH_DAO.insert(khMoi);
+            DANH_SACH_KHACH_HANG.add(khMoi);
+            return khMoi;
         } catch (SQLException e) {
             System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
+            return null;
         }
-        DANH_SACH_KHACH_HANG.add(khMoi);
-        return khMoi;
     }
 
     // Xóa khách hàng khỏi CSDL và loại bỏ luôn khỏi danh sách tạm trên RAM để tránh sai lệch dữ liệu

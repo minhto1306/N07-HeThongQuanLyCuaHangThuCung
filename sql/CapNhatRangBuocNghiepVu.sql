@@ -1,4 +1,4 @@
-﻿/*
+/*
   Chạy một lần trên CSDL đã tồn tại.
   Script không tự xóa dữ liệu trùng: nếu phát hiện trùng, script dừng để Quản lý
   kiểm tra và chọn đúng bản ghi cần giữ, tránh mất lịch sử nghiệp vụ.
@@ -42,45 +42,40 @@ IF NOT EXISTS (
     WHERE object_id = OBJECT_ID(N'dbo.BangGiaoCa')
       AND name = N'UQ_BangGiaoCa_NhanVien_Ngay_Ca'
 )
-    CREATE UNIQUE INDEX UQ_BangGiaoCa_NhanVien_Ngay_Ca
+    EXEC(N'CREATE UNIQUE INDEX UQ_BangGiaoCa_NhanVien_Ngay_Ca
         ON dbo.BangGiaoCa(maNhanVien, ngayGiaoCa, maCa)
-        WHERE ngayGiaoCa IS NOT NULL;
+        WHERE gioKetThucThucTe IS NOT NULL;');
 
 IF COL_LENGTH(N'dbo.ChiTietDoiTra', N'soLo') IS NULL
-    ALTER TABLE dbo.ChiTietDoiTra ADD soLo NVARCHAR(50) NULL;
+    EXEC(N'ALTER TABLE dbo.ChiTietDoiTra ADD soLo NVARCHAR(50) NULL;');
 
 IF COL_LENGTH(N'dbo.ChiTietDoiTra', N'soLuongCoSoHoan') IS NULL
-    ALTER TABLE dbo.ChiTietDoiTra ADD soLuongCoSoHoan INT NOT NULL
-        CONSTRAINT DF_CTDoiTra_SoLuongCoSoHoan DEFAULT 0;
+    EXEC(N'ALTER TABLE dbo.ChiTietDoiTra ADD soLuongCoSoHoan INT NOT NULL CONSTRAINT DF_CTDoiTra_SoLuongCoSoHoan DEFAULT 0;');
 
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_CTDoiTra_LoHang')
-    ALTER TABLE dbo.ChiTietDoiTra ADD CONSTRAINT FK_CTDoiTra_LoHang
-        FOREIGN KEY (soLo) REFERENCES dbo.LoHang(soLo);
+    EXEC(N'ALTER TABLE dbo.ChiTietDoiTra ADD CONSTRAINT FK_CTDoiTra_LoHang FOREIGN KEY (soLo) REFERENCES dbo.LoHang(soLo);');
 
 IF COL_LENGTH(N'dbo.LichSuLuuTru', N'maHoaDon') IS NULL
-    ALTER TABLE dbo.LichSuLuuTru ADD maHoaDon NVARCHAR(20) NULL;
+    EXEC(N'ALTER TABLE dbo.LichSuLuuTru ADD maHoaDon NVARCHAR(20) NULL;');
 
 IF COL_LENGTH(N'dbo.LichSuLuuTru', N'trangThaiThanhToan') IS NULL
-    ALTER TABLE dbo.LichSuLuuTru ADD trangThaiThanhToan NVARCHAR(30) NOT NULL
-        CONSTRAINT DF_LichSuLuuTru_ThanhToan DEFAULT 'CHO_THANH_TOAN';
+    EXEC(N'ALTER TABLE dbo.LichSuLuuTru ADD trangThaiThanhToan NVARCHAR(30) NOT NULL CONSTRAINT DF_LichSuLuuTru_ThanhToan DEFAULT ''CHO_THANH_TOAN'';');
 
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_LichSuLuuTru_HoaDon')
-    ALTER TABLE dbo.LichSuLuuTru ADD CONSTRAINT FK_LichSuLuuTru_HoaDon
-        FOREIGN KEY (maHoaDon) REFERENCES dbo.HoaDon(maHoaDon);
+    EXEC(N'ALTER TABLE dbo.LichSuLuuTru ADD CONSTRAINT FK_LichSuLuuTru_HoaDon FOREIGN KEY (maHoaDon) REFERENCES dbo.HoaDon(maHoaDon);');
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.LichSuLuuTru') AND name=N'UQ_LichSuLuuTru_HoaDon')
-    CREATE UNIQUE INDEX UQ_LichSuLuuTru_HoaDon ON dbo.LichSuLuuTru(maHoaDon) WHERE maHoaDon IS NOT NULL;
+    EXEC(N'CREATE UNIQUE INDEX UQ_LichSuLuuTru_HoaDon ON dbo.LichSuLuuTru(maHoaDon) WHERE maHoaDon IS NOT NULL;');
 
 IF COL_LENGTH(N'dbo.TheSpaPass', N'maHoaDonKichHoat') IS NULL
-    ALTER TABLE dbo.TheSpaPass ADD maHoaDonKichHoat NVARCHAR(20) NULL;
+    EXEC(N'ALTER TABLE dbo.TheSpaPass ADD maHoaDonKichHoat NVARCHAR(20) NULL;');
 
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name=N'FK_TheSpaPass_HoaDonKichHoat')
-    ALTER TABLE dbo.TheSpaPass ADD CONSTRAINT FK_TheSpaPass_HoaDonKichHoat
-        FOREIGN KEY (maHoaDonKichHoat) REFERENCES dbo.HoaDon(maHoaDon);
+    EXEC(N'ALTER TABLE dbo.TheSpaPass ADD CONSTRAINT FK_TheSpaPass_HoaDonKichHoat FOREIGN KEY (maHoaDonKichHoat) REFERENCES dbo.HoaDon(maHoaDon);');
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.TheSpaPass') AND name=N'UQ_TheSpaPass_HoaDonKichHoat')
-    CREATE UNIQUE INDEX UQ_TheSpaPass_HoaDonKichHoat
-        ON dbo.TheSpaPass(maHoaDonKichHoat) WHERE maHoaDonKichHoat IS NOT NULL;
+    EXEC(N'CREATE UNIQUE INDEX UQ_TheSpaPass_HoaDonKichHoat
+        ON dbo.TheSpaPass(maHoaDonKichHoat) WHERE maHoaDonKichHoat IS NOT NULL;');
 
 IF OBJECT_ID(N'dbo.LichSuSuDungSpaPass', N'U') IS NULL
 BEGIN
