@@ -359,9 +359,9 @@ public class LoginForm extends JFrame {
         btnGuiOtp.addActionListener(e -> {
             if (!utils.EmailThongBaoHelper.isSmtpConfigured()) {
                 JOptionPane.showMessageDialog(dlg,
-                        "Hệ thống chưa cấu hình máy chủ email thật nên không thể gửi OTP an toàn.\n"
-                        + "Vui lòng liên hệ Quản lý để được cấp lại mật khẩu.",
-                        "Khôi phục mật khẩu tạm khóa", JOptionPane.WARNING_MESSAGE);
+                        "Hệ thống chưa cấu hình tài khoản gửi email trong config/mail.properties.\n"
+                        + "Vui lòng nhập địa chỉ Gmail và Mật khẩu ứng dụng (App Password) vào file config/mail.properties!",
+                        "Chưa cấu hình Email SMTP", JOptionPane.WARNING_MESSAGE);
                 return;
             }
             String sdt = txtResetPhone.getText().trim();
@@ -387,12 +387,15 @@ public class LoginForm extends JFrame {
             // Hiển thị hộp thoại EmailPreviewDialog gửi mã xác thực OTP tới email nhân viên
             String maTK = nv.getTaiKhoan() != null ? nv.getTaiKhoan().getMaTaiKhoan() : nv.getMaNhanVien();
             String htmlOtp = utils.EmailThongBaoHelper.taoEmailKhoiPhucMatKhau(nv.getHoTen(), sdt, maTK, otp);
-            utils.EmailThongBaoHelper.moHopThoaiGuiEmail(
+            boolean guiThanhCong = utils.EmailThongBaoHelper.moHopThoaiGuiEmail(
                     dlg,
                     mail,
                     "[Mio Pet Shop] Mã OTP khôi phục mật khẩu tài khoản " + maTK,
                     htmlOtp
             );
+            if (!guiThanhCong) {
+                return;
+            }
 
             txtOtp.setEnabled(true);
             txtOtp.setText("");

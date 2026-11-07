@@ -2,34 +2,161 @@ package utils;
 
 import java.awt.*;
 import javax.swing.JOptionPane;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
+import java.util.Properties;
 
-// Lớp hỗ trợ tạo và gửi email thông báo tự động cho khách hàng
-// Phục vụ riêng cho phân hệ Pet Hotel (chuồng trại), Lịch hẹn Spa Grooming và Sổ sức khỏe tiêm phòng của bạn Ngọc
-// Code theo phong cách HTML inline CSS để tương thích tốt với mọi hòm thư như Gmail, Outlook
+// Lớp hỗ trợ tạo và gửi email thông báo tự động cho khách hàng & nhân viên
+// Hỗ trợ gửi thư thật 100% qua Gmail SMTP (cổng 465 SSL) chuẩn Java thuần không cần thư viện ngoài
 public class EmailThongBaoHelper {
 
     private static final DecimalFormat DF_MONEY = new DecimalFormat("#,### đ");
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
 
-    /** Hiện dự án chỉ có màn hình xem trước, chưa có SMTP thật. */
-    public static boolean isSmtpConfigured() {
-        return false;
+    private static String smtpHost = "smtp.gmail.com";
+    private static int smtpPort = 465;
+    private static String smtpUsername = "";
+    private static String smtpPassword = "";
+    private static String senderDisplayName = "Mio Pet Shop";
+
+    static {
+        napCauHinh();
     }
 
-    // Không báo gửi thành công khi dự án chưa cấu hình SMTP thật.
+    public static synchronized void napCauHinh() {
+        File f = new File("config/mail.properties");
+        if (f.exists()) {
+            try (InputStream in = new FileInputStream(f)) {
+                Properties p = new Properties();
+                p.load(in);
+                if (p.getProperty("mail.smtp.host") != null) smtpHost = p.getProperty("mail.smtp.host").trim();
+                if (p.getProperty("mail.smtp.port") != null) smtpPort = Integer.parseInt(p.getProperty("mail.smtp.port").trim());
+                if (p.getProperty("mail.smtp.username") != null) smtpUsername = p.getProperty("mail.smtp.username").trim();
+                if (p.getProperty("mail.smtp.password") != null) smtpPassword = p.getProperty("mail.smtp.password").trim().replaceAll("\\s+", "");
+                if (p.getProperty("mail.smtp.senderName") != null) senderDisplayName = p.getProperty("mail.smtp.senderName").trim();
+            } catch (Exception ex) {
+                System.err.println("[EmailThongBaoHelper] Lỗi đọc config/mail.properties: " + ex.getMessage());
+            }
+        }
+    }
+
+    /** Kiểm tra xem đã có tài khoản gửi email trong config/mail.properties chưa. */
+    public static boolean isSmtpConfigured() {
+        napCauHinh();
+        return smtpUsername != null && !smtpUsername.isBlank()
+                && smtpPassword != null && !smtpPassword.isBlank();
+    }
+
+    /** Gửi email thật qua giao thức SMTP SSL. */
+    public static void guiEmail(String toEmail, String tieuDe, String htmlContent) throws Exception {
+        napCauHinh();
+        if (!isSmtpConfigured()) {
+            throw new IllegalStateException("Chưa cấu hình tài khoản gửi thư trong config/mail.properties");
+        }
+        SSLSocketFactory sf = (SSLSocketFactory) SSLSocketFactory.getDefault();
+        try (SSLSocket socket = (SSLSocket) sf.createSocket(smtpHost, smtpPort)) {
+            socket.setSoTimeout(15000);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+
+            docPhanHoi(in, 220);
+
+            guiLenh(out, "EHLO " + smtpHost);
+            docPhanHoi(in, 250);
+
+            guiLenh(out, "AUTH LOGIN");
+            docPhanHoi(in, 334);
+
+            guiLenh(out, Base64.getEncoder().encodeToString(smtpUsername.getBytes(StandardCharsets.UTF_8)));
+            docPhanHoi(in, 334);
+
+            guiLenh(out, Base64.getEncoder().encodeToString(smtpPassword.getBytes(StandardCharsets.UTF_8)));
+            docPhanHoi(in, 235);
+
+            guiLenh(out, "MAIL FROM:<" + smtpUsername + ">");
+            docPhanHoi(in, 250);
+
+            guiLenh(out, "RCPT TO:<" + toEmail + ">");
+            docPhanHoi(in, 250);
+
+            guiLenh(out, "DATA");
+            docPhanHoi(in, 354);
+
+            out.write("From: =?UTF-8?B?" + Base64.getEncoder().encodeToString(senderDisplayName.getBytes(StandardCharsets.UTF_8)) + "?= <" + smtpUsername + ">\r\n");
+            out.write("To: <" + toEmail + ">\r\n");
+            out.write("Subject: =?UTF-8?B?" + Base64.getEncoder().encodeToString(tieuDe.getBytes(StandardCharsets.UTF_8)) + "?=\r\n");
+            out.write("MIME-Version: 1.0\r\n");
+            out.write("Content-Type: text/html; charset=UTF-8\r\n");
+            out.write("Content-Transfer-Encoding: base64\r\n\r\n");
+            out.write(Base64.getMimeEncoder().encodeToString(htmlContent.getBytes(StandardCharsets.UTF_8)));
+            out.write("\r\n.\r\n");
+            out.flush();
+
+            docPhanHoi(in, 250);
+
+            guiLenh(out, "QUIT");
+        }
+    }
+
+    private static void docPhanHoi(BufferedReader in, int expectedCode) throws IOException {
+        String line;
+        while ((line = in.readLine()) != null) {
+            if (line.length() >= 3) {
+                int code;
+                try {
+                    code = Integer.parseInt(line.substring(0, 3));
+                } catch (NumberFormatException e) {
+                    continue;
+                }
+                if (line.length() == 3 || line.charAt(3) != '-') {
+                    if (code != expectedCode) {
+                        throw new IOException("Máy chủ SMTP báo lỗi (" + code + "): " + line);
+                    }
+                    return;
+                }
+            }
+        }
+        throw new IOException("Máy chủ SMTP ngắt kết nối đột ngột.");
+    }
+
+    private static void guiLenh(BufferedWriter out, String command) throws IOException {
+        out.write(command + "\r\n");
+        out.flush();
+    }
+
+    /** Mở hộp thoại gửi email thật và hiển thị thông báo kết quả. */
     public static boolean moHopThoaiGuiEmail(Window owner, String toEmail, String tieuDe, String htmlContent) {
         if (!isSmtpConfigured()) {
             JOptionPane.showMessageDialog(owner,
-                    "Chức năng gửi email chưa được cấu hình SMTP.\n"
-                    + "Hệ thống chưa gửi thư và không ghi nhận gửi thành công.",
-                    "Email chưa được cấu hình",
+                    "Chưa cấu hình tài khoản gửi email trong config/mail.properties.\n"
+                    + "Vui lòng nhập mail.smtp.username và mail.smtp.password (Google App Password)!",
+                    "Chưa cấu hình Email",
                     JOptionPane.WARNING_MESSAGE);
             return false;
         }
-        throw new IllegalStateException("SMTP được đánh dấu đã cấu hình nhưng chưa có bộ gửi email triển khai");
+        try {
+            guiEmail(toEmail, tieuDe, htmlContent);
+            JOptionPane.showMessageDialog(owner,
+                    "ĐÃ GỬI EMAIL THÀNH CÔNG!\n\n"
+                    + "• Người nhận: " + toEmail + "\n"
+                    + "• Tiêu đề: " + tieuDe + "\n\n"
+                    + "Vui lòng kiểm tra Hộp thư đến (hoặc mục Spam / Thư rác) trên thiết bị của bạn.",
+                    "Gửi Email Thành Công", JOptionPane.INFORMATION_MESSAGE);
+            return true;
+        } catch (Exception ex) {
+            System.err.println("[EmailThongBaoHelper] Lỗi gửi email: " + ex.getMessage());
+            JOptionPane.showMessageDialog(owner,
+                    "Không thể gửi email đến [" + toEmail + "]:\n" + ex.getMessage()
+                    + "\n\nVui lòng kiểm tra lại mạng Internet hoặc cấu hình trong config/mail.properties!",
+                    "Lỗi gửi Email", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
     }
 
     // 1. Mẫu Email Xác nhận Check-in nhận phòng thú cưng tại Pet Hotel

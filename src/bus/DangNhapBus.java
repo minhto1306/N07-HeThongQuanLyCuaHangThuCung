@@ -136,6 +136,13 @@ public class DangNhapBus {
 
         try {
             TaiKhoan tk = taiKhoanDAO.findBySoDienThoaiVaEmail(sdt, mail);
+            if (tk == null) {
+                // Nếu SĐT hợp lệ và tài khoản đang hoạt động, cho phép gửi OTP đến email thực tế người dùng nhập
+                TaiKhoan tkSdt = taiKhoanDAO.findBySoDienThoai(sdt);
+                if (tkSdt != null && tkSdt.isTrangThaiHoatDong()) {
+                    tk = tkSdt;
+                }
+            }
             if (tk != null && tk.isTrangThaiHoatDong()) {
                 NhanVien nv = nhanVienDAO.findByMaNhanVien(tk.getMaTaiKhoan());
                 if (nv != null) {
