@@ -18,6 +18,7 @@ public class BangGiaoCa {
     private BigDecimal tienChuyenKhoan;
     private BigDecimal tienHoanTra;
     private String lyDoChenhLech;
+    private LocalDateTime gioBatDauCa;
     private LocalDateTime gioKetThucThucTe;
     private String trangThai;
     private NhanVien quanLyDuyet;
@@ -141,6 +142,9 @@ public class BangGiaoCa {
     public LocalDateTime getGioKetThucThucTe() {
         return gioKetThucThucTe;
     }
+
+    public LocalDateTime getGioBatDauCa() { return gioBatDauCa; }
+    public void setGioBatDauCa(LocalDateTime gioBatDauCa) { this.gioBatDauCa = gioBatDauCa; }
 
     public void setGioKetThucThucTe(LocalDateTime gioKetThucThucTe) {
         this.gioKetThucThucTe = gioKetThucThucTe;

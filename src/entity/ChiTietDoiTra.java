@@ -11,6 +11,8 @@ public class ChiTietDoiTra {
     private SanPham sanPham;
     private int soLuongDoiTra;
     private BigDecimal tienHoanLai;
+    private String soLo;
+    private int soLuongCoSoHoan;
 
     public ChiTietDoiTra() {
         this.soLuongDoiTra = 1;
@@ -64,6 +66,11 @@ public class ChiTietDoiTra {
     public void setTienHoanLai(BigDecimal tienHoanLai) {
         this.tienHoanLai = tienHoanLai;
     }
+
+    public String getSoLo() { return soLo; }
+    public void setSoLo(String soLo) { this.soLo = soLo; }
+    public int getSoLuongCoSoHoan() { return soLuongCoSoHoan; }
+    public void setSoLuongCoSoHoan(int soLuongCoSoHoan) { this.soLuongCoSoHoan = soLuongCoSoHoan; }
 
     @Override
     public String toString() {
