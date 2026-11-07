@@ -1,4 +1,4 @@
-package models.entity;
+package entity;
 
 import java.math.BigDecimal;
 
@@ -21,17 +21,21 @@ public class ChiTietDichVu extends ChiTietHoaDon {
                          DichVu dichVu, ThuCung thuCung, NhanVien ktvThucHien, BigDecimal tienHoaHong) {
         super(maChiTiet, hoaDon, soLuong, donGiaLucBan);
         this.dichVu = dichVu;
+        super.dichVu = dichVu;
         this.thuCung = thuCung;
         this.ktvThucHien = ktvThucHien;
         this.tienHoaHong = tienHoaHong != null ? tienHoaHong : BigDecimal.ZERO;
     }
 
+    @Override
     public DichVu getDichVu() {
         return dichVu;
     }
 
+    @Override
     public void setDichVu(DichVu dichVu) {
         this.dichVu = dichVu;
+        super.dichVu = dichVu;
     }
 
     public ThuCung getThuCung() {

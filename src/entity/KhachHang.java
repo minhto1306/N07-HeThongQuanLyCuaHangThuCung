@@ -1,4 +1,4 @@
-package models.entity;
+package entity;
 
 // Entity khách hàng, mới bổ sung thêm trường email với địa chỉ
 // để phục vụ bên gửi email xác nhận đặt lịch hẹn với thông báo chăm sóc thú cưng ở pet hotel

@@ -1,13 +1,13 @@
-package views;
+package gui;
 
-import controllers.BanHangController;
-import controllers.SpaPassController;
-import controllers.ThuCungController;
-import models.entity.HoSoSucKhoe;
-import models.entity.HoSoThuCung;
-import models.entity.KhachHang;
-import models.entity.TheSpaPass;
-import models.entity.ThuCung;
+import bus.BanHangBus;
+import bus.SpaPassBus;
+import bus.ThuCungBus;
+import entity.HoSoSucKhoe;
+import entity.HoSoThuCung;
+import entity.KhachHang;
+import entity.TheSpaPass;
+import entity.ThuCung;
 import utils.IconHelper;
 import utils.ThemeColors;
 
@@ -33,11 +33,11 @@ import java.util.List;
  */
 public class ThuCungDichVuPanel extends JPanel {
 
-    private final ThuCungController controller = new ThuCungController();
+    private final ThuCungBus controller = new ThuCungBus();
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
     private final DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    private final SpaPassController spaPassController = new SpaPassController();
+    private final SpaPassBus SpaPassBus = new SpaPassBus();
     private DefaultTableModel modelHoSo;
     private DefaultTableModel modelSucKhoe;
     private DefaultTableModel modelKhachHang;
@@ -189,14 +189,20 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogDangKyThuCung() {
+        String maTC = utils.MaTuSinhHelper.sinhMaThuCung();
+        JTextField txtMaTC = new JTextField(maTC);
+        txtMaTC.setEditable(false);
+        txtMaTC.setBackground(new Color(0xF1, 0xF5, 0xF9));
+
         JTextField txtTen = new JTextField();
         JTextField txtGiong = new JTextField("Mèo Anh Lông Ngắn");
         JComboBox<String> cboSex = new JComboBox<>(new String[]{"Đực", "Cái"});
         JTextField txtChu = new JTextField("Nguyễn Văn An");
         JTextField txtSdt = new JTextField("0988111222");
-        JTextField txtChip = new JTextField("MC" + System.currentTimeMillis() % 100000);
+        JTextField txtChip = new JTextField("MC-982" + maTC.replace("TC", "") + "-VN");
 
         Object[] msg = {
+                "Mã thú cưng (Hệ thống tự sinh):", txtMaTC,
                 "Tên thú cưng:", txtTen,
                 "Giống loài:", txtGiong,
                 "Giới tính:", cboSex,
@@ -207,11 +213,12 @@ public class ThuCungDichVuPanel extends JPanel {
 
         int opt = JOptionPane.showConfirmDialog(this, msg, "ĐĂNG KÝ HỒ SƠ THÚ CƯNG MỚI", JOptionPane.OK_CANCEL_OPTION);
         if (opt == JOptionPane.OK_OPTION && !txtTen.getText().trim().isEmpty()) {
-            ThuCung tc = new ThuCung("TC" + System.currentTimeMillis() % 10000, txtTen.getText().trim(),
+            ThuCung tc = new ThuCung(maTC, txtTen.getText().trim(),
                     txtGiong.getText().trim(), LocalDate.now().minusMonths(6), (String) cboSex.getSelectedItem());
-            controller.themThuCung(tc, "KH001", txtChip.getText().trim());
+            controller.themThuCungTheoSdtChu(tc, txtChu.getText().trim(), txtSdt.getText().trim(), txtChip.getText().trim());
             napDuLieuHoSoThuCung();
-            JOptionPane.showMessageDialog(this, "Đã tạo hồ sơ thú cưng và cấp mã Microchip thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            napDuLieuKhachHang();
+            JOptionPane.showMessageDialog(this, "Đã tạo hồ sơ thú cưng [" + maTC + "] và cấp mã Microchip thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -270,6 +277,11 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogKhamSucKhoe() {
+        String maSK = utils.MaTuSinhHelper.sinhMaSucKhoe();
+        JTextField txtMaSK = new JTextField(maSK);
+        txtMaSK.setEditable(false);
+        txtMaSK.setBackground(new Color(0xF1, 0xF5, 0xF9));
+
         // 1. Tạo ComboBox lấy danh sách thú cưng thực tế từ Controller thay vì gõ tay
         JComboBox<ThuCung> cboThuCung = new JComboBox<>();
         List<HoSoThuCung> dsHoSo = controller.layDanhSachHoSoThuCung();
@@ -298,6 +310,7 @@ public class ThuCungDichVuPanel extends JPanel {
         JTextField txtGhiChu = new JTextField("Thể trạng bình thường, sẵn sàng làm dịch vụ");
 
         Object[] msg = {
+                "Mã phiếu khám (Hệ thống tự sinh):", txtMaSK,
                 "Chọn thú cưng khám:", cboThuCung, // Thay JTextField bằng JComboBox
                 "Cân nặng (kg):", txtCanNang,
                 "Nhiệt độ (°C):", txtNhietDo,
@@ -315,10 +328,10 @@ public class ThuCungDichVuPanel extends JPanel {
                 return;
             }
 
-            models.entity.NhanVien nvKiemTra = new models.entity.NhanVien("NV001", "Lê Khải Minh", "NVQL", null, null);
+            entity.NhanVien nvKiemTra = new entity.NhanVien("NV001", "Lê Khải Minh", "NVQL", null, null);
 
             HoSoSucKhoe sk = new HoSoSucKhoe(
-                    "SK" + System.currentTimeMillis() % 10000,
+                    maSK,
                     selectedTC, // Truyền đúng thú cưng đã chọn (mang mã và tên thật)
                     nvKiemTra,
                     new BigDecimal(txtCanNang.getText().trim()),
@@ -331,7 +344,7 @@ public class ThuCungDichVuPanel extends JPanel {
             
             controller.themHoSoSucKhoe(sk);
             napDuLieuSucKhoe();
-            JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ sức khỏe và thể trạng thú cưng!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ sức khỏe [" + maSK + "] và thể trạng thú cưng!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -440,7 +453,7 @@ public class ThuCungDichVuPanel extends JPanel {
         String kw = txtTimKhachHang != null ? txtTimKhachHang.getText().trim() : "";
         int filterIdx = cboLocHangKhach != null ? cboLocHangKhach.getSelectedIndex() : 0;
 
-        List<KhachHang> ds = BanHangController.timKiemGoiYKhachHang(kw);
+        List<KhachHang> ds = BanHangBus.timKiemGoiYKhachHang(kw);
         for (KhachHang kh : ds) {
             int diem = kh.getDiemTichLuy();
             if (filterIdx == 1 && diem < 100) continue;
@@ -449,7 +462,7 @@ public class ThuCungDichVuPanel extends JPanel {
             if (filterIdx == 4 && diem >= 20) continue;
 
             String phanLoai = diem >= 20 ? "Khách quen (Khách cũ)" : "Khách hàng Mới";
-            String hangThe = BanHangController.xepHangThanhVien(diem);
+            String hangThe = BanHangBus.xepHangThanhVien(diem);
             String uuDai = String.format("Quy đổi tối đa %,d đ (%d điểm)", diem * 1000L, diem);
 
             modelKhachHang.addRow(new Object[]{
@@ -467,8 +480,10 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogThemKhachHang() {
-        JTextField txtMa = new JTextField(BanHangController.sinhMaKhachHangMoi());
+        JTextField txtMa = new JTextField(BanHangBus.sinhMaKhachHangMoi());
         txtMa.setEditable(false);
+        txtMa.setFocusable(false);
+        txtMa.setBackground(new Color(0xF1, 0xF5, 0xF9));
         JTextField txtHoTen = new JTextField();
         JTextField txtSdt = new JTextField();
         JTextField txtDiem = new JTextField("0");
@@ -500,7 +515,7 @@ public class ThuCungDichVuPanel extends JPanel {
             }
             String email = txtEmail.getText().trim();
             String diaChi = txtDiaChi.getText().trim();
-            BanHangController.luuHoacCapNhatKhachHang(sdt, ten, diem, email, diaChi);
+            BanHangBus.luuHoacCapNhatKhachHang(sdt, ten, diem, email, diaChi);
             napDuLieuKhachHang();
             JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ khách hàng [" + ten + " - " + sdt + "] thành công!",
                     "Thành công", JOptionPane.INFORMATION_MESSAGE);
@@ -552,7 +567,7 @@ public class ThuCungDichVuPanel extends JPanel {
             }
             String emailMoi = txtEmail.getText().trim();
             String diaChiMoi = txtDiaChi.getText().trim();
-            if (BanHangController.capNhatThongTinKhachHang(maKH, tenMoi, sdtMoi, diemMoi, emailMoi, diaChiMoi)) {
+            if (BanHangBus.capNhatThongTinKhachHang(maKH, tenMoi, sdtMoi, diemMoi, emailMoi, diaChiMoi)) {
                 napDuLieuKhachHang();
                 JOptionPane.showMessageDialog(this, "Đã cập nhật thông tin khách hàng " + maKH + " thành công!",
                         "Thành công", JOptionPane.INFORMATION_MESSAGE);
@@ -573,7 +588,7 @@ public class ThuCungDichVuPanel extends JPanel {
                 "Bạn có chắc chắn muốn xóa khách hàng [" + maKH + " - " + tenKH + "] khỏi danh sách thành viên?",
                 "Xác nhận xóa khách hàng", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (confirm == JOptionPane.YES_OPTION) {
-            if (BanHangController.xoaKhachHang(maKH)) {
+            if (BanHangBus.xoaKhachHang(maKH)) {
                 napDuLieuKhachHang();
                 JOptionPane.showMessageDialog(this, "Đã xóa khách hàng [" + maKH + "] khỏi hệ thống.",
                         "Đã xóa", JOptionPane.INFORMATION_MESSAGE);
@@ -676,7 +691,7 @@ public class ThuCungDichVuPanel extends JPanel {
         String kw = txtTimTheHoiVien != null ? txtTimTheHoiVien.getText().trim().toLowerCase() : "";
         int filterIdx = cboLocTrangThaiThe != null ? cboLocTrangThaiThe.getSelectedIndex() : 0;
 
-        List<TheSpaPass> dsThe = spaPassController.layTatCaThe();
+        List<TheSpaPass> dsThe = SpaPassBus.layTatCaThe();
         for (TheSpaPass the : dsThe) {
             the.capNhatTrangThai();
             String st = the.getTrangThai();
@@ -722,7 +737,7 @@ public class ThuCungDichVuPanel extends JPanel {
             private void lookup() {
                 String s = txtSdt.getText().trim();
                 if (s.matches("^0\\d{9}$")) {
-                    List<KhachHang> ds = BanHangController.timKiemGoiYKhachHang(s);
+                    List<KhachHang> ds = BanHangBus.timKiemGoiYKhachHang(s);
                     for (KhachHang kh : ds) {
                         if (s.equals(kh.getSoDienThoai())) {
                             txtHoTen.setText(kh.getHoTen());
@@ -755,7 +770,7 @@ public class ThuCungDichVuPanel extends JPanel {
             long donGia = goiIdx == 1 ? 1600000L : (goiIdx == 2 ? 580000L : 900000L);
             String tenGoi = goiIdx == 1 ? "Gói Spa Pass 10 Buổi (Gia Đình)" : (goiIdx == 2 ? "Gói Chăm Sóc Định Kỳ 3 Buổi" : "Gói Spa Pass 5 Buổi (Punch Card)");
 
-            TheSpaPass theMoi = spaPassController.kichHoatTheMoi(sdt, ten, tenGoi, soBuoi, donGia);
+            TheSpaPass theMoi = SpaPassBus.kichHoatTheMoi(sdt, ten, tenGoi, soBuoi, donGia);
             napDuLieuTheHoiVien();
             JOptionPane.showMessageDialog(this,
                     "Phát hành Thẻ Spa Pass thành công!\n"
@@ -775,7 +790,7 @@ public class ThuCungDichVuPanel extends JPanel {
         }
         String maThe = modelTheHoiVien.getValueAt(row, 0).toString();
         String tenKhach = modelTheHoiVien.getValueAt(row, 1).toString();
-        TheSpaPass the = spaPassController.timTheTheoMa(maThe);
+        TheSpaPass the = SpaPassBus.timTheTheoMa(maThe);
         if (the == null) {
             JOptionPane.showMessageDialog(this, "Không tìm thấy thông tin thẻ: " + maThe, "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;

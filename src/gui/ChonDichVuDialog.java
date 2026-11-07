@@ -1,7 +1,7 @@
-package views;
+package gui;
 
-import controllers.NhanVienController;
-import models.entity.NhanVien;
+import bus.NhanVienBus;
+import entity.NhanVien;
 import utils.IconHelper;
 import utils.ThemeColors;
 
@@ -198,7 +198,7 @@ public class ChonDichVuDialog extends JDialog {
     }
 
     private void napDanhSachKtv() {
-        NhanVienController nvc = new NhanVienController();
+        NhanVienBus nvc = new NhanVienBus();
         List<NhanVien> list = nvc.layDanhSachKtvHoatDong();
         for (NhanVien nv : list) {
             cboKtv.addItem(nv.getMaNhanVien() + " - " + nv.getHoTen() + " (" + nv.getChucVu() + ")");

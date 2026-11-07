@@ -1,6 +1,6 @@
-package models.dao;
+package dao;
 
-import models.entity.*;
+import entity.*;
 import utils.DBConnection;
 
 import java.sql.*;

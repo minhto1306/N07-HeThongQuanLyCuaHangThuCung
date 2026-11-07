@@ -1,7 +1,7 @@
-package models.dao;
+package dao;
 
 import utils.DBConnection;
-import views.PetHotelPanel.PhongLuuTru;
+import gui.PetHotelPanel.PhongLuuTru;
 
 import java.sql.*;
 import java.util.ArrayList;

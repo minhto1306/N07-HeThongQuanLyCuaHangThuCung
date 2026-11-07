@@ -1,6 +1,6 @@
-package controllers;
+package bus;
 
-import models.entity.TheSpaPass;
+import entity.TheSpaPass;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -10,7 +10,7 @@ import java.util.List;
  * Controller Quản lý Thẻ Gói Spa Pass (Punch Card).
  * Quản lý tra cứu theo SĐT khách, kích hoạt thẻ mới khi mua tại POS, và trừ số buổi khi sử dụng.
  */
-public class SpaPassController {
+public class SpaPassBus {
 
     private static final List<TheSpaPass> DANH_SACH_THE = new ArrayList<>();
 

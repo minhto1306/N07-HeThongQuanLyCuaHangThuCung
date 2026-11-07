@@ -1,10 +1,10 @@
-package models.dao;
+package dao;
 
-import models.entity.HoSoSucKhoe;
-import models.entity.HoSoThuCung;
-import models.entity.KhachHang;
-import models.entity.NhanVien;
-import models.entity.ThuCung;
+import entity.HoSoSucKhoe;
+import entity.HoSoThuCung;
+import entity.KhachHang;
+import entity.NhanVien;
+import entity.ThuCung;
 import utils.DBConnection;
 
 import java.math.BigDecimal;
@@ -146,12 +146,14 @@ public class ThuCungDAO {
                 psTC.executeUpdate();
             }
 
-            String maHoSo = "HS" + System.currentTimeMillis() % 1000000;
+            String maHoSo = utils.MaTuSinhHelper.sinhMaHoSo();
             try (PreparedStatement psHS = conn.prepareStatement(sqlHS)) {
                 psHS.setString(1, maHoSo);
                 psHS.setString(2, maKhachHang);
                 psHS.setString(3, tc.getMaThuCung());
-                psHS.setString(4, soMicrochip != null ? soMicrochip : "MC" + System.currentTimeMillis() % 100000);
+                psHS.setString(4, (soMicrochip != null && !soMicrochip.trim().isEmpty())
+                        ? soMicrochip.trim()
+                        : ("MC-982" + maHoSo.replace("HS", "") + "-VN"));
                 psHS.setDate(5, Date.valueOf(LocalDate.now()));
                 psHS.setString(6, "Đang nuôi");
                 psHS.executeUpdate();

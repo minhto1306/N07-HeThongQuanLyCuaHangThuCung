@@ -1,7 +1,7 @@
-package views;
+package gui;
 
-import controllers.ThuCungController;
-import models.entity.*;
+import bus.ThuCungBus;
+import entity.*;
 import utils.IconHelper;
 import utils.ThemeColors;
 
@@ -27,7 +27,7 @@ import java.util.Map;
  */
 public class DatLichHenDialog extends JDialog {
 
-    private final ThuCungController controller;
+    private final ThuCungBus controller;
     private final Runnable onSuccessCallback;
 
     // Cột Trái: Thông tin khách & thú cưng
@@ -58,7 +58,7 @@ public class DatLichHenDialog extends JDialog {
 
     private boolean isConfirmed = false;
 
-    public DatLichHenDialog(Frame parent, ThuCungController controller, Runnable onSuccessCallback) {
+    public DatLichHenDialog(Frame parent, ThuCungBus controller, Runnable onSuccessCallback) {
         super(parent, "TIẾP NHẬN LỊCH HẸN DỊCH VỤ SPA & GROOMING", true);
         this.controller = controller;
         this.onSuccessCallback = onSuccessCallback;
@@ -637,7 +637,7 @@ public class DatLichHenDialog extends JDialog {
             if (hoiGui == JOptionPane.YES_OPTION) {
                 String emailChu = "";
                 try {
-                    KhachHang khDb = new models.dao.KhachHangDAO().findBySoDienThoai(sdt);
+                    KhachHang khDb = new bus.KhachHangBus().timKhachHangTheoSoDienThoai(sdt);
                     if (khDb != null && khDb.getEmail() != null && !khDb.getEmail().isEmpty()) {
                         emailChu = khDb.getEmail();
                     } else {

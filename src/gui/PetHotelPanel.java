@@ -1,4 +1,4 @@
-package views;
+package gui;
 
 import utils.IconHelper;
 import utils.ThemeColors;
@@ -77,8 +77,8 @@ public class PetHotelPanel extends JPanel {
 
     public static void dongBoPhongTuDatabase() {
         try {
-            models.dao.PhongLuuTruDAO dao = new models.dao.PhongLuuTruDAO();
-            List<PhongLuuTru> dbList = dao.getAllPhong();
+            bus.PetHotelBus hotelBus = new bus.PetHotelBus();
+            List<PhongLuuTru> dbList = hotelBus.layDanhSachPhong();
             if (dbList != null) {
                 DANH_SACH_PHONG.clear();
                 DANH_SACH_PHONG.addAll(dbList);
@@ -91,7 +91,7 @@ public class PetHotelPanel extends JPanel {
     public static void luuPhongXuongDB(PhongLuuTru p) {
         if (p == null) return;
         try {
-            new models.dao.PhongLuuTruDAO().updatePhong(p);
+            new bus.PetHotelBus().capNhatPhong(p);
         } catch (Exception e) {
             System.err.println("[PetHotelPanel] Lỗi cập nhật phòng CSDL: " + e.getMessage());
         }
@@ -605,7 +605,7 @@ public class PetHotelPanel extends JPanel {
             btnGuiBaoCao.addActionListener(e -> {
                 String emailChu = "";
                 try {
-                    models.entity.KhachHang kh = new models.dao.KhachHangDAO().findBySoDienThoai(p.sdtChu);
+                    entity.KhachHang kh = new bus.KhachHangBus().timKhachHangTheoSoDienThoai(p.sdtChu);
                     if (kh != null && kh.getEmail() != null && !kh.getEmail().isEmpty()) {
                         emailChu = kh.getEmail();
                     } else {
@@ -859,7 +859,7 @@ public class PetHotelPanel extends JPanel {
             public void changedUpdate(javax.swing.event.DocumentEvent e) { checkTraCuu(); }
             private void checkTraCuu() {
                 String s = txtSdt.getText().trim();
-                models.entity.KhachHang kh = new controllers.BanHangController().timKhachHang(s);
+                entity.KhachHang kh = new bus.BanHangBus().timKhachHang(s);
                 if (kh != null) {
                     txtTenChu.setText(kh.getHoTen());
                 }
@@ -939,7 +939,7 @@ public class PetHotelPanel extends JPanel {
             if (hoiGui == JOptionPane.YES_OPTION) {
                 String emailChu = "";
                 try {
-                    models.entity.KhachHang kh = new models.dao.KhachHangDAO().findBySoDienThoai(pChon.sdtChu);
+                    entity.KhachHang kh = new bus.KhachHangBus().timKhachHangTheoSoDienThoai(pChon.sdtChu);
                     if (kh != null && kh.getEmail() != null && !kh.getEmail().isEmpty()) {
                         emailChu = kh.getEmail();
                     } else {

@@ -1,4 +1,4 @@
-package models.entity;
+package entity;
 
 /**
  * Thực thể Chi tiết lịch hẹn

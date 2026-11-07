@@ -1,6 +1,6 @@
-package models.dao;
+package dao;
 
-import models.entity.KhachHang;
+import entity.KhachHang;
 import utils.DBConnection;
 
 import java.sql.Connection;

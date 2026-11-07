@@ -1,6 +1,6 @@
-package models.dao;
+package dao;
 
-import models.entity.DichVu;
+import entity.DichVu;
 import utils.DBConnection;
 
 import java.sql.Connection;
