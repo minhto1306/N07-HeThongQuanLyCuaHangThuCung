@@ -3,7 +3,6 @@ package bus;
 import dao.TheSpaPassDAO;
 import entity.TheSpaPass;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,7 +12,6 @@ import java.util.List;
  * Lưu trữ bền vững xuống CSDL SQL Server qua TheSpaPassDAO.
  */
 public class SpaPassBus {
-    private final dao.DichVuDAO dichVuDAO = new dao.DichVuDAO();
 
     private static final List<TheSpaPass> DANH_SACH_THE = new ArrayList<>();
     private static final TheSpaPassDAO dao = new TheSpaPassDAO();
@@ -34,41 +32,8 @@ public class SpaPassBus {
             System.err.println("[SpaPassBus] Cảnh báo kết nối CSDL TheSpaPass: " + e.getMessage());
         }
 
-        if (DANH_SACH_THE.isEmpty()) {
-            khoiTaoDuLieuMacDinh();
-        }
-    }
-
-    private static void khoiTaoDuLieuMacDinh() {
-        // Khách quen Nguyễn Văn An (0988111222): Có gói Spa 5 buổi, đã dùng 2, còn 3 buổi
-        TheSpaPass the1 = new TheSpaPass(
-                "PASS_0988111222_01",
-                "0988111222",
-                "Nguyễn Văn An",
-                "Gói Spa Chăm Sóc Thư Giãn (5 Buổi)",
-                5,
-                2,
-                900000L,
-                LocalDate.now().minusDays(20),
-                LocalDate.now().plusDays(70)
-        );
-        DANH_SACH_THE.add(the1);
-        try { dao.insertTheSpaPass(the1); } catch (Exception ignored) {}
-
-        // Khách Trần Thị Mai (0977333444): Có gói Spa 10 buổi, đã dùng 8, còn 2 buổi
-        TheSpaPass the2 = new TheSpaPass(
-                "PASS_0977333444_01",
-                "0977333444",
-                "Trần Thị Mai",
-                "Gói Spa Toàn Diện & Cắt Tỉa (10 Buổi)",
-                10,
-                8,
-                1600000L,
-                LocalDate.now().minusDays(45),
-                LocalDate.now().plusDays(45)
-        );
-        DANH_SACH_THE.add(the2);
-        try { dao.insertTheSpaPass(the2); } catch (Exception ignored) {}
+        // Không tự tạo thẻ miễn phí khi CSDL rỗng/mất kết nối.
+        DANH_SACH_THE.clear();
     }
 
     /**
@@ -97,16 +62,7 @@ public class SpaPassBus {
      * Sử dụng 1 buổi trong Thẻ Spa Pass của khách hàng.
      */
     public boolean suDungMotBuoi(String sdt) {
-        TheSpaPass the = timTheKhaDung(sdt);
-        if (the != null) {
-            boolean ok = the.dungMotBuoi();
-            if (ok) {
-                try { dao.updateTheSpaPass(the); } catch (Exception e) {
-                    System.err.println("[SpaPassBus] Lỗi cập nhật TheSpaPass CSDL: " + e.getMessage());
-                }
-            }
-            return ok;
-        }
+        System.err.println("[SpaPassBus] Từ chối trừ lượt ngoài giao dịch hóa đơn POS");
         return false;
     }
 
@@ -114,13 +70,17 @@ public class SpaPassBus {
         if (maTheOrSdt == null) return false;
         for (TheSpaPass the : DANH_SACH_THE) {
             if ((maTheOrSdt.equalsIgnoreCase(the.getMaThe()) || maTheOrSdt.equalsIgnoreCase(the.getSdtKhachHang())) && the.coTheSuDung()) {
-                boolean ok = the.dungMotBuoi();
-                if (ok) {
-                    try { dao.updateTheSpaPass(the); } catch (Exception e) {
-                        System.err.println("[SpaPassBus] Lỗi cập nhật TheSpaPass CSDL: " + e.getMessage());
+                try {
+                    boolean ok = dao.suDungMotBuoi(the.getMaThe(), maHD,
+                            utils.UserSession.getUserId(), ghiChu);
+                    if (ok) {
+                        dongBoDuLieuTuDatabase();
+                        return true;
                     }
+                } catch (Exception e) {
+                    System.err.println("[SpaPassBus] Lỗi trừ lượt/ghi lịch sử: " + e.getMessage());
                 }
-                return ok;
+                return false;
             }
         }
         return false;
@@ -130,27 +90,8 @@ public class SpaPassBus {
      * Kích hoạt Thẻ Spa Pass mới khi khách hàng mua gói tại quầy POS.
      */
     public TheSpaPass kichHoatTheMoi(String sdt, String tenKhach, String maGoi, int soBuoi, long donGia) {
-        if (sdt == null || sdt.trim().isEmpty()) return null;
-        String tenGoi = "Gói Spa Chăm Sóc (" + soBuoi + " Buổi)";
-        String maThe = dao.sinhMaTheSpaPass(sdt);
-        TheSpaPass theMoi = new TheSpaPass(
-                maThe,
-                sdt.trim(),
-                tenKhach != null ? tenKhach : "Khách hàng",
-                tenGoi,
-                soBuoi,
-                0,
-                donGia,
-                LocalDate.now(),
-                LocalDate.now().plusDays(soBuoi > 5 ? 120 : 90)
-        );
-        DANH_SACH_THE.add(0, theMoi);
-        try {
-            dao.insertTheSpaPass(theMoi);
-        } catch (Exception e) {
-            System.err.println("[SpaPassBus] Lỗi lưu TheSpaPass CSDL: " + e.getMessage());
-        }
-        return theMoi;
+        System.err.println("[SpaPassBus] Từ chối kích hoạt thẻ ngoài giao dịch hóa đơn POS");
+        return null;
     }
 
     /**
@@ -171,16 +112,7 @@ public class SpaPassBus {
     }
 
     public boolean napThemBuoiChoThe(String maThe, int soBuoi, int soNgayGiaHan) {
-        TheSpaPass the = timTheTheoMa(maThe);
-        if (the != null) {
-            the.napThemBuoi(soBuoi, soNgayGiaHan);
-            try {
-                dao.updateTheSpaPass(the);
-            } catch (Exception e) {
-                System.err.println("[SpaPassBus] Lỗi cập nhật nạp thêm TheSpaPass CSDL: " + e.getMessage());
-            }
-            return true;
-        }
+        System.err.println("[SpaPassBus] Từ chối nạp thêm lượt ngoài giao dịch thanh toán");
         return false;
     }
 }

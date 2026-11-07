@@ -5,6 +5,9 @@ import dao.SanPhamDAO;
 import entity.LoHang;
 import entity.QuyDoiDonVi;
 import entity.SanPham;
+import entity.DanhMucHang;
+import entity.DonViTinh;
+import entity.NhaCungCap;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
@@ -19,26 +22,6 @@ import java.util.List;
  * Tách biệt hoàn toàn tầng GUI khỏi SanPhamDAO và LoHangDAO.
  */
 public class KhoLoHangBus {
-
-    public String sinhMaSanPhamMoi() {
-        return sanPhamDAO.sinhMaSanPhamMoi();
-    }
-
-    public String sinhMaLoHangMoi() {
-        return loHangDAO.sinhMaLoHangMoi();
-    }
-
-    public String sinhMaQuyDoiMoi() {
-        return sanPhamDAO.sinhMaQuyDoiMoi();
-    }
-
-    public List<entity.DonViTinh> layTatCaDonViTinh() {
-        try {
-            return sanPhamDAO.getAllDonViTinh();
-        } catch (Exception ignored) {
-            return new ArrayList<>();
-        }
-    }
 
     private final LoHangDAO loHangDAO;
     private final SanPhamDAO sanPhamDAO;
@@ -56,6 +39,33 @@ public class KhoLoHangBus {
             return sanPhamDAO.getAllSanPham();
         } catch (SQLException e) {
             System.err.println("[KhoLoHangBus] Lỗi layDanhSachSanPham: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public List<DanhMucHang> layDanhSachDanhMuc() {
+        try {
+            return sanPhamDAO.getAllDanhMuc();
+        } catch (SQLException e) {
+            System.err.println("[KhoLoHangBus] Lỗi lấy danh mục: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public List<DonViTinh> layDanhSachDonViTinh() {
+        try {
+            return sanPhamDAO.getAllDonViTinh();
+        } catch (SQLException e) {
+            System.err.println("[KhoLoHangBus] Lỗi lấy đơn vị tính: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public List<NhaCungCap> layDanhSachNhaCungCap() {
+        try {
+            return loHangDAO.getAllNhaCungCap();
+        } catch (SQLException e) {
+            System.err.println("[KhoLoHangBus] Lỗi lấy nhà cung cấp: " + e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -176,6 +186,15 @@ public class KhoLoHangBus {
             return loHangDAO.insertLoHang(lh);
         } catch (SQLException e) {
             System.err.println("[KhoLoHangBus] Lỗi nhapLoHang: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean nhapSanPhamVaLoHang(SanPham sp, QuyDoiDonVi qd, LoHang lo) {
+        try {
+            return new dao.NhapKhoDAO().nhapSanPhamVaLoHang(sp, qd, lo);
+        } catch (SQLException e) {
+            System.err.println("[KhoLoHangBus] Transaction nhập kho thất bại: " + e.getMessage());
             return false;
         }
     }

@@ -46,19 +46,15 @@ public class PhanCaBus {
     public void dongBoPhanCongTuDatabase() {
         try {
             List<BangPhanCong> dbList = phanCaDAO.getAllPhanCong();
-            if (dbList != null && !dbList.isEmpty()) {
-                danhSachPhanCong.clear();
+            danhSachPhanCong.clear();
+            if (dbList != null) {
                 danhSachPhanCong.addAll(dbList);
-                return;
-            }
-            khoiTaoDuLieuPhanCongMau();
-            for (BangPhanCong pc : danhSachPhanCong) {
-                try { phanCaDAO.insertPhanCong(pc); } catch (Exception ignored) {}
             }
         } catch (Exception e) {
-            if (danhSachPhanCong.isEmpty()) {
-                khoiTaoDuLieuPhanCongMau();
-            }
+            // Không tự tạo/ghi dữ liệu mẫu khi mất kết nối. Phân công ca là dữ
+            // liệu nghiệp vụ thật và chỉ được tạo bởi Quản lý hoặc script seed.
+            danhSachPhanCong.clear();
+            System.err.println("[PhanCaBus] Không đồng bộ được phân công: " + e.getMessage());
         }
     }
 
@@ -242,7 +238,7 @@ public class PhanCaBus {
             }
         }
 
-        String maPC = "PC" + (danhSachPhanCong.size() + 1);
+        String maPC = utils.MaTuSinhHelper.sinhMaPhanCong();
         BangPhanCong pcMoi = new BangPhanCong(maPC, nv, ca, ngay, "Chưa bắt đầu", ghiChu != null ? ghiChu : "");
         try {
             if (!phanCaDAO.insertPhanCong(pcMoi)) return false;

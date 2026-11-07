@@ -15,10 +15,6 @@ import java.util.List;
 // controller xử lý bán hàng và khách hàng
 public class BanHangBus {
 
-    public String sinhMaHoaDonMoi(String maNV) {
-        return hoaDonDAO.sinhMaHoaDonMoi(maNV);
-    }
-
     // list tạm lưu khách trên ram để tìm cho nhanh đỡ lag
     private static final List<KhachHang> DANH_SACH_KHACH_HANG = new ArrayList<>();
     private static final KhachHangDAO STATIC_KH_DAO = new KhachHangDAO();
@@ -54,15 +50,19 @@ public class BanHangBus {
      */
     // Khởi tạo phiên hóa đơn mới tại quầy: gán mã chuẩn, thời gian tạo và nhân viên thu ngân trực ca
     public void khoiTaoHoaDonMoi(String maHoaDon, NhanVien nhanVien) {
+        NhanVien nhanVienLap = nhanVien != null ? nhanVien : utils.UserSession.getCurrentUser();
+        if (nhanVienLap == null || nhanVienLap.getMaNhanVien() == null) {
+            throw new IllegalStateException("Phải đăng nhập trước khi mở phiên bán hàng");
+        }
         // chưa có mã thì tự sinh mã theo ngày
         if (maHoaDon == null || maHoaDon.trim().isEmpty()) {
-            maHoaDon = hoaDonDAO.sinhMaHoaDonMoi(nhanVien != null ? nhanVien.getMaNhanVien() : utils.UserSession.getUserId());
+            maHoaDon = utils.MaTuSinhHelper.sinhMaHoaDon(nhanVienLap.getMaNhanVien());
         }
         // khởi tạo hóa đơn mới
         this.hoaDonHienTai = new HoaDon(
                 maHoaDon,
                 null,
-                nhanVien != null ? nhanVien : new NhanVien("NV001", "Nhân viên thu ngân", "Thu ngân", "", null),
+                nhanVienLap,
                 LocalDateTime.now(),
                 BigDecimal.ZERO,
                 "Tiền mặt",
@@ -172,6 +172,30 @@ public class BanHangBus {
             return hoaDonDAO.luuPhieuDoiTra(pdt);
         } catch (SQLException e) {
             System.err.println("[BanHangBus] Lỗi luuPhieuDoiTra: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /** Lưu phiếu đổi hàng và hóa đơn mới trong cùng một transaction CSDL. */
+    public boolean luuHoaDonKemDoiTra(HoaDon hd, PhieuDoiTra pdt) {
+        try {
+            return hoaDonDAO.thanhToanHoaDonKemDoiTra(hd, pdt);
+        } catch (SQLException | RuntimeException e) {
+            System.err.println("[BanHangBus] Lỗi luuHoaDonKemDoiTra: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean luuGiaoDichPosDayDu(HoaDon hd, PhieuDoiTra pdt,
+                                      String maTheSuDung, entity.TheSpaPass theMoi,
+                                      List<String> dsMaPhongHotel, int diemSuDung,
+                                      int diemThuHoiDoTraHang) {
+        try {
+            return hoaDonDAO.thanhToanHoaDonDayDu(
+                    hd, pdt, maTheSuDung, theMoi, dsMaPhongHotel,
+                    diemSuDung, diemThuHoiDoTraHang);
+        } catch (SQLException | RuntimeException e) {
+            System.err.println("[BanHangBus] Lỗi luuGiaoDichPosDayDu: " + e.getMessage());
             return false;
         }
     }
@@ -306,9 +330,9 @@ public class BanHangBus {
         return khMoi;
     }
 
-    // Gọi KhachHangDAO để sinh mã khách hàng tự tăng dạng KH0001 từ T-SQL Function fn_SinhMaKhachHang
+    // Gọi MaTuSinhHelper để sinh mã khách hàng tự tăng dạng KH0001 dựa trên mã lớn nhất trong CSDL
     public static String sinhMaKhachHangMoi() {
-        return new dao.KhachHangDAO().sinhMaKhachHangMoi();
+        return utils.MaTuSinhHelper.sinhMaKhachHang();
     }
 
     // Cập nhật thông tin chi tiết khách hàng: chuẩn hóa dữ liệu đầu vào và lưu xuống CSDL

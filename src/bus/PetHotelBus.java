@@ -61,6 +61,16 @@ public class PetHotelBus {
         }
     }
 
+    public boolean hoanTatCheckOutDaThanhToan(PhongLuuTru p, long soNgay, long tongTien, String maHoaDon) {
+        if (p == null || maHoaDon == null || maHoaDon.isBlank()) return false;
+        try {
+            return phongLuuTruDAO.hoanTatCheckOutDaThanhToan(p, soNgay, tongTien, maHoaDon);
+        } catch (SQLException e) {
+            System.err.println("[PetHotelBus] Lỗi hoàn tất checkout: " + e.getMessage());
+            return false;
+        }
+    }
+
     /**
      * Đếm số phòng đang có thú cưng lưu trú (phục vụ KPI và thống kê).
      */

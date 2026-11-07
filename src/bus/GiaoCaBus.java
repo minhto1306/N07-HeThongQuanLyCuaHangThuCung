@@ -17,10 +17,6 @@ import java.util.List;
  */
 public class GiaoCaBus {
 
-    public String sinhMaGiaoCaMoi() {
-        return bangGiaoCaDAO.sinhMaGiaoCaMoi();
-    }
-
     private final BangGiaoCaDAO bangGiaoCaDAO;
     private BangGiaoCa caHienTai;
 
@@ -74,6 +70,15 @@ public class GiaoCaBus {
             System.err.println("[GiaoCaBus] Lỗi tinhTongTienHoanTra: " + e.getMessage());
             return 0L;
         }
+    }
+
+    public long tinhDoanhThuTrongCa(LocalDateTime batDau, LocalDateTime ketThuc,
+                                    String maNhanVien, boolean tienMat) {
+        return bangGiaoCaDAO.tinhDoanhThuTrongCa(batDau, ketThuc, maNhanVien, tienMat);
+    }
+
+    public long tinhHoanTraTrongCa(LocalDateTime batDau, LocalDateTime ketThuc, String maNhanVien) {
+        return bangGiaoCaDAO.tinhHoanTraTrongCa(batDau, ketThuc, maNhanVien);
     }
 
     /**

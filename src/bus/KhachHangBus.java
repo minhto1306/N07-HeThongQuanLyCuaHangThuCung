@@ -11,10 +11,6 @@ import java.sql.SQLException;
  */
 public class KhachHangBus {
 
-    public String sinhMaKhachHangMoi() {
-        return khachHangDAO.sinhMaKhachHangMoi();
-    }
-
     private final KhachHangDAO khachHangDAO;
 
     public KhachHangBus() {

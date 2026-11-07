@@ -4,15 +4,17 @@ import dao.NhanVienDAO;
 import dao.TaiKhoanDAO;
 import entity.NhanVien;
 import entity.TaiKhoan;
+import utils.PasswordHasher;
 
 import java.sql.SQLException;
-import java.util.Random;
+import java.security.SecureRandom;
 
 /**
  * Controller xử lý logic nghiệp vụ Đăng nhập, Xác thực bảo mật & Quên mật khẩu.
  * Đăng nhập bằng Số điện thoại nhân viên + Mật khẩu băm SHA-256.
  */
 public class DangNhapBus {
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final TaiKhoanDAO taiKhoanDAO;
     private final NhanVienDAO nhanVienDAO;
@@ -76,9 +78,19 @@ public class DangNhapBus {
 
         String inputUser = soDienThoaiHoacMa.trim();
         String sdt = chuanHoaSoDienThoai(inputUser);
+        String passHash = PasswordHasher.hashSHA256(matKhau.trim());
+
         try {
-            // Xác thực trực tiếp qua Stored Procedure sp_DangNhap trong SQL Server (tự băm SHA-256)
-            TaiKhoan tk = taiKhoanDAO.kiemTraDangNhap(inputUser, matKhau.trim());
+            // 1. Thử xác thực theo số điện thoại
+            TaiKhoan tk = taiKhoanDAO.kiemTraDangNhap(sdt, passHash);
+
+            // 2. Nếu không tìm thấy bằng SĐT, thử xác thực bằng mã tài khoản (NVxxx) cho tương thích
+            if (tk == null && inputUser.toUpperCase().startsWith("NV")) {
+                TaiKhoan tkMa = taiKhoanDAO.findByMaTaiKhoan(inputUser.toUpperCase());
+                if (tkMa != null && tkMa.isTrangThaiHoatDong() && passHash.equalsIgnoreCase(tkMa.getMatKhau())) {
+                    tk = tkMa;
+                }
+            }
 
             if (tk != null) {
                 NhanVien nv = nhanVienDAO.findByMaNhanVien(tk.getMaTaiKhoan());
@@ -101,7 +113,7 @@ public class DangNhapBus {
                 }
 
                 if (tonTai == null) {
-                    return new KetQuaDangNhap(false, "Số điện thoại / Mã nhân viên không tồn tại trong hệ thống!\n(Gợi ý SĐT mẫu: 0901234567, 0912345678 - Mật khẩu: 123456)", null);
+                    return new KetQuaDangNhap(false, "Số điện thoại / Mã nhân viên hoặc mật khẩu không chính xác!", null);
                 } else if (!tonTai.isTrangThaiHoatDong()) {
                     return new KetQuaDangNhap(false, "Tài khoản của nhân viên này đang bị khóa hoặc ngừng hoạt động!", null);
                 } else {
@@ -141,8 +153,7 @@ public class DangNhapBus {
      * Sinh mã OTP ngẫu nhiên 6 chữ số phục vụ xác thực quên mật khẩu.
      */
     public String sinhMaOTP() {
-        Random rand = new Random();
-        int otp = 100000 + rand.nextInt(900000);
+        int otp = 100000 + SECURE_RANDOM.nextInt(900000);
         return String.valueOf(otp);
     }
 
@@ -154,8 +165,9 @@ public class DangNhapBus {
             return false;
         }
         String sdt = chuanHoaSoDienThoai(soDienThoai);
+        String hash = PasswordHasher.hashSHA256(matKhauMoi.trim());
         try {
-            return taiKhoanDAO.doiMatKhauTheoSoDienThoai(sdt, matKhauMoi.trim());
+            return taiKhoanDAO.doiMatKhauTheoSoDienThoai(sdt, hash);
         } catch (SQLException e) {
             System.err.println("[DangNhapBus] Lỗi datLaiMatKhau: " + e.getMessage());
             return false;
@@ -169,10 +181,19 @@ public class DangNhapBus {
         if (maHoacSdt == null || matKhauCu == null || matKhauMoi == null) return false;
         if (matKhauMoi.trim().length() < 4) return false;
 
+        String oldHash = PasswordHasher.hashSHA256(matKhauCu.trim());
+        String newHash = PasswordHasher.hashSHA256(matKhauMoi.trim());
+
         try {
-            TaiKhoan tk = taiKhoanDAO.kiemTraDangNhap(maHoacSdt, matKhauCu.trim());
-            if (tk != null) {
-                boolean ok = taiKhoanDAO.doiMatKhau(tk.getMaTaiKhoan(), matKhauMoi.trim());
+            TaiKhoan tk = taiKhoanDAO.findBySoDienThoai(maHoacSdt);
+            if (tk == null) {
+                tk = taiKhoanDAO.findByMaTaiKhoan(maHoacSdt);
+            }
+            if (tk != null && oldHash.equalsIgnoreCase(tk.getMatKhau())) {
+                boolean ok = taiKhoanDAO.doiMatKhau(tk.getMaTaiKhoan(), newHash);
+                if (ok && currentUser != null && currentUser.getTaiKhoan() != null) {
+                    currentUser.getTaiKhoan().setMatKhau(newHash);
+                }
                 return ok;
             }
             return false;

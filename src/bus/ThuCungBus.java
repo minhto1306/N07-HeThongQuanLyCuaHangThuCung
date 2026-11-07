@@ -18,18 +18,6 @@ import java.util.List;
  */
 public class ThuCungBus {
 
-    public String sinhMaThuCungMoi() {
-        return thuCungDAO.sinhMaThuCungMoi();
-    }
-
-    public String sinhMaKhachHangMoi() {
-        return new dao.KhachHangDAO().sinhMaKhachHangMoi();
-    }
-
-    public String sinhMaSucKhoeMoi() {
-        return thuCungDAO.sinhMaHoSoMoi().replace("HS", "SK");
-    }
-
     private final ThuCungDAO thuCungDAO;
     private final LichHenDAO lichHenDAO;
 
@@ -49,6 +37,19 @@ public class ThuCungBus {
         }
     }
 
+    public List<HoSoThuCung> timHoSoTheoSoDienThoai(String soDienThoai) {
+        if (soDienThoai == null || soDienThoai.isBlank()) return Collections.emptyList();
+        String sdt = soDienThoai.trim();
+        List<HoSoThuCung> result = new ArrayList<>();
+        for (HoSoThuCung hs : layDanhSachHoSoThuCung()) {
+            if (hs.getKhachHang() != null && sdt.equals(hs.getKhachHang().getSoDienThoai())
+                    && "Đang nuôi".equalsIgnoreCase(hs.getTrangThaiNuoi())) {
+                result.add(hs);
+            }
+        }
+        return result;
+    }
+
     // Tiếp nhận thú cưng mới: kiểm tra chủ nuôi trước, nếu là khách mới toanh chưa có hồ sơ thì tự động tạo nhanh khách hàng rồi mới gắn bé vào
     public boolean themThuCung(ThuCung tc, String maKhachHang, String soMicrochip) {
         try {
@@ -57,7 +58,7 @@ public class ThuCungBus {
             if (kh == null) {
                 String maKhMoi = (maKhachHang != null && !maKhachHang.trim().isEmpty())
                         ? maKhachHang.trim()
-                        : khDao.sinhMaKhachHangMoi();
+                        : utils.MaTuSinhHelper.sinhMaKhachHang();
                 kh = new KhachHang(maKhMoi, "Khách hàng " + maKhMoi, "0900000" + maKhMoi.replaceAll("\\D+", ""), 0);
                 khDao.insert(kh);
             }
@@ -77,7 +78,7 @@ public class ThuCungBus {
                 kh = khDao.findBySoDienThoai(sdtChu.trim());
             }
             if (kh == null) {
-                String maKhMoi = khDao.sinhMaKhachHangMoi();
+                String maKhMoi = utils.MaTuSinhHelper.sinhMaKhachHang();
                 String hoTen = (tenChu != null && !tenChu.trim().isEmpty()) ? tenChu.trim() : ("Khách hàng " + maKhMoi);
                 String sdt = (sdtChu != null && !sdtChu.trim().isEmpty()) ? sdtChu.trim() : ("0900000" + maKhMoi.replaceAll("\\D+", ""));
                 kh = new KhachHang(maKhMoi, hoTen, sdt, 0);
@@ -144,11 +145,23 @@ public class ThuCungBus {
             }
             if (lh.getDsChiTiet() != null) {
                 // Kiểm tra từng bé cưng trong phiếu hẹn, đảm bảo bé nào cũng có thông tin định danh
+                List<ThuCung> thuCungCuaKhach = kh != null
+                        ? thuCungDAO.getThuCungByKhachHang(kh.getMaKhachHang())
+                        : Collections.emptyList();
                 for (ChiTietLichHen ct : lh.getDsChiTiet()) {
                     ThuCung tc = ct.getThuCung();
-                    if (tc != null && thuCungDAO.getThuCungById(tc.getMaThuCung()) == null) {
+                    if (tc == null) continue;
+                    ThuCung daCo = thuCungCuaKhach.stream()
+                            .filter(x -> x.getTenThuCung() != null
+                                    && x.getTenThuCung().trim().equalsIgnoreCase(tc.getTenThuCung().trim()))
+                            .findFirst().orElse(null);
+                    if (daCo != null) {
+                        // Dùng lại đúng mã hồ sơ để giữ bệnh án, dị ứng và lịch sử tiêm.
+                        ct.setThuCung(daCo);
+                    } else if (thuCungDAO.getThuCungById(tc.getMaThuCung()) == null) {
                         String maKH = kh != null ? kh.getMaKhachHang() : "KH001";
-                        thuCungDAO.insertThuCung(tc, maKH, null);
+                        if (!thuCungDAO.insertThuCung(tc, maKH, null)) return false;
+                        thuCungCuaKhach.add(tc);
                     }
                 }
             }
