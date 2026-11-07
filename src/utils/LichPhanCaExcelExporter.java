@@ -52,10 +52,14 @@ public final class LichPhanCaExcelExporter {
     }
 
     private static String workbook(String sheetName) {
+        String safeSheetName = sheetName == null ? "Sheet1"
+                : sheetName.replaceAll("[\\\\/?:*\\[\\]]", " ").trim();
+        if (safeSheetName.isEmpty()) safeSheetName = "Sheet1";
+        if (safeSheetName.length() > 31) safeSheetName = safeSheetName.substring(0, 31);
         return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                 "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" " +
                 "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">" +
-                "<sheets><sheet name=\"" + xml(sheetName) + "\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>";
+                "<sheets><sheet name=\"" + xml(safeSheetName) + "\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>";
     }
 
     private static String workbookRelationships() {

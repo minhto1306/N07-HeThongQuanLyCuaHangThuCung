@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -19,8 +20,8 @@ import java.util.*;
  */
 public final class VNPayHelper {
 
-    private static String tmnCode = "2QXUI4J4";
-    private static String hashSecret = "RA3U8AXPMRF3F8W3L6M8X6E8Z9R5H4Y8";
+    private static String tmnCode = "";
+    private static String hashSecret = "";
     private static String payUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
     private static int returnPort = 8888;
     private static String returnPath = "/vnpay_return";
@@ -79,12 +80,18 @@ public final class VNPayHelper {
      * Tạo URL thanh toán VNPay Sandbox v2.1.0
      */
     public static String taoUrlThanhToan(String maHD, long soTienVnd, String returnUrl) {
+        if (tmnCode.isBlank() || hashSecret.isBlank()) {
+            throw new IllegalStateException("Chưa cấu hình vnpay.tmnCode/vnpay.hashSecret");
+        }
+        if (maHD == null || maHD.isBlank() || returnUrl == null || returnUrl.isBlank() || soTienVnd <= 0) {
+            throw new IllegalArgumentException("Thông tin giao dịch VNPay không hợp lệ");
+        }
         try {
             Map<String, String> vnp_Params = new HashMap<>();
             vnp_Params.put("vnp_Version", "2.1.0");
             vnp_Params.put("vnp_Command", "pay");
             vnp_Params.put("vnp_TmnCode", tmnCode);
-            vnp_Params.put("vnp_Amount", String.valueOf(soTienVnd * 100L)); // VNPay quy định nhân 100
+            vnp_Params.put("vnp_Amount", String.valueOf(Math.multiplyExact(soTienVnd, 100L))); // VNPay quy định nhân 100
             vnp_Params.put("vnp_CurrCode", "VND");
             
             // Mã giao dịch duy nhất
@@ -96,8 +103,10 @@ public final class VNPayHelper {
             vnp_Params.put("vnp_ReturnUrl", returnUrl);
             vnp_Params.put("vnp_IpAddr", "127.0.0.1");
 
-            Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
+            TimeZone vietNamTimeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
+            Calendar cld = Calendar.getInstance(vietNamTimeZone);
             SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+            formatter.setTimeZone(vietNamTimeZone);
             String vnp_CreateDate = formatter.format(cld.getTime());
             vnp_Params.put("vnp_CreateDate", vnp_CreateDate);
 
@@ -167,7 +176,9 @@ public final class VNPayHelper {
             }
 
             String signValue = hmacSHA512(hashSecret, hashData.toString());
-            return signValue.equalsIgnoreCase(vnp_SecureHash);
+            return MessageDigest.isEqual(
+                    signValue.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.US_ASCII),
+                    vnp_SecureHash.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.US_ASCII));
         } catch (Exception ex) {
             return false;
         }

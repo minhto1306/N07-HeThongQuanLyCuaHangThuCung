@@ -14,8 +14,8 @@ public class DBConnection {
     private static String host = "localhost";
     private static String port = "1433";
     private static String databaseName = "QuanLyCuaHangThuCung";
-    private static String user = "sa";
-    private static String password = "sapassword";
+    private static String user = "";
+    private static String password = "";
     private static String instance = "SQLEXPRESS";
     private static int loginTimeout = 3;
 
@@ -76,6 +76,9 @@ public class DBConnection {
 
     // mở kết nối mới
     public static Connection getNewConnection() throws SQLException {
+        if (user.isBlank() || password.isBlank()) {
+            throw new SQLException("Thiếu db.user/db.password trong config/database.properties");
+        }
         SQLException lastEx = null;
 
         // thử port 1433 trước

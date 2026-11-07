@@ -1,8 +1,7 @@
 package utils;
 
-import gui.EmailPreviewDialog;
-
 import java.awt.*;
+import javax.swing.JOptionPane;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -15,11 +14,22 @@ public class EmailThongBaoHelper {
     private static final DecimalFormat DF_MONEY = new DecimalFormat("#,### đ");
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
 
-    // Hàm gọi hiển thị dialog xem trước email và thực hiện gửi
+    /** Hiện dự án chỉ có màn hình xem trước, chưa có SMTP thật. */
+    public static boolean isSmtpConfigured() {
+        return false;
+    }
+
+    // Không báo gửi thành công khi dự án chưa cấu hình SMTP thật.
     public static boolean moHopThoaiGuiEmail(Window owner, String toEmail, String tieuDe, String htmlContent) {
-        EmailPreviewDialog dlg = new EmailPreviewDialog(owner, toEmail, tieuDe, htmlContent);
-        dlg.setVisible(true);
-        return dlg.isDaGuiThanhCong();
+        if (!isSmtpConfigured()) {
+            JOptionPane.showMessageDialog(owner,
+                    "Chức năng gửi email chưa được cấu hình SMTP.\n"
+                    + "Hệ thống chưa gửi thư và không ghi nhận gửi thành công.",
+                    "Email chưa được cấu hình",
+                    JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        throw new IllegalStateException("SMTP được đánh dấu đã cấu hình nhưng chưa có bộ gửi email triển khai");
     }
 
     // 1. Mẫu Email Xác nhận Check-in nhận phòng thú cưng tại Pet Hotel

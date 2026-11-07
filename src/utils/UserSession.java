@@ -30,7 +30,7 @@ public final class UserSession {
 
         // đổi từ chữ vai trò trong db sang enum
         public static Role fromString(String roleStr) {
-            if (roleStr == null) return NVTN;
+            if (roleStr == null) return null;
             String normalized = roleStr.trim().toUpperCase();
 
             if (normalized.contains("QL") || normalized.contains("ADMIN") || normalized.contains("QUANLY") || normalized.contains("KHO")) {
@@ -42,12 +42,12 @@ public final class UserSession {
             } else if (normalized.contains("TN") || normalized.contains("THUNGAN")) {
                 return NVTN;
             }
-            return NVTN;
+            return null;
         }
     }
 
     private static NhanVien currentUser = null;
-    private static Role currentRole = Role.NVQL;
+    private static Role currentRole = null;
 
     private UserSession() {}
 
@@ -61,7 +61,7 @@ public final class UserSession {
         } else if (nhanVien != null) {
             currentRole = Role.fromString(nhanVien.getChucVu());
         } else {
-            currentRole = Role.NVQL;
+            currentRole = null;
         }
     }
 
@@ -74,7 +74,7 @@ public final class UserSession {
     }
 
     public static String getUserId() {
-        return currentUser != null ? currentUser.getMaNhanVien() : "NV_ANONYMOUS";
+        return currentUser != null ? currentUser.getMaNhanVien() : null;
     }
 
     public static String getFullName() {
@@ -90,19 +90,19 @@ public final class UserSession {
     }
 
     public static boolean isQuanLy() {
-        return currentRole == Role.NVQL;
+        return currentUser != null && currentRole == Role.NVQL;
     }
 
     public static boolean isBanHang() {
-        return currentRole == Role.NVBH;
+        return currentUser != null && currentRole == Role.NVBH;
     }
 
     public static boolean isChamSoc() {
-        return currentRole == Role.NVCS;
+        return currentUser != null && currentRole == Role.NVCS;
     }
 
     public static boolean isThuNgan() {
-        return currentRole == Role.NVTN;
+        return currentUser != null && currentRole == Role.NVTN;
     }
 
     // hàm check xem tài khoản này có dc bấm vào card này ko
@@ -253,6 +253,6 @@ public final class UserSession {
      */
     public static void clearSession() {
         currentUser = null;
-        currentRole = Role.NVQL;
+        currentRole = null;
     }
 }
