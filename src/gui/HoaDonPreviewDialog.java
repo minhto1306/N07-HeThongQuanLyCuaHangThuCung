@@ -468,7 +468,7 @@ public class HoaDonPreviewDialog extends JDialog {
                 pw.println("<div class='total-row' style='color:#16a34a; font-weight:bold;'><span>Tiền thối lại:</span><span>" + df.format(tienThoiLai) + "</span></div>");
                 pw.println("<div class='qr-box'>");
                 pw.println("<div style='font-size:11px; font-weight:bold; color:#0284c7; margin-bottom:4px;'>VIETQR NAPAS 247</div>");
-                pw.println("<img src='https://api.vietqr.io/image/970422-0988111222-compact.jpg?amount=" + hoaDon.tongThanhToan + "&addInfo=" + hoaDon.maHoaDon + "' width='140' height='140' alt='VietQR' style='display:block; margin:0 auto;'/>");
+                pw.println("<img src='https://api.vietqr.io/image/970422-0349445392-compact.jpg?amount=" + hoaDon.tongThanhToan + "&addInfo=" + hoaDon.maHoaDon + "' width='140' height='140' alt='VietQR' style='display:block; margin:0 auto;'/>");
                 pw.println("<div style='font-size:10px; color:#64748b; margin-top:4px;'>Quét app ngân hàng để thanh toán</div>");
                 pw.println("</div>");
                 pw.println("<div class='footer'>");

@@ -2,6 +2,7 @@ package gui;
 
 import utils.IconHelper;
 import utils.ThemeColors;
+import utils.UserSession;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -246,6 +247,9 @@ public class KhoLoHangPanel extends JPanel {
         JButton btnSearch = ThemeColors.createSecondaryButton("Lọc", IconHelper.getIcon(IconHelper.SEARCH, 14, ThemeColors.TEXT_SECONDARY));
         JButton btnThemSP = ThemeColors.createPrimaryButton("Thêm Sản phẩm & Lô mới", IconHelper.getIcon(IconHelper.PLUS, 14, Color.WHITE));
         JButton btnQuyDoi = ThemeColors.createSecondaryButton("Thiết lập Quy đổi ĐVT", IconHelper.getIcon(IconHelper.SETTINGS, 14, ThemeColors.TEXT_SECONDARY));
+        boolean duocCapNhatKho = UserSession.canAccessNhom3CapNhatNhapKho();
+        btnThemSP.setEnabled(duocCapNhatKho);
+        btnQuyDoi.setEnabled(duocCapNhatKho);
 
         btnThemSP.addActionListener(e -> moDialogNhapHang());
         btnQuyDoi.addActionListener(e -> moDialogQuyDoi());
@@ -300,6 +304,8 @@ public class KhoLoHangPanel extends JPanel {
         cboLocHSD.setPreferredSize(new Dimension(260, 36));
 
         JButton btnKiemKe = ThemeColors.createSecondaryButton("Kiểm kê tồn kho", IconHelper.getIcon(IconHelper.CLIPBOARD_CHECK, 14, ThemeColors.TEXT_SECONDARY));
+        btnNhapLo.setEnabled(UserSession.canAccessNhom3CapNhatNhapKho());
+        btnKiemKe.setEnabled(UserSession.canAccessNhom3CapNhatNhapKho());
 
         btnNhapLo.addActionListener(e -> moDialogNhapHang());
         btnKiemKe.addActionListener(e -> xuLyKiemKe());
@@ -423,29 +429,34 @@ public class KhoLoHangPanel extends JPanel {
             // 1. Ghi nhận trực tiếp vào CSDL qua KhoLoHangBus trước khi đồng bộ giao diện
             try {
                 bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
-                if (khoBus.laySanPhamById(maSP) == null) {
-                    entity.DanhMucHang dm = new entity.DanhMucHang("DM01", danhMuc, "");
-                    entity.SanPham spMoi = new entity.SanPham(maSP, dm, tenSP, "", dvtCoSo, java.math.BigDecimal.valueOf(giaBan), "Nhập kho mới");
-                    khoBus.themSanPham(spMoi);
-                    entity.DonViTinh dvt = new entity.DonViTinh("DVT01", dvtCoSo);
-                    entity.QuyDoiDonVi qd = new entity.QuyDoiDonVi(khoBus.sinhMaQuyDoiMoi(), spMoi, dvt, 1, true, java.math.BigDecimal.valueOf(giaBan));
-                    khoBus.themQuyDoi(qd);
+                entity.DanhMucHang dm = khoBus.layDanhSachDanhMuc().stream()
+                        .filter(x -> danhMuc.equals(x.getTenDanhMuc())).findFirst().orElse(null);
+                entity.DonViTinh dvt = khoBus.layDanhSachDonViTinh().stream()
+                        .filter(x -> dvtCoSo.equals(x.getTenDonVi())).findFirst().orElse(null);
+                entity.NhaCungCap nccRef = khoBus.layDanhSachNhaCungCap().stream()
+                        .filter(x -> ncc.equals(x.getTenNhaCungCap())).findFirst().orElse(null);
+                if (dm == null || dvt == null || nccRef == null) {
+                    throw new IllegalStateException("Danh mục, đơn vị tính hoặc nhà cung cấp không tồn tại trong CSDL");
                 }
+                entity.SanPham spMoi = new entity.SanPham(maSP, dm, tenSP, "", dvtCoSo, java.math.BigDecimal.valueOf(giaBan), "Nhập kho mới");
+                entity.QuyDoiDonVi qd = new entity.QuyDoiDonVi(utils.MaTuSinhHelper.sinhMaQuyDoi(), spMoi, dvt, 1, true, java.math.BigDecimal.valueOf(giaBan));
                 java.time.format.DateTimeFormatter dtfParse = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
                 java.time.LocalDate dNgaySX = java.time.LocalDate.parse(nsx, dtfParse);
                 java.time.LocalDate dHanSD = java.time.LocalDate.parse(hsd, dtfParse);
-                entity.SanPham spRef = new entity.SanPham(maSP, null, tenSP, "");
-                entity.NhaCungCap nccRef = new entity.NhaCungCap("NCC01", ncc, "", "");
-                entity.LoHang lhMoi = new entity.LoHang(soLo, spRef, nccRef, dNgaySX, dHanSD, java.math.BigDecimal.valueOf(giaNhap), slNhap, slNhap);
-                khoBus.nhapLoHang(lhMoi);
+                entity.LoHang lhMoi = new entity.LoHang(soLo, spMoi, nccRef, dNgaySX, dHanSD, java.math.BigDecimal.valueOf(giaNhap), slNhap, slNhap);
+                if (!khoBus.nhapSanPhamVaLoHang(spMoi, qd, lhMoi)) {
+                    throw new IllegalStateException("Transaction sản phẩm/quy đổi/lô hàng đã rollback");
+                }
             } catch (Exception ex) {
                 System.err.println("[KhoLoHangPanel] Lỗi lưu CSDL SQL Server: " + ex.getMessage());
+                return false;
             }
 
             // 2. Đồng bộ toàn diện Kho, POS Catalog và Dashboard từ CSDL
             dongBoLoHangTuDatabase();
             BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
             TongQuanPanel.lamMoiDuLieuDashboardAll();
+            return true;
         });
         dialog.setVisible(true);
     }
@@ -544,11 +555,15 @@ public class KhoLoHangPanel extends JPanel {
                 bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
                 for (LoHangRecord lo : DANH_SACH_LO_HANG) {
                     if (lo.soLo.equalsIgnoreCase(soLo)) {
+                        boolean ok = khoBus.capNhatSoLuongTon(soLo, Math.max(0, tonThucTe));
+                        if (!ok) {
+                            JOptionPane.showMessageDialog(this, "Không thể cập nhật số lượng tồn vào CSDL!", "Lỗi CSDL", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
                         lo.soLuongTon = Math.max(0, tonThucTe);
                         if (lo.soLuongTon == 0) {
                             lo.trangThaiFEFO = "ĐÃ HẾT TỒN LÔ";
                         }
-                        khoBus.capNhatSoLuongTon(soLo, lo.soLuongTon);
                         break;
                     }
                 }
@@ -717,6 +732,7 @@ public class KhoLoHangPanel extends JPanel {
         JButton btnTaoPO = ThemeColors.createPrimaryButton("Tạo Đơn Đề Xuất Nhập Hàng (Draft PO)", IconHelper.getIcon(IconHelper.FILE_TEXT, 14, Color.WHITE));
         JButton btnXuatCsv = ThemeColors.createSecondaryButton("Xuất Báo Cáo ROP (.csv)", IconHelper.getIcon(IconHelper.FILE_TEXT, 14, ThemeColors.TEXT_SECONDARY));
         JButton btnLamMoi = ThemeColors.createSecondaryButton("Làm mới (F5)", IconHelper.getIcon(IconHelper.REFRESH, 14, ThemeColors.TEXT_SECONDARY));
+        btnTaoPO.setEnabled(UserSession.isQuanLy());
 
         btnTaoPO.addActionListener(e -> moDialogDeXuatNhapHang());
         btnXuatCsv.addActionListener(e -> xuatBaoCaoROPCsv());
@@ -965,9 +981,10 @@ public class KhoLoHangPanel extends JPanel {
                 List<ROPItem> ds = tinhToanDanhSachROP();
                 int stt = 1;
                 for (ROPItem it : ds) {
-                    osw.write(stt++ + ",\"" + it.maSP + "\",\"" + it.tenSP + "\"," + it.tonThucTe + ","
+                    osw.write(stt++ + "," + utils.CsvHelper.cell(it.maSP) + "," + utils.CsvHelper.cell(it.tenSP) + "," + it.tonThucTe + ","
                             + it.tieuThuNgay + "," + it.leadTime + "," + it.tonAnToan + "," + it.rop + ",\""
-                            + it.trangThai + "\"," + (it.deXuatNhap > 0 ? it.deXuatNhap : 0) + ",\"" + it.nhaCungCap + "\"\n");
+                            + it.trangThai.replace("\"", "\"\"") + "\"," + (it.deXuatNhap > 0 ? it.deXuatNhap : 0) + ","
+                            + utils.CsvHelper.cell(it.nhaCungCap) + "\n");
                 }
             }
 

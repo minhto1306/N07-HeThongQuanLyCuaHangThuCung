@@ -24,7 +24,7 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public interface OnNhapHangThanhCongListener {
-        void onNhapHang(String maSP, String tenSP, String danhMuc, String dvtCoSo,
+        boolean onNhapHang(String maSP, String tenSP, String danhMuc, String dvtCoSo,
                         String soLo, String ncc, String nsx, String hsd,
                         long giaNhap, long giaBan, int soLuongNhap, String trangThaiFefo);
     }
@@ -56,7 +56,27 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         getContentPane().setBackground(ThemeColors.SURFACE);
 
         initUI();
+        napDanhMucTuCoSoDuLieu();
         capNhatDanhGiaFefo();
+    }
+
+    private void napDanhMucTuCoSoDuLieu() {
+        bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
+        java.util.List<entity.DanhMucHang> danhMuc = khoBus.layDanhSachDanhMuc();
+        java.util.List<entity.NhaCungCap> nhaCungCap = khoBus.layDanhSachNhaCungCap();
+        java.util.List<entity.DonViTinh> donViTinh = khoBus.layDanhSachDonViTinh();
+        if (!danhMuc.isEmpty()) {
+            cboDanhMuc.setModel(new DefaultComboBoxModel<>(danhMuc.stream()
+                    .map(entity.DanhMucHang::getTenDanhMuc).toArray(String[]::new)));
+        }
+        if (!nhaCungCap.isEmpty()) {
+            cboNhaCungCap.setModel(new DefaultComboBoxModel<>(nhaCungCap.stream()
+                    .map(entity.NhaCungCap::getTenNhaCungCap).toArray(String[]::new)));
+        }
+        if (!donViTinh.isEmpty()) {
+            cboDvtCoSo.setModel(new DefaultComboBoxModel<>(donViTinh.stream()
+                    .map(entity.DonViTinh::getTenDonVi).toArray(String[]::new)));
+        }
     }
 
     private void initUI() {
@@ -131,7 +151,7 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         card.add(new JLabel("Mã sản phẩm:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
      //  Tự động lấy mã tiếp theo từ Database
-        txtMaSP = new JTextField(new bus.KhoLoHangBus().sinhMaSanPhamMoi());
+        txtMaSP = new JTextField(utils.MaTuSinhHelper.sinhMaSanPham());
         txtMaSP.setPreferredSize(new Dimension(0, 32));
         txtMaSP.setBorder(ThemeColors.createInputBorder());
 
@@ -226,7 +246,7 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.35;
         card.add(new JLabel("Số lô hàng:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
-        txtSoLo = new JTextField(new bus.KhoLoHangBus().sinhMaLoHangMoi());
+        txtSoLo = new JTextField(utils.MaTuSinhHelper.sinhSoLo());
         txtSoLo.setPreferredSize(new Dimension(0, 32));
         txtSoLo.setBorder(ThemeColors.createInputBorder());
         txtSoLo.setEditable(false);
@@ -390,9 +410,15 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
 
             String fefo = lblFefoBadge.getText();
 
-            // CHỈ GỌI LISTENER 1 LẦN DUY NHẤT
-            if (listener != null) {
-                listener.onNhapHang(maSP, ten, danhMuc, dvt, soLo, ncc, nsx, hsd, giaNhap, giaBan, sl, fefo);
+            boolean daLuu = listener != null
+                    && listener.onNhapHang(maSP, ten, danhMuc, dvt, soLo, ncc, nsx, hsd,
+                            giaNhap, giaBan, sl, fefo);
+            if (!daLuu) {
+                JOptionPane.showMessageDialog(this,
+                        "Không thể lưu sản phẩm/lô hàng vào CSDL. Không có thông báo thành công giả.\n"
+                        + "Vui lòng kiểm tra kết nối và dữ liệu danh mục rồi thử lại.",
+                        "Nhập kho thất bại", JOptionPane.ERROR_MESSAGE);
+                return;
             }
 
             JOptionPane.showMessageDialog(this,

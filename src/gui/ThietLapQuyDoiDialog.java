@@ -362,17 +362,19 @@ public class ThietLapQuyDoiDialog extends JDialog {
 
             try {
                 bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
-                String maDvt = "DVT" + (khoBus.layTatCaDonViTinh().size() + 1);
+                String maDvt = utils.MaTuSinhHelper.sinhMaDonViTinh();
                 entity.DonViTinh dvt = new entity.DonViTinh(maDvt, tenDvt);
                 khoBus.themDonViTinh(dvt);
                 entity.SanPham sp = new entity.SanPham(maSP, null, tenSP, "");
                 entity.QuyDoiDonVi qd = new entity.QuyDoiDonVi(
-                        khoBus.sinhMaQuyDoiMoi(),
+                        utils.MaTuSinhHelper.sinhMaQuyDoi(),
                         sp, dvt, tyLe, false, java.math.BigDecimal.valueOf(giaBan)
                 );
                 khoBus.themQuyDoi(qd);
             } catch (Exception ex) {
                 System.err.println("[ThietLapQuyDoiDialog] Lỗi lưu quy đổi CSDL: " + ex.getMessage());
+                JOptionPane.showMessageDialog(this, "Không thể lưu quy cách mới vào CSDL: " + ex.getMessage(), "Lỗi CSDL", JOptionPane.ERROR_MESSAGE);
+                return;
             }
 
             QuyDoiItem newItem = new QuyDoiItem(maSP, tenSP, tenDvt, tyLe, false, giaBan);

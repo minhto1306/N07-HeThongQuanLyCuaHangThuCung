@@ -15,6 +15,8 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.text.DecimalFormat;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -232,7 +234,7 @@ public class DoiTraHangPanel extends JPanel {
         pnlHeader.add(lblGuide, BorderLayout.EAST);
 
         String[] cols = {
-                "Chọn", "STT", "Mã SP", "Tên sản phẩm", "ĐVT", "Đơn giá", "Đã mua", "SL Trả", "Lý do đổi trả", "Tình trạng hàng"
+                "Chọn", "STT", "Mã SP", "Tên sản phẩm", "ĐVT", "Giá hoàn/ĐVT", "Đã mua", "SL Trả", "Lý do đổi trả", "Tình trạng hàng", "Số lô", "SL cơ sở/món"
         };
 
         modelSanPham = new DefaultTableModel(cols, 0) {
@@ -280,6 +282,10 @@ public class DoiTraHangPanel extends JPanel {
         tblSanPham.getColumnModel().getColumn(7).setCellRenderer(center);
         tblSanPham.getColumnModel().getColumn(8).setPreferredWidth(160);
         tblSanPham.getColumnModel().getColumn(9).setPreferredWidth(180);
+        tblSanPham.getColumnModel().getColumn(10).setMinWidth(0);
+        tblSanPham.getColumnModel().getColumn(10).setMaxWidth(0);
+        tblSanPham.getColumnModel().getColumn(11).setMinWidth(0);
+        tblSanPham.getColumnModel().getColumn(11).setMaxWidth(0);
 
         // Combobox cho Lý do đổi trả
         JComboBox<String> cboLyDo = new JComboBox<>(new String[]{
@@ -575,6 +581,11 @@ public class DoiTraHangPanel extends JPanel {
             String dvt = mon.length > 3 && mon[3] != null ? mon[3].toString() : "Gói";
             int slMua = mon.length > 4 && mon[4] instanceof Integer ? (Integer) mon[4] : 1;
             String giaStr = mon.length > 5 && mon[5] != null ? mon[5].toString() : "0 đ";
+            long giaHoanSauGiam = tinhGiaHoanSauGiamGia(parseGia(giaStr));
+            String soLo = mon.length > 7 && mon[7] != null ? mon[7].toString() : null;
+            int tongSoLuongCoSo = mon.length > 8 && mon[8] instanceof Number
+                    ? ((Number) mon[8]).intValue() : slMua;
+            int soLuongCoSoMoiDonVi = slMua > 0 ? Math.max(1, tongSoLuongCoSo / slMua) : 1;
 
             // Chỉ cho phép đổi trả hàng hóa vật lý (bắt đầu bằng SP), không đổi dịch vụ đã thực hiện
             if (ma.startsWith("SP")) {
@@ -583,7 +594,7 @@ public class DoiTraHangPanel extends JPanel {
                 if (slConDuocTra > 0) {
                     String tenHienThi = slDaTra > 0 ? (ten + " (Đã trả " + slDaTra + "/" + slMua + ")") : ten;
                     modelSanPham.addRow(new Object[]{
-                            false, stt++, ma, tenHienThi, dvt, giaStr, slConDuocTra, 1, "Sản phẩm lỗi/hỏng", "Còn nguyên tem (nhập lại kho)"
+                            false, stt++, ma, tenHienThi, dvt, df.format(giaHoanSauGiam), slConDuocTra, 1, "Sản phẩm lỗi/hỏng", "Còn nguyên tem (nhập lại kho)", soLo, soLuongCoSoMoiDonVi
                     });
                 } else {
                     coSanPhamDaTraHet = true;
@@ -676,6 +687,17 @@ public class DoiTraHangPanel extends JPanel {
         }
     }
 
+    /** Phân bổ giảm giá cấp hóa đơn theo tỷ lệ giá trị từng dòng hàng. */
+    private long tinhGiaHoanSauGiamGia(long donGiaGoc) {
+        if (currentHoaDon == null || donGiaGoc <= 0 || currentHoaDon.tongTienHang <= 0) return 0L;
+        long toiDaDuocHoan = Math.max(0L,
+                Math.min(currentHoaDon.tongThanhToan, currentHoaDon.tongTienHang));
+        return BigDecimal.valueOf(donGiaGoc)
+                .multiply(BigDecimal.valueOf(toiDaDuocHoan))
+                .divide(BigDecimal.valueOf(currentHoaDon.tongTienHang), 0, RoundingMode.HALF_UP)
+                .longValue();
+    }
+
     // ==========================================
     // XÁC NHẬN & IN PHIẾU ĐỔI TRẢ
     // ==========================================
@@ -700,12 +722,16 @@ public class DoiTraHangPanel extends JPanel {
                 String lyDo = (String) modelSanPham.getValueAt(i, 8);
                 String tinhTrang = (String) modelSanPham.getValueAt(i, 9);
                 boolean nguyenTem = tinhTrang != null && tinhTrang.contains("nguyên tem");
+                String soLo = modelSanPham.getValueAt(i, 10) != null ? modelSanPham.getValueAt(i, 10).toString() : null;
+                int slCoSoMoiDonVi = modelSanPham.getValueAt(i, 11) instanceof Number
+                        ? ((Number) modelSanPham.getValueAt(i, 11)).intValue() : 1;
 
                 long thanhTien = donGia * slTra;
                 tongTienTra += thanhTien;
                 if (nguyenTem) tongSlNguyenTem += slTra;
 
-                dsMonTra.add(new Object[]{maSP, tenSP, dvt, slTra, donGia, thanhTien, lyDo, nguyenTem});
+                dsMonTra.add(new Object[]{maSP, tenSP, dvt, slTra, donGia, thanhTien, lyDo, nguyenTem,
+                        soLo, slTra * slCoSoMoiDonVi});
             }
         }
 
@@ -726,17 +752,19 @@ public class DoiTraHangPanel extends JPanel {
                 LocalDateTime ngayMua = LocalDateTime.parse(currentHoaDon.thoiGian.trim(), dtf);
                 long soNgayDaQua = java.time.temporal.ChronoUnit.DAYS.between(ngayMua.toLocalDate(), java.time.LocalDate.now());
                 if (soNgayDaQua > 7) {
-                    int cfQuaHan = JOptionPane.showConfirmDialog(this,
-                            "⚠️ CẢNH BÁO QUÁ HẠN ĐỔI TRẢ (QUY ĐỊNH 07 NGÀY):\n\n" +
-                            "• Hóa đơn [" + currentHoaDon.maHoaDon + "] mua lúc: " + currentHoaDon.thoiGian + " (Đã qua " + soNgayDaQua + " ngày).\n" +
-                            "• Theo quy định cửa hàng, hóa đơn chỉ được đổi/trả trong vòng 07 ngày.\n\n" +
-                            "Bạn có xác nhận ngoại lệ từ Quản lý cửa hàng để tiếp tục xử lý không?",
-                            "Cảnh báo quá hạn 7 ngày",
-                            JOptionPane.YES_NO_OPTION,
-                            JOptionPane.WARNING_MESSAGE);
-                    if (cfQuaHan != JOptionPane.YES_OPTION) {
+                    if (!utils.UserSession.isQuanLy()) {
+                        JOptionPane.showMessageDialog(this,
+                                "Hóa đơn đã quá hạn đổi trả 07 ngày. Chỉ tài khoản Quản lý (NVQL)\n"
+                                + "mới được duyệt ngoại lệ; nhân viên hiện tại không thể tiếp tục.",
+                                "Cần Quản lý duyệt", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
+                    int cfQuaHan = JOptionPane.showConfirmDialog(this,
+                            "Bạn đang dùng quyền Quản lý để duyệt ngoại lệ cho hóa đơn đã qua "
+                            + soNgayDaQua + " ngày. Tiếp tục?",
+                            "Quản lý duyệt ngoại lệ quá hạn", JOptionPane.YES_NO_OPTION,
+                            JOptionPane.WARNING_MESSAGE);
+                    if (cfQuaHan != JOptionPane.YES_OPTION) return;
                 }
             }
         } catch (Exception ignored) {}
@@ -774,7 +802,8 @@ public class DoiTraHangPanel extends JPanel {
                 String lyDo = (String) mon[6];
                 boolean nguyenTem = (Boolean) mon[7];
                 data.addMonTra(new DoiTraTransferData.MonTraLai(
-                        maSP, tenSP, dvt, slTra, donGia, thanhTien, lyDo, nguyenTem
+                        maSP, tenSP, dvt, slTra, donGia, thanhTien, lyDo, nguyenTem,
+                        (String) mon[8], (Integer) mon[9]
                 ));
             }
 
@@ -800,18 +829,7 @@ public class DoiTraHangPanel extends JPanel {
             return;
         }
 
-        // 1. Cập nhật Hoàn kho nếu nguyên tem
-        for (Object[] mon : dsMonTra) {
-            String ma = (String) mon[0];
-            int sl = (Integer) mon[3];
-            boolean nt = (Boolean) mon[7];
-            if (nt) {
-                KhoLoHangPanel.congTonKho(ma, sl);
-                BanHangPOSPanel.congTonKhoCatalog(ma, sl);
-            }
-        }
-
-        // 2. Nếu Kịch bản B: trừ kho món mới
+        // Nếu Kịch bản B: trừ kho món mới
         if (!laKichBanA && spMoi != null) {
             KhoLoHangPanel.truTonKhoTheoFEFO(spMoi.maSP, slMoi);
             BanHangPOSPanel.truTonKhoCatalog(spMoi.maSP, slMoi);
@@ -836,7 +854,7 @@ public class DoiTraHangPanel extends JPanel {
         }
 
         // Lưu Phiếu Đổi Trả vào SQL Server
-        String maPhieu = new bus.DoiTraBus().sinhMaPhieuDoiTraMoi();
+        String maPhieu = utils.MaTuSinhHelper.sinhMaPhieuDoiTra();
         try {
             entity.PhieuDoiTra pdt = new entity.PhieuDoiTra();
             pdt.setMaPhieuDoiTra(maPhieu);
@@ -844,7 +862,11 @@ public class DoiTraHangPanel extends JPanel {
             hdGoc.setMaHoaDon(currentHoaDon.maHoaDon);
             pdt.setHoaDonGoc(hdGoc);
             entity.NhanVien nv = new entity.NhanVien();
-            nv.setMaNhanVien(utils.UserSession.getUserId() != null ? utils.UserSession.getUserId() : "NV001");
+            String maNhanVienDangNhap = utils.UserSession.getUserId();
+            if (maNhanVienDangNhap == null || maNhanVienDangNhap.isBlank()) {
+                throw new IllegalStateException("Phiên đăng nhập đã hết hạn");
+            }
+            nv.setMaNhanVien(maNhanVienDangNhap);
             pdt.setNhanVien(nv);
             pdt.setNgayDoiTra(LocalDateTime.now());
             pdt.setLyDoDoiTra(laKichBanA ? "Trả hàng - Hoàn tiền" : "Đổi sang sản phẩm khác");
@@ -855,16 +877,30 @@ public class DoiTraHangPanel extends JPanel {
                 String ma = (String) mon[0];
                 int sl = (Integer) mon[3];
                 long thanhTien = (Long) mon[5];
-                pdt.addChiTietDoiTra(new entity.ChiTietDoiTra(
+                entity.ChiTietDoiTra chiTiet = new entity.ChiTietDoiTra(
                         pdt.getMaPhieuDoiTra() + "_" + (idx++),
                         pdt, new entity.SanPham(ma, null, "", ""), sl,
                         java.math.BigDecimal.valueOf(thanhTien)
-                ));
+                );
+                if ((Boolean) mon[7]) {
+                    chiTiet.setSoLo((String) mon[8]);
+                    chiTiet.setSoLuongCoSoHoan((Integer) mon[9]);
+                }
+                pdt.addChiTietDoiTra(chiTiet);
             }
-            doiTraBus.luuPhieuDoiTra(pdt);
+            if (!doiTraBus.luuPhieuDoiTra(pdt)) {
+                throw new IllegalStateException("Không lưu được phiếu đổi trả; tồn kho chưa được hoàn");
+            }
         } catch (Exception ex) {
             System.err.println("[DoiTraHangPanel] Lỗi lưu phiếu đổi trả CSDL: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Đổi trả chưa hoàn tất vì không thể ghi nhận giao dịch: " + ex.getMessage(),
+                    "Lỗi lưu đổi trả", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+
+        KhoLoHangPanel.dongBoLoHangTuDatabase();
+        BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
 
         // 4. Đồng bộ Dashboard
         TongQuanPanel.lamMoiDuLieuDashboardAll();
