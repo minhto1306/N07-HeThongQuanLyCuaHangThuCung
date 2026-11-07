@@ -105,16 +105,12 @@ public class VietQRDialog extends JDialog {
         setLayout(new BorderLayout());
         getContentPane().setBackground(new Color(0xF8, 0xFA, 0xFC));
 
-        // Phím tắt ESC để đóng, F9 để xác nhận
+        // Chỉ ESC được dùng làm phím tắt. Không cho xác nhận tiền bằng một phím
+        // tắt vô tình; thu ngân phải chủ động đối chiếu ứng dụng ngân hàng.
         getRootPane().registerKeyboardAction(e -> {
             xacNhanThanhCong = false;
             dispose();
         }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
-
-        getRootPane().registerKeyboardAction(e -> {
-            xacNhanThanhCong = true;
-            dispose();
-        }, KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
 
         // 1. HEADER BANNER
         JPanel pnlHeader = new JPanel(new BorderLayout());
@@ -230,7 +226,7 @@ public class VietQRDialog extends JDialog {
             dispose();
         });
 
-        btnXacNhan = new JButton("✓ ĐÃ NHẬN ĐỦ " + df.format(tongThanhToan) + " (F9)");
+        btnXacNhan = new JButton("✓ ĐÃ ĐỐI CHIẾU NGÂN HÀNG");
         btnXacNhan.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnXacNhan.setPreferredSize(new Dimension(280, 42));
         btnXacNhan.setBackground(new Color(0x10, 0xB9, 0x81)); // Xanh Emerald thành công
@@ -239,8 +235,15 @@ public class VietQRDialog extends JDialog {
         btnXacNhan.setBorder(new LineBorder(new Color(0x05, 0x96, 0x69), 1, true));
         btnXacNhan.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnXacNhan.addActionListener(e -> {
-            xacNhanThanhCong = true;
-            dispose();
+            int choice = JOptionPane.showConfirmDialog(this,
+                    "Chỉ xác nhận khi giao dịch " + maHoaDon + " đã xuất hiện trong ứng dụng ngân hàng\n"
+                    + "với đúng số tiền " + df.format(tongThanhToan) + ".\n\nBạn đã đối chiếu đủ hai thông tin trên?",
+                    "Xác nhận đối chiếu chuyển khoản",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (choice == JOptionPane.YES_OPTION) {
+                xacNhanThanhCong = true;
+                dispose();
+            }
         });
 
         pnlActions.add(btnHuy, BorderLayout.WEST);
@@ -389,9 +392,10 @@ public class VietQRDialog extends JDialog {
                     System.err.println("[VietQRDialog] Endpoint 2 (/v2/generate) lỗi: " + ex.getMessage());
                 }
 
-                // CƠ CHẾ 3: Offline Vector QR Fallback (Đảm bảo hiển thị mã QR sắc nét ngay cả khi máy mất mạng)
+                // Không dựng ma trận ngẫu nhiên giả làm QR: ảnh đó không chứa payload
+                // VietQR hợp lệ và có thể khiến thu ngân tưởng khách đã quét được.
                 isOfflineFallback = true;
-                return taoMaVietQROfflineFallback();
+                return null;
             }
 
             @Override
@@ -409,17 +413,19 @@ public class VietQRDialog extends JDialog {
                         lblQRCode.setText(null);
                         lblQRCode.setIcon(new ImageIcon(scaled));
 
-                        if (isOfflineFallback) {
-                            lblTrangThaiKetNoi.setText("✓ Mã QR nội bộ (Offline Mode) • Đã khóa số tiền " + df.format(tongThanhToan));
-                            lblTrangThaiKetNoi.setForeground(new Color(0xD9, 0x77, 0x06));
-                        } else {
-                            lblTrangThaiKetNoi.setText("✓ ĐÃ KHÓA CỐ ĐỊNH SỐ TIỀN " + df.format(tongThanhToan));
-                            lblTrangThaiKetNoi.setForeground(new Color(0x15, 0x80, 0x3D));
-                        }
+                        lblTrangThaiKetNoi.setText("✓ ĐÃ KHÓA CỐ ĐỊNH SỐ TIỀN " + df.format(tongThanhToan));
+                        lblTrangThaiKetNoi.setForeground(new Color(0x15, 0x80, 0x3D));
+                    } else if (isOfflineFallback) {
+                        lblQRCode.setIcon(null);
+                        lblQRCode.setText("<html><center>Không tải được mã VietQR.<br>Khách có thể chuyển khoản bằng thông tin bên dưới;<br>thu ngân phải đối chiếu ứng dụng ngân hàng.</center></html>");
+                        lblTrangThaiKetNoi.setText("⚠ Mất kết nối VietQR - không hiển thị QR giả");
+                        lblTrangThaiKetNoi.setForeground(new Color(0xD9, 0x77, 0x06));
                     }
                 } catch (Exception ex) {
-                    lblQRCode.setIcon(new ImageIcon(taoMaVietQROfflineFallback()));
-                    lblTrangThaiKetNoi.setText("✓ Đã kích hoạt QR dự phòng nội bộ");
+                    lblQRCode.setIcon(null);
+                    lblQRCode.setText("Không thể tải mã VietQR. Vui lòng chuyển khoản thủ công và đối chiếu ngân hàng.");
+                    lblTrangThaiKetNoi.setText("⚠ Không thể tạo mã VietQR hợp lệ");
+                    lblTrangThaiKetNoi.setForeground(new Color(0xDC, 0x26, 0x26));
                 }
             }
         };

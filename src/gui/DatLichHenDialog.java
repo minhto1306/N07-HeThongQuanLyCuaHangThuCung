@@ -164,7 +164,7 @@ public class DatLichHenDialog extends JDialog {
         gbc.gridx = 1;
         JPanel pnlSdt = new JPanel(new BorderLayout(4, 0));
         pnlSdt.setOpaque(false);
-        txtSdt = new JTextField("0988111222");
+        txtSdt = new JTextField();
         txtSdt.setBorder(ThemeColors.createInputBorder());
         txtSdt.setPreferredSize(new Dimension(0, 30));
         JButton btnTraCuu = ThemeColors.createSecondaryButton("Gợi ý", IconHelper.getIcon(IconHelper.SEARCH, 12, ThemeColors.TEXT_SECONDARY));
@@ -570,23 +570,26 @@ public class DatLichHenDialog extends JDialog {
 
     private void traCuuKhachHangNhanh() {
         String sdt = txtSdt.getText().trim();
-        if (sdt.equals("0988111222")) {
-            txtKhachHang.setText("Nguyễn Văn An");
-            txtTenThuCung.setText("Miu Miu");
-            cboGiongLoai.setSelectedItem("Mèo Anh Lông Ngắn");
-            spnCanNang.setValue(4.2);
-            capNhatSizeBadge();
-            JOptionPane.showMessageDialog(this, "Đã tìm thấy thông tin khách hàng cũ!", "Tra cứu", JOptionPane.INFORMATION_MESSAGE);
-        } else if (sdt.equals("0977333444")) {
-            txtKhachHang.setText("Trần Thị Mai");
-            txtTenThuCung.setText("Lu Lu");
-            cboGiongLoai.setSelectedItem("Chó Poodle");
-            spnCanNang.setValue(5.8);
-            capNhatSizeBadge();
-            JOptionPane.showMessageDialog(this, "Đã tìm thấy thông tin khách hàng cũ!", "Tra cứu", JOptionPane.INFORMATION_MESSAGE);
-        } else {
+        java.util.List<HoSoThuCung> hoSo = controller.timHoSoTheoSoDienThoai(sdt);
+        if (hoSo.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Chưa có dữ liệu cho SĐT này. Tiếp tục nhập thông tin mới.", "Thông tin", JOptionPane.INFORMATION_MESSAGE);
+            return;
         }
+        HoSoThuCung selected = hoSo.get(0);
+        if (hoSo.size() > 1) {
+            Object choice = JOptionPane.showInputDialog(this,
+                    "Khách có nhiều thú cưng, vui lòng chọn đúng bé:", "Chọn hồ sơ thú cưng",
+                    JOptionPane.QUESTION_MESSAGE, null, hoSo.toArray(), hoSo.get(0));
+            if (choice == null) return;
+            selected = (HoSoThuCung) choice;
+        }
+        txtKhachHang.setText(selected.getKhachHang().getHoTen());
+        txtTenThuCung.setText(selected.getThuCung().getTenThuCung());
+        cboGiongLoai.setSelectedItem(selected.getThuCung().getGiongLoai());
+        JOptionPane.showMessageDialog(this,
+                "Đã liên kết hồ sơ " + selected.getThuCung().getMaThuCung()
+                + ". Lịch hẹn mới sẽ giữ nguyên bệnh án và cảnh báo dị ứng.",
+                "Đã tìm thấy hồ sơ", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private String formatDateDisplay(LocalDate date) {
@@ -605,8 +608,8 @@ public class DatLichHenDialog extends JDialog {
             return;
         }
 
-        String maLH = new dao.LichHenDAO().sinhMaLichHenMoi();
-        KhachHang kh = new KhachHang(new dao.KhachHangDAO().sinhMaKhachHangMoi(), hoTen, sdt, 0);
+        String maLH = utils.MaTuSinhHelper.sinhMaLichHen();
+        KhachHang kh = new KhachHang(utils.MaTuSinhHelper.sinhMaKhachHang(), hoTen, sdt, 0);
 
         String ktvSelected = (String) cboKtv.getSelectedItem();
         NhanVien ktv = null;
@@ -625,7 +628,7 @@ public class DatLichHenDialog extends JDialog {
         }
 
         String gioiTinh = radDuc.isSelected() ? "Đực" : "Cái";
-        ThuCung tc = new ThuCung(new dao.ThuCungDAO().sinhMaThuCungMoi(), tenTc, (String) cboGiongLoai.getSelectedItem(), null, gioiTinh);
+        ThuCung tc = new ThuCung(utils.MaTuSinhHelper.sinhMaThuCung(), tenTc, (String) cboGiongLoai.getSelectedItem(), null, gioiTinh);
 
         String dvStr = (String) cboDichVu.getSelectedItem();
         String maDv = dvStr.substring(0, 5);

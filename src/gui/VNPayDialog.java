@@ -97,7 +97,15 @@ public class VNPayDialog extends JDialog {
                     String responseCode = params.get("vnp_ResponseCode");
                     String txnRef = params.get("vnp_TxnRef");
                     boolean hopLe = VNPayHelper.xacThucChuKy(params);
-                    boolean thanhCong = "00".equals(responseCode);
+                    boolean dungMaHoaDon = txnRef != null && txnRef.startsWith(maHoaDon + "_");
+                    boolean dungSoTien = false;
+                    try {
+                        dungSoTien = Long.parseLong(params.getOrDefault("vnp_Amount", "-1"))
+                                == Math.multiplyExact(tongThanhToan, 100L);
+                    } catch (NumberFormatException | ArithmeticException ignored) {
+                        dungSoTien = false;
+                    }
+                    boolean thanhCong = hopLe && dungMaHoaDon && dungSoTien && "00".equals(responseCode);
 
                     // Phản hồi HTML cho Trình duyệt
                     String html;
@@ -190,9 +198,9 @@ public class VNPayDialog extends JDialog {
         }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
 
         getRootPane().registerKeyboardAction(e -> {
-            xacNhanThanhCong = true;
-            dungServer();
-            dispose();
+            JOptionPane.showMessageDialog(this,
+                    "VNPay chỉ được xác nhận tự động sau khi callback hợp lệ từ cổng thanh toán.",
+                    "Không thể xác nhận thủ công", JOptionPane.WARNING_MESSAGE);
         }, KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
 
         // 1. HEADER VNPAY (Xanh dương & Đỏ thương hiệu VNPay)
@@ -308,19 +316,14 @@ public class VNPayDialog extends JDialog {
             dispose();
         });
 
-        btnXacNhan = new JButton("✓ XÁC NHẬN ĐÃ THANH TOÁN (F9)");
+        btnXacNhan = new JButton("ĐANG CHỜ VNPAY XÁC NHẬN");
         btnXacNhan.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnXacNhan.setPreferredSize(new Dimension(280, 42));
         btnXacNhan.setBackground(new Color(0x10, 0xB9, 0x81));
         btnXacNhan.setForeground(Color.WHITE);
         btnXacNhan.setFocusPainted(false);
         btnXacNhan.setBorder(new LineBorder(new Color(0x05, 0x96, 0x69), 1, true));
-        btnXacNhan.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnXacNhan.addActionListener(e -> {
-            xacNhanThanhCong = true;
-            dungServer();
-            dispose();
-        });
+        btnXacNhan.setEnabled(false);
 
         pnlActions.add(btnHuy, BorderLayout.WEST);
         pnlActions.add(btnXacNhan, BorderLayout.CENTER);

@@ -121,6 +121,7 @@ public class ThuCungDichVuPanel extends JPanel {
 
         JButton btnThem = ThemeColors.createPrimaryButton("Đăng ký Thú cưng mới", IconHelper.getIcon(IconHelper.PLUS, 14, Color.WHITE));
         JButton btnLamMoi = ThemeColors.createSecondaryButton("Làm mới", IconHelper.getIcon(IconHelper.REFRESH, 14, ThemeColors.TEXT_SECONDARY));
+        btnThem.setEnabled(utils.UserSession.canAccessNhom3CapNhatSucKhoeBe());
 
         btnThem.addActionListener(e -> moDialogDangKyThuCung());
         btnLamMoi.addActionListener(e -> {
@@ -189,7 +190,7 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogDangKyThuCung() {
-        String maTC = controller.sinhMaThuCungMoi();
+        String maTC = utils.MaTuSinhHelper.sinhMaThuCung();
         JTextField txtMaTC = new JTextField(maTC);
         txtMaTC.setEditable(false);
         txtMaTC.setBackground(new Color(0xF1, 0xF5, 0xF9));
@@ -198,7 +199,7 @@ public class ThuCungDichVuPanel extends JPanel {
         JTextField txtGiong = new JTextField("Mèo Anh Lông Ngắn");
         JComboBox<String> cboSex = new JComboBox<>(new String[]{"Đực", "Cái"});
         JTextField txtChu = new JTextField("Nguyễn Văn An");
-        JTextField txtSdt = new JTextField("0988111222");
+        JTextField txtSdt = new JTextField();
         JTextField txtChip = new JTextField("MC-982" + maTC.replace("TC", "") + "-VN");
 
         Object[] msg = {
@@ -238,6 +239,7 @@ public class ThuCungDichVuPanel extends JPanel {
                 IconHelper.getIcon(IconHelper.PLUS, 14, Color.WHITE));
         JButton btnLamMoiSK = ThemeColors.createSecondaryButton("Làm mới",
                 IconHelper.getIcon(IconHelper.REFRESH, 14, ThemeColors.TEXT_SECONDARY));
+        btnKiemTraMoi.setEnabled(utils.UserSession.canAccessNhom3CapNhatSucKhoeBe());
 
         btnKiemTraMoi.addActionListener(e -> moDialogKhamSucKhoe());
         btnLamMoiSK.addActionListener(e -> napDuLieuSucKhoe());
@@ -281,7 +283,7 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogKhamSucKhoe() {
-        String maSK = "SK00" + (System.currentTimeMillis() % 100);
+        String maSK = utils.MaTuSinhHelper.sinhMaSucKhoe();
         JTextField txtMaSK = new JTextField(maSK);
         txtMaSK.setEditable(false);
         txtMaSK.setBackground(new Color(0xF1, 0xF5, 0xF9));
@@ -333,7 +335,12 @@ public class ThuCungDichVuPanel extends JPanel {
             }
 
             entity.NhanVien cur = utils.UserSession.getCurrentUser();
-            entity.NhanVien nvKiemTra = (cur != null) ? cur : new entity.NhanVien("NV001", "Lê Khãi Minh", "NVQL", null, null);
+            if (cur == null || cur.getMaNhanVien() == null) {
+                JOptionPane.showMessageDialog(this, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!",
+                        "Không thể lưu hồ sơ", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            entity.NhanVien nvKiemTra = cur;
 
             HoSoSucKhoe sk = new HoSoSucKhoe(
                     maSK,
@@ -416,6 +423,11 @@ public class ThuCungDichVuPanel extends JPanel {
         btnXoaKH.setForeground(ThemeColors.DANGER);
         JButton btnLamMoiKH = ThemeColors.createSecondaryButton("Làm mới",
                 IconHelper.getIcon(IconHelper.REFRESH, 14, ThemeColors.TEXT_SECONDARY));
+        boolean duocCapNhatKhach = utils.UserSession.isQuanLy()
+                || utils.UserSession.isBanHang() || utils.UserSession.isThuNgan();
+        btnThemKH.setEnabled(duocCapNhatKhach);
+        btnSuaKH.setEnabled(duocCapNhatKhach);
+        btnXoaKH.setEnabled(utils.UserSession.isQuanLy());
 
         txtTimKhachHang.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { napDuLieuKhachHang(); }
@@ -629,6 +641,10 @@ public class ThuCungDichVuPanel extends JPanel {
         JButton btnPhatHanhThe = ThemeColors.createPrimaryButton("Phát hành Thẻ mới", IconHelper.getIcon(IconHelper.PLUS, 14, Color.WHITE));
         JButton btnNapBuoi = ThemeColors.createSecondaryButton("Nạp thêm / Gia hạn buổi", IconHelper.getIcon(IconHelper.EDIT, 14, ThemeColors.TEXT_SECONDARY));
         JButton btnLamMoiThe = ThemeColors.createSecondaryButton("Làm mới", IconHelper.getIcon(IconHelper.REFRESH, 14, ThemeColors.TEXT_SECONDARY));
+        btnPhatHanhThe.setEnabled(false);
+        btnNapBuoi.setEnabled(false);
+        btnPhatHanhThe.setToolTipText("Bán gói qua POS để phát hành sau thanh toán");
+        btnNapBuoi.setToolTipText("Nạp/gia hạn qua POS để có hóa đơn");
 
         txtTimTheHoiVien.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { napDuLieuTheHoiVien(); }
@@ -734,6 +750,12 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogPhatHanhTheMoi() {
+        JOptionPane.showMessageDialog(this,
+                "Thẻ Spa Pass chỉ được phát hành sau khi bán gói và thanh toán tại POS.\n"
+                + "Màn hình này chỉ dùng để tra cứu/đối soát thẻ.",
+                "Phát hành qua POS", JOptionPane.INFORMATION_MESSAGE);
+        return;
+        /*
         JTextField txtSdt = new JTextField();
         JTextField txtHoTen = new JTextField();
         JComboBox<String> cboGoi = new JComboBox<>(new String[]{
@@ -789,9 +811,15 @@ public class ThuCungDichVuPanel extends JPanel {
                             + "- Hạn sử dụng: Đến ngày " + theMoi.getNgayHetHanStr(),
                     "Phát hành thành công", JOptionPane.INFORMATION_MESSAGE);
         }
+        */
     }
 
     private void moDialogGiaHanHoacNapBuoi() {
+        JOptionPane.showMessageDialog(this,
+                "Nạp thêm/gia hạn là giao dịch có thu tiền và phải thực hiện qua POS để có hóa đơn.",
+                "Nạp gói qua POS", JOptionPane.INFORMATION_MESSAGE);
+        return;
+        /*
         int row = tblTheHoiVien.getSelectedRow();
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn 1 thẻ trên bảng để nạp thêm hoặc gia hạn!", "Chưa chọn thẻ", JOptionPane.WARNING_MESSAGE);
@@ -831,6 +859,7 @@ public class ThuCungDichVuPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, "Số buổi và số ngày phải là số nguyên dương hợp lệ!", "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
             }
         }
+        */
     }
 
     // hàm gửi email nhắc lịch tiêm phòng dại hoặc tái chủng 7 bệnh cho chủ thú cưng

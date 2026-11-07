@@ -70,6 +70,7 @@ public class PetHotelPanel extends JPanel {
     }
 
     private static final List<PhongLuuTru> DANH_SACH_PHONG = new ArrayList<>();
+    private static final List<PetHotelPanel> INSTANCES = new ArrayList<>();
 
     static {
         dongBoPhongTuDatabase();
@@ -85,6 +86,19 @@ public class PetHotelPanel extends JPanel {
             }
         } catch (Exception e) {
             System.err.println("[PetHotelPanel] Lỗi tải phòng lưu trú CSDL: " + e.getMessage());
+        }
+    }
+
+    public static void dongBoVaLamMoiGiaoDien() {
+        dongBoPhongTuDatabase();
+        for (PetHotelPanel panel : INSTANCES) {
+            panel.phongDangChon = DANH_SACH_PHONG.stream()
+                    .filter(p -> panel.phongDangChon != null
+                            && p.maPhong.equalsIgnoreCase(panel.phongDangChon.maPhong))
+                    .findFirst().orElse(DANH_SACH_PHONG.isEmpty() ? null : DANH_SACH_PHONG.get(0));
+            panel.capNhatSoLieuKPI();
+            panel.locVaHienThiGridPhong();
+            if (panel.phongDangChon != null) panel.capNhatKhungChiTiet(panel.phongDangChon);
         }
     }
 
@@ -110,6 +124,7 @@ public class PetHotelPanel extends JPanel {
     private PhongLuuTru phongDangChon = null;
 
     public PetHotelPanel() {
+        INSTANCES.add(this);
         setLayout(new BorderLayout(0, 10));
         setBackground(ThemeColors.BACKGROUND);
         setBorder(new EmptyBorder(12, 16, 14, 16));
@@ -1014,25 +1029,11 @@ public class PetHotelPanel extends JPanel {
 
         int opt = JOptionPane.showConfirmDialog(this, msg, "Xác nhận Check-out", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (opt == JOptionPane.YES_OPTION) {
-            // Lưu lịch sử lưu trú trước khi đổi trạng thái phòng
-            try {
-                new bus.PetHotelBus().luuLichSuLuuTru(p, days, tongTien);
-            } catch (Exception ex) {
-                System.err.println("[PetHotelPanel] Lỗi ghi lịch sử lưu trú: " + ex.getMessage());
-            }
-
-            // Đổi trạng thái sang dọn dẹp
-            p.trangThai = "ĐANG DỌN DẸP";
-            luuPhongXuongDB(p);
             String tenBe = p.tenThuCung;
             String tenChu = p.tenChu;
             String sdt = p.sdtChu;
             String maPhong = p.maPhong;
             String loaiPhong = p.loaiPhong;
-
-            capNhatSoLieuKPI();
-            locVaHienThiGridPhong();
-            capNhatKhungChiTiet(p);
 
             // Đẩy sang Hóa đơn POS qua MainDashboard
             Container top = getTopLevelAncestor();
@@ -1045,6 +1046,25 @@ public class PetHotelPanel extends JPanel {
                 }
             }
         }
+    }
+
+    /** Chỉ giải phóng phòng sau khi hóa đơn POS đã commit thành công. */
+    public static boolean hoanTatCheckOutSauThanhToan(String maPhong, String maHoaDon) {
+        PhongLuuTru phong = DANH_SACH_PHONG.stream()
+                .filter(p -> p.maPhong.equalsIgnoreCase(maPhong)).findFirst().orElse(null);
+        if (phong == null || !"ĐANG CÓ KHÁCH".equalsIgnoreCase(phong.trangThai)) return false;
+        long days = phong.thoiGianCheckIn == null ? 1
+                : Math.max(1, ChronoUnit.DAYS.between(phong.thoiGianCheckIn.toLocalDate(),
+                        LocalDateTime.now().toLocalDate()));
+        long tongTien = days * phong.donGiaNgay + phong.phiDichVuPhatSinh;
+        if (!new bus.PetHotelBus().hoanTatCheckOutDaThanhToan(phong, days, tongTien, maHoaDon)) return false;
+        phong.trangThai = "ĐANG DỌN DẸP";
+        for (PetHotelPanel panel : INSTANCES) {
+            panel.capNhatSoLieuKPI();
+            panel.locVaHienThiGridPhong();
+            panel.capNhatKhungChiTiet(phong);
+        }
+        return true;
     }
 
     public static List<PhongLuuTru> layDanhSachPhong() {

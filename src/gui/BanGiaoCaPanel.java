@@ -2,6 +2,7 @@ package gui;
 
 import bus.DangNhapBus;
 import bus.GiaoCaBus;
+import bus.PhanCaBus;
 import entity.BangGiaoCa;
 import entity.CaLamViec;
 import entity.NhanVien;
@@ -23,6 +24,7 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -36,8 +38,9 @@ import java.util.List;
 public class BanGiaoCaPanel extends JPanel {
 
     private final GiaoCaBus giaoCaBus = new GiaoCaBus();
+    private final PhanCaBus phanCaBus = new PhanCaBus();
 
-    private static final long TIEN_BAN_GIAO_MAU = 6_500_000L;
+    private static final long TIEN_DAU_CA_KHI_CHUA_CO_BAN_GIAO = 0L;
 
     private final DecimalFormat df = new DecimalFormat("#,### đ");
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -59,7 +62,7 @@ public class BanGiaoCaPanel extends JPanel {
     private JButton btnQuanLyDuyet;
     private JButton btnChotCa;
 
-    private long tienDauCa = TIEN_BAN_GIAO_MAU;
+    private long tienDauCa = TIEN_DAU_CA_KHI_CHUA_CO_BAN_GIAO;
     private long tienHeThongGhiNhan = 0L;
     private long tienChuyenKhoanGhiNhan = 0L;
     private long tienHoanTraKhach = 0L;
@@ -79,6 +82,7 @@ public class BanGiaoCaPanel extends JPanel {
         add(pnlRight, BorderLayout.CENTER);
 
         lamMoiDuLieuCaHienTai();
+        cboCaLamViec.addActionListener(e -> lamMoiDuLieuCaHienTai());
     }
 
     private JPanel taoPanelBienBanKetCa() {
@@ -122,9 +126,10 @@ public class BanGiaoCaPanel extends JPanel {
 
         gbc.gridx = 1; gbc.weightx = 0.58;
         cboCaLamViec = new JComboBox<>(new String[]{
-                "CA01 - Ca Sáng (07:30 - 12:00)",
-                "CA02 - Ca Chiều (12:00 - 17:30)",
-                "CA03 - Ca Tối (17:30 - 22:00)"
+                "CA01 - Ca Sáng (07:00 - 11:30)",
+                "CA02 - Ca Trưa (11:30 - 15:30)",
+                "CA03 - Ca Chiều (15:30 - 19:30)",
+                "CA04 - Ca Tối (19:30 - 22:00)"
         });
         cboCaLamViec.setFont(new Font("Segoe UI", Font.BOLD, 12));
         cboCaLamViec.setPreferredSize(new Dimension(210, 30));
@@ -146,7 +151,7 @@ public class BanGiaoCaPanel extends JPanel {
         pnlForm.add(taoLabelForm("(1) Tiền đầu ca kế thừa:"), gbc);
 
         gbc.gridx = 1;
-        txtTienDauCa = new JTextField(String.valueOf(TIEN_BAN_GIAO_MAU));
+        txtTienDauCa = new JTextField(String.valueOf(TIEN_DAU_CA_KHI_CHUA_CO_BAN_GIAO));
         txtTienDauCa.setFont(new Font("Segoe UI", Font.BOLD, 13));
         txtTienDauCa.setPreferredSize(new Dimension(160, 30));
         txtTienDauCa.setBorder(ThemeColors.createInputBorder());
@@ -315,13 +320,15 @@ public class BanGiaoCaPanel extends JPanel {
 
     private void chonCaMacDinhTheoGio() {
         if (cboCaLamViec == null) return;
-        int hour = LocalTime.now().getHour();
-        if (hour < 12) {
+        LocalTime now = LocalTime.now();
+        if (now.isBefore(LocalTime.of(11, 30))) {
             cboCaLamViec.setSelectedIndex(0);
-        } else if (hour < 17) {
+        } else if (now.isBefore(LocalTime.of(15, 30))) {
             cboCaLamViec.setSelectedIndex(1);
-        } else {
+        } else if (now.isBefore(LocalTime.of(19, 30))) {
             cboCaLamViec.setSelectedIndex(2);
+        } else {
+            cboCaLamViec.setSelectedIndex(3);
         }
     }
 
@@ -474,21 +481,20 @@ public class BanGiaoCaPanel extends JPanel {
                 if (caBanGiaoGanNhat != null) {
                     tienDauCa = caBanGiaoGanNhat.getTienCuoiCaThucTe() != null
                             ? caBanGiaoGanNhat.getTienCuoiCaThucTe().longValue()
-                            : TIEN_BAN_GIAO_MAU;
-                    LocalDateTime mocBatDauCa = caBanGiaoGanNhat.getGioKetThucThucTe();
-                    tienHeThongGhiNhan = giaoCaBus.tinhDoanhThuTienMatTuThoiDiem(mocBatDauCa);
-                    tienChuyenKhoanGhiNhan = giaoCaBus.tinhDoanhThuChuyenKhoanTuThoiDiem(mocBatDauCa);
-                    tienHoanTraKhach = giaoCaBus.tinhTongTienHoanTraTuThoiDiem(mocBatDauCa);
+                            : TIEN_DAU_CA_KHI_CHUA_CO_BAN_GIAO;
                 } else {
-                    tienDauCa = TIEN_BAN_GIAO_MAU;
-                    LocalDateTime dauNgay = java.time.LocalDate.now().atStartOfDay();
-                    tienHeThongGhiNhan = giaoCaBus.tinhDoanhThuTienMatTuThoiDiem(dauNgay);
-                    tienChuyenKhoanGhiNhan = giaoCaBus.tinhDoanhThuChuyenKhoanTuThoiDiem(dauNgay);
-                    tienHoanTraKhach = giaoCaBus.tinhTongTienHoanTraTuThoiDiem(dauNgay);
+                    tienDauCa = TIEN_DAU_CA_KHI_CHUA_CO_BAN_GIAO;
                 }
+                LocalDateTime mocBatDauCa = layMocBatDauCaDangChon();
+                LocalDateTime now = LocalDateTime.now();
+                String maNV = UserSession.getUserId();
+                tienHeThongGhiNhan = giaoCaBus.tinhDoanhThuTrongCa(mocBatDauCa, now, maNV, true);
+                tienChuyenKhoanGhiNhan = giaoCaBus.tinhDoanhThuTrongCa(mocBatDauCa, now, maNV, false);
+                tienHoanTraKhach = giaoCaBus.tinhHoanTraTrongCa(mocBatDauCa, now, maNV);
             } catch (Exception e) {
-                // Dữ liệu mẫu giữ cho màn hình demo nhất quán khi CSDL chưa sẵn sàng.
-                tienDauCa = TIEN_BAN_GIAO_MAU;
+                // Không đưa số tiền mẫu vào két khi CSDL lỗi vì có thể làm sai
+                // toàn bộ chuỗi bàn giao và chênh lệch của ca.
+                tienDauCa = TIEN_DAU_CA_KHI_CHUA_CO_BAN_GIAO;
                 tienHeThongGhiNhan = 0L;
                 tienChuyenKhoanGhiNhan = 0L;
                 tienHoanTraKhach = 0L;
@@ -521,6 +527,14 @@ public class BanGiaoCaPanel extends JPanel {
 
     private long tinhTongLyThuyetHienTai() {
         return Math.max(0L, tienDauCa + tienHeThongGhiNhan - tienHoanTraKhach);
+    }
+
+    private LocalDateTime layMocBatDauCaDangChon() {
+        int idx = cboCaLamViec != null ? cboCaLamViec.getSelectedIndex() : 0;
+        LocalTime[] batDau = {LocalTime.of(7, 0), LocalTime.of(11, 30),
+                LocalTime.of(15, 30), LocalTime.of(19, 30)};
+        if (idx < 0 || idx >= batDau.length) idx = 0;
+        return LocalDate.now().atTime(batDau[idx]);
     }
 
     private long parseSoTien(String raw, long defaultVal) {
@@ -592,13 +606,7 @@ public class BanGiaoCaPanel extends JPanel {
         } catch (Exception e) {
             System.err.println("[BanGiaoCaPanel] Lỗi tải lịch sử giao ca CSDL: " + e.getMessage());
         }
-        // Dữ liệu demo theo chuỗi bàn giao liên tục, mới nhất luôn nằm trên cùng.
-        modelLichSu.addRow(new Object[]{"GC003", "CA03", "Lê Khải Minh", "4,580,000 đ", "6,500,000 đ", "6,500,000 đ", "0 đ", "02/11/2026 22:00", "✓ Đã duyệt (QL: Trần Quản Lý) | Khớp két 100%"});
-        modelLichSu.addRow(new Object[]{"GC002", "CA02", "Trần Thị Thu Hà", "3,500,000 đ", "4,600,000 đ", "4,580,000 đ", "-20,000 đ", "02/11/2026 17:30", "✓ Đã duyệt (QL: Trần Quản Lý) | Thối nhầm 20.000 đ"});
-        modelLichSu.addRow(new Object[]{"GC001", "CA01", "Lê Anh Minh", "1,000,000 đ", "3,500,000 đ", "3,500,000 đ", "0 đ", "02/11/2026 12:00", "✓ Đã duyệt (QL: Trần Quản Lý) | Khớp két 100%"});
-        if (tblLichSu != null) {
-            tblLichSu.setRowSelectionInterval(0, 0);
-        }
+        // Để trống đúng trạng thái thật; dữ liệu mẫu phải được tạo bằng SQL seed.
     }
 
     private String taoMoTaTrangThai(BangGiaoCa bgc) {
@@ -660,8 +668,28 @@ public class BanGiaoCaPanel extends JPanel {
         String caSelected = cboCaLamViec != null && cboCaLamViec.getSelectedItem() != null
                 ? cboCaLamViec.getSelectedItem().toString() : "CA01 - Ca Sáng";
         String maCa = caSelected.split("-")[0].trim();
-        String maNV = UserSession.getUserId() != null ? UserSession.getUserId() : "NV002";
-        String tenNV = UserSession.getFullName() != null ? UserSession.getFullName() : "Lê Anh Minh";
+        String maNV = UserSession.getUserId();
+        String tenNV = UserSession.getFullName();
+        if (maNV == null || (!UserSession.isThuNgan() && !UserSession.isQuanLy())) {
+            JOptionPane.showMessageDialog(this,
+                    "Chỉ Thu ngân được phân công hoặc Quản lý đang trực quầy mới được chốt ca.",
+                    "Không đủ quyền", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (phanCaBus.timPhanCong(maNV, LocalDate.now(), maCa) == null) {
+            if (!UserSession.isQuanLy()) {
+                JOptionPane.showMessageDialog(this,
+                        "Bạn không được phân công " + maCa + " trong ngày hôm nay nên không thể chốt ca này.",
+                        "Sai ca được phân công", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int override = JOptionPane.showConfirmDialog(this,
+                    "Quản lý chưa được phân công " + maCa + " hôm nay.\n"
+                    + "Chỉ tiếp tục nếu Quản lý đang trực tiếp thay Thu ngân tại quầy.",
+                    "Xác nhận Quản lý trực quầy", JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (override != JOptionPane.YES_OPTION) return;
+        }
         String maGC = luuBienBanGiaoCaXuongCSDL(maNV, tenNV, maCa, tienDauCa, lyThuyet, thucTe, chenhLech, lyDoNhap);
         if (maGC == null) {
             return;
@@ -722,6 +750,7 @@ public class BanGiaoCaPanel extends JPanel {
             bgc.setTienChuyenKhoan(BigDecimal.valueOf(tienChuyenKhoanGhiNhan));
             bgc.setTienHoanTra(BigDecimal.valueOf(tienHoanTraKhach));
             bgc.setTrangThai("CHO_DUYET");
+            bgc.setGioBatDauCa(layMocBatDauCaDangChon());
             if (!giaoCaBus.luuBangGiaoCa(bgc)) {
                 throw new SQLException("Không có bản ghi bàn giao ca nào được lưu.");
             }

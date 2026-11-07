@@ -309,7 +309,7 @@ public class BaoCaoThongKeDialog extends JDialog {
         } catch (Exception e) { JOptionPane.showMessageDialog(this, "Không thể in báo biểu: " + e.getMessage(), "Lỗi in", JOptionPane.ERROR_MESSAGE); }
     }
 
-    private String csv(String s) { return "\"" + (s == null ? "" : s.replace("\"", "\"\"")) + "\""; }
+    private String csv(String s) { return utils.CsvHelper.cell(s); }
     private JPanel taoPanelBaoCao(JPanel kpis, DefaultTableModel model) {
         JPanel p = new JPanel(new BorderLayout(0, 10)); p.setOpaque(false); p.setBorder(new EmptyBorder(10, 10, 10, 10));
         p.add(kpis, BorderLayout.NORTH); p.add(new JScrollPane(taoBangBaoCao(model)), BorderLayout.CENTER); return p;
