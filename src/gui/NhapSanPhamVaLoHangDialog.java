@@ -1,4 +1,4 @@
-package views;
+package gui;
 
 import utils.IconHelper;
 import utils.ThemeColors;
@@ -131,13 +131,13 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         card.add(new JLabel("Mã sản phẩm:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
      //  Tự động lấy mã tiếp theo từ Database
-        models.dao.SanPhamDAO spDao = new models.dao.SanPhamDAO();
-        txtMaSP = new JTextField(spDao.phatSinhMaSanPham());
+        txtMaSP = new JTextField(utils.MaTuSinhHelper.sinhMaSanPham());
         txtMaSP.setPreferredSize(new Dimension(0, 32));
         txtMaSP.setBorder(ThemeColors.createInputBorder());
 
         //  KHÓA CỨNG không cho người dùng tự gõ tay sửa mã (tránh trùng khóa chính)
         txtMaSP.setEditable(false);
+        txtMaSP.setFocusable(false);
         txtMaSP.setBackground(new Color(241, 245, 249)); // Màu xám nhạt báo hiệu 
         card.add(txtMaSP, gbc);
 
@@ -222,15 +222,17 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
 
         gbc.gridwidth = 1;
 
-        // Số lô
+        // Số lô (Tự động sinh & khóa chỉnh sửa theo quy chuẩn mã tự tăng)
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.35;
         card.add(new JLabel("Số lô hàng:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
-        models.dao.LoHangDAO loDao = new models.dao.LoHangDAO();
-        txtSoLo = new JTextField(loDao.phatSinhSoLoTuDong()); 
+        txtSoLo = new JTextField(utils.MaTuSinhHelper.sinhSoLo());
         txtSoLo.setPreferredSize(new Dimension(0, 32));
         txtSoLo.setBorder(ThemeColors.createInputBorder());
-        txtSoLo.setToolTipText("Số lô gợi ý tự động. Bạn có thể sửa lại theo số lô thực tế trên bao bì sản phẩm.");
+        txtSoLo.setEditable(false);
+        txtSoLo.setFocusable(false);
+        txtSoLo.setBackground(new Color(241, 245, 249));
+        txtSoLo.setToolTipText("Số lô tự động sinh và tăng dần theo ngày nhập kho (LO-yyMMdd-xxx).");
         card.add(txtSoLo, gbc);
 
         // Ngày sản xuất (Kèm nút chọn lịch)

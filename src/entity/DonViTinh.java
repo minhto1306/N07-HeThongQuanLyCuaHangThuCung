@@ -1,4 +1,4 @@
-package models.entity;
+package entity;
 
 /**
  * Thực thể Đơn vị tính (Gói, Lon, Hộp, Thùng, Kg)

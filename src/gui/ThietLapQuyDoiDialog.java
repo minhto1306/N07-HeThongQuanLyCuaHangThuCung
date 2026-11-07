@@ -1,4 +1,4 @@
-package views;
+package gui;
 
 import utils.IconHelper;
 import utils.ThemeColors;
@@ -77,12 +77,12 @@ public class ThietLapQuyDoiDialog extends JDialog {
     private void dongBoDuLieuQuyDoiTuDatabase() {
         dsQuyDoi.clear();
         try {
-            models.dao.SanPhamDAO spDao = new models.dao.SanPhamDAO();
-            List<models.entity.SanPham> dsSP = spDao.getAllSanPham();
+            bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
+            List<entity.SanPham> dsSP = khoBus.layDanhSachSanPham();
             if (dsSP != null && !dsSP.isEmpty()) {
-                for (models.entity.SanPham sp : dsSP) {
-                    List<models.entity.QuyDoiDonVi> listQd = spDao.getQuyDoiBySanPham(sp.getMaSanPham());
-                    for (models.entity.QuyDoiDonVi qd : listQd) {
+                for (entity.SanPham sp : dsSP) {
+                    List<entity.QuyDoiDonVi> listQd = khoBus.layQuyDoiBySanPham(sp.getMaSanPham());
+                    for (entity.QuyDoiDonVi qd : listQd) {
                         dsQuyDoi.add(new QuyDoiItem(
                                 sp.getMaSanPham(),
                                 sp.getTenSanPham(),
@@ -361,16 +361,16 @@ public class ThietLapQuyDoiDialog extends JDialog {
             String tenSP = sel.substring(sel.indexOf(" - ") + 3).trim();
 
             try {
-                models.dao.SanPhamDAO spDao = new models.dao.SanPhamDAO();
-                String maDvt = "DV" + (System.currentTimeMillis() % 100000);
-                models.entity.DonViTinh dvt = new models.entity.DonViTinh(maDvt, tenDvt);
-                spDao.insertDonViTinh(dvt);
-                models.entity.SanPham sp = new models.entity.SanPham(maSP, null, tenSP, "");
-                models.entity.QuyDoiDonVi qd = new models.entity.QuyDoiDonVi(
-                        "QD" + (System.currentTimeMillis() % 100000),
+                bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
+                String maDvt = utils.MaTuSinhHelper.sinhMaDonViTinh();
+                entity.DonViTinh dvt = new entity.DonViTinh(maDvt, tenDvt);
+                khoBus.themDonViTinh(dvt);
+                entity.SanPham sp = new entity.SanPham(maSP, null, tenSP, "");
+                entity.QuyDoiDonVi qd = new entity.QuyDoiDonVi(
+                        utils.MaTuSinhHelper.sinhMaQuyDoi(),
                         sp, dvt, tyLe, false, java.math.BigDecimal.valueOf(giaBan)
                 );
-                spDao.insertQuyDoi(qd);
+                khoBus.themQuyDoi(qd);
             } catch (Exception ex) {
                 System.err.println("[ThietLapQuyDoiDialog] Lỗi lưu quy đổi CSDL: " + ex.getMessage());
             }

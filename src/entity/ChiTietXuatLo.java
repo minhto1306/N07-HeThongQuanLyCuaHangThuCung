@@ -1,4 +1,4 @@
-package models.entity;
+package entity;
 
 import java.math.BigDecimal;
 
@@ -21,6 +21,11 @@ public class ChiTietXuatLo extends ChiTietHoaDon {
         super(maChiTiet, hoaDon, soLuong, donGiaLucBan);
         this.loHang = loHang;
         this.quyDoiDonVi = quyDoiDonVi;
+        if (quyDoiDonVi != null && quyDoiDonVi.getSanPham() != null) {
+            this.sanPham = quyDoiDonVi.getSanPham();
+        } else if (loHang != null && loHang.getSanPham() != null) {
+            this.sanPham = loHang.getSanPham();
+        }
         tinhSoLuongXuatCoSo();
     }
 
@@ -30,6 +35,9 @@ public class ChiTietXuatLo extends ChiTietHoaDon {
 
     public void setLoHang(LoHang loHang) {
         this.loHang = loHang;
+        if (this.sanPham == null && loHang != null && loHang.getSanPham() != null) {
+            this.sanPham = loHang.getSanPham();
+        }
     }
 
     public QuyDoiDonVi getQuyDoiDonVi() {
@@ -38,7 +46,29 @@ public class ChiTietXuatLo extends ChiTietHoaDon {
 
     public void setQuyDoiDonVi(QuyDoiDonVi quyDoiDonVi) {
         this.quyDoiDonVi = quyDoiDonVi;
+        if (quyDoiDonVi != null && quyDoiDonVi.getSanPham() != null) {
+            this.sanPham = quyDoiDonVi.getSanPham();
+        }
+        if (this.donGiaLucBan == null || this.donGiaLucBan.compareTo(BigDecimal.ZERO) <= 0) {
+            apDungGiaNiemYet();
+        }
         tinhSoLuongXuatCoSo();
+    }
+
+    @Override
+    public void setSoLuong(int soLuong) {
+        super.setSoLuong(soLuong);
+        tinhSoLuongXuatCoSo();
+    }
+
+    @Override
+    public void apDungGiaNiemYet() {
+        if (quyDoiDonVi != null && quyDoiDonVi.getGiaBan() != null && quyDoiDonVi.getGiaBan().compareTo(BigDecimal.ZERO) > 0) {
+            this.donGiaLucBan = quyDoiDonVi.getGiaBan();
+            this.thanhTien = tinhThanhTien();
+        } else {
+            super.apDungGiaNiemYet();
+        }
     }
 
     public int getSoLuongXuatCoSo() {
@@ -71,12 +101,15 @@ public class ChiTietXuatLo extends ChiTietHoaDon {
             String donVi = quyDoiDonVi.getDonViTinh() != null ? quyDoiDonVi.getDonViTinh().getTenDonVi() : "";
             return quyDoiDonVi.getSanPham().getTenSanPham() + " [" + donVi + " - Lô: " + (loHang != null ? loHang.getSoLo() : "") + "]";
         }
+        if (sanPham != null) {
+            return sanPham.getTenSanPham();
+        }
         return "Sản phẩm xuất kho";
     }
 
     @Override
     public String getLoaiChiTiet() {
-        return "XUAT_LO";
+        return "SAN_PHAM";
     }
 
     @Override

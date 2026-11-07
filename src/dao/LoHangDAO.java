@@ -1,8 +1,8 @@
-package models.dao;
+package dao;
 
-import models.entity.LoHang;
-import models.entity.NhaCungCap;
-import models.entity.SanPham;
+import entity.LoHang;
+import entity.NhaCungCap;
+import entity.SanPham;
 import utils.DBConnection;
 
 import java.sql.*;
@@ -172,6 +172,19 @@ public class LoHangDAO {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, soLuongCong);
+            ps.setString(2, soLo);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Cập nhật số lượng tồn kho thực tế sau kiểm kê
+     */
+    public boolean capNhatSoLuongTon(String soLo, int soLuongMoi) throws SQLException {
+        String sql = "UPDATE LoHang SET soLuongTon = ? WHERE soLo = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, Math.max(0, soLuongMoi));
             ps.setString(2, soLo);
             return ps.executeUpdate() > 0;
         }

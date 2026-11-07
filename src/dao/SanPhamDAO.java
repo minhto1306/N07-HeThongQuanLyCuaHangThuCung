@@ -1,6 +1,6 @@
-package models.dao;
+package dao;
 
-import models.entity.*;
+import entity.*;
 import utils.DBConnection;
 
 import java.sql.*;
@@ -12,6 +12,39 @@ import java.util.List;
  * Cung cấp đầy đủ các thao tác CRUD (Thêm, Xóa, Sửa, Lấy danh sách, Tìm kiếm theo ID).
  */
 public class SanPhamDAO {
+
+    private SanPham mapResultSetToSanPham(ResultSet rs) throws SQLException {
+        DanhMucHang dm = new DanhMucHang(
+                rs.getString("maDanhMuc"),
+                rs.getString("tenDanhMuc"),
+                rs.getString("moTaDM")
+        );
+        String maVach = "";
+        String donViCoSo = "Đơn vị";
+        java.math.BigDecimal giaBanCoSo = java.math.BigDecimal.ZERO;
+        try {
+            String mv = rs.getString("maVach");
+            if (mv != null) maVach = mv;
+        } catch (SQLException ignored) {}
+        try {
+            String dv = rs.getString("donViCoSo");
+            if (dv != null && !dv.isEmpty()) donViCoSo = dv;
+        } catch (SQLException ignored) {}
+        try {
+            java.math.BigDecimal gb = rs.getBigDecimal("giaBanCoSo");
+            if (gb != null) giaBanCoSo = gb;
+        } catch (SQLException ignored) {}
+
+        return new SanPham(
+                rs.getString("maSanPham"),
+                dm,
+                rs.getString("tenSanPham"),
+                maVach,
+                donViCoSo,
+                giaBanCoSo,
+                rs.getString("moTa")
+        );
+    }
 
     /**
      * Lấy toàn bộ danh sách sản phẩm kèm danh mục
@@ -25,18 +58,7 @@ public class SanPhamDAO {
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                DanhMucHang dm = new DanhMucHang(
-                        rs.getString("maDanhMuc"),
-                        rs.getString("tenDanhMuc"),
-                        rs.getString("moTaDM")
-                );
-                SanPham sp = new SanPham(
-                        rs.getString("maSanPham"),
-                        dm,
-                        rs.getString("tenSanPham"),
-                        rs.getString("moTa")
-                );
-                list.add(sp);
+                list.add(mapResultSetToSanPham(rs));
             }
         }
         return list;
@@ -54,19 +76,33 @@ public class SanPhamDAO {
             ps.setString(1, maSanPham);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    DanhMucHang dm = new DanhMucHang(
-                            rs.getString("maDanhMuc"),
-                            rs.getString("tenDanhMuc"),
-                            rs.getString("moTaDM")
-                    );
-                    return new SanPham(
-                            rs.getString("maSanPham"),
-                            dm,
-                            rs.getString("tenSanPham"),
-                            rs.getString("moTa")
-                    );
+                    return mapResultSetToSanPham(rs);
                 }
             }
+        }
+        return null;
+    }
+
+    /**
+     * Tìm sản phẩm nhanh theo Mã vạch (Barcode) hoặc Mã sản phẩm (hỗ trợ máy quét POS)
+     */
+    public SanPham findByMaVachHoacMaSP(String keyword) throws SQLException {
+        if (keyword == null || keyword.trim().isEmpty()) return null;
+        String kw = keyword.trim();
+        String sql = "SELECT s.*, d.tenDanhMuc, d.moTa AS moTaDM " +
+                     "FROM SanPham s JOIN DanhMucHang d ON s.maDanhMuc = d.maDanhMuc " +
+                     "WHERE s.maVach = ? OR s.maSanPham = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, kw);
+            ps.setString(2, kw);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToSanPham(rs);
+                }
+            }
+        } catch (SQLException e) {
+            return getSanPhamById(kw);
         }
         return null;
     }
@@ -75,13 +111,20 @@ public class SanPhamDAO {
      * Thêm sản phẩm mới vào CSDL
      */
     public boolean insertSanPham(SanPham sp) throws SQLException {
-        String sql = "INSERT INTO SanPham (maSanPham, maDanhMuc, tenSanPham, moTa) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO SanPham (maSanPham, maDanhMuc, tenSanPham, maVach, donViCoSo, giaBanCoSo, moTa) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, sp.getMaSanPham());
             ps.setString(2, sp.getDanhMucHang() != null ? sp.getDanhMucHang().getMaDanhMuc() : null);
             ps.setString(3, sp.getTenSanPham());
-            ps.setString(4, sp.getMoTa());
+            if (sp.getMaVach() != null && !sp.getMaVach().trim().isEmpty()) {
+                ps.setString(4, sp.getMaVach().trim());
+            } else {
+                ps.setNull(4, Types.VARCHAR);
+            }
+            ps.setString(5, sp.getDonViCoSo());
+            ps.setBigDecimal(6, sp.getGiaBanCoSo());
+            ps.setString(7, sp.getMoTa());
             return ps.executeUpdate() > 0;
         }
     }
@@ -90,13 +133,20 @@ public class SanPhamDAO {
      * Cập nhật thông tin sản phẩm
      */
     public boolean updateSanPham(SanPham sp) throws SQLException {
-        String sql = "UPDATE SanPham SET maDanhMuc = ?, tenSanPham = ?, moTa = ? WHERE maSanPham = ?";
+        String sql = "UPDATE SanPham SET maDanhMuc = ?, tenSanPham = ?, maVach = ?, donViCoSo = ?, giaBanCoSo = ?, moTa = ? WHERE maSanPham = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, sp.getDanhMucHang() != null ? sp.getDanhMucHang().getMaDanhMuc() : null);
             ps.setString(2, sp.getTenSanPham());
-            ps.setString(3, sp.getMoTa());
-            ps.setString(4, sp.getMaSanPham());
+            if (sp.getMaVach() != null && !sp.getMaVach().trim().isEmpty()) {
+                ps.setString(3, sp.getMaVach().trim());
+            } else {
+                ps.setNull(3, Types.VARCHAR);
+            }
+            ps.setString(4, sp.getDonViCoSo());
+            ps.setBigDecimal(5, sp.getGiaBanCoSo());
+            ps.setString(6, sp.getMoTa());
+            ps.setString(7, sp.getMaSanPham());
             return ps.executeUpdate() > 0;
         }
     }
@@ -304,4 +354,37 @@ public class SanPhamDAO {
         // Trả về mã kế tiếp 
         return String.format("SP%03d", maxId + 1);
     }
+
+    /**
+     * Lấy danh sách sản phẩm kèm quy đổi đơn vị tính và tồn kho cơ sở phục vụ Catalog bán hàng POS.
+     * Mỗi phần tử Object[] gồm: [0] maSP, [1] tenSP, [2] moTa, [3] maVach, [4] maQuyDoi, [5] giaBan(long), [6] tenDonVi, [7] tyLe(int), [8] tonKhoCoSo(int)
+     */
+    public List<Object[]> layDanhSachSanPhamCatalogPOS() throws SQLException {
+        List<Object[]> list = new ArrayList<>();
+        String sqlSP = "SELECT sp.maSanPham, sp.tenSanPham, sp.moTa, ISNULL(sp.maVach, '') AS maVach, qd.maQuyDoi, qd.giaBan, dvt.tenDonVi, qd.tyLeQuyDoi AS tyLe, " +
+                "       ISNULL((SELECT SUM(soLuongTon) FROM LoHang WHERE maSanPham = sp.maSanPham AND soLuongTon > 0), 0) AS tonKhoCoSo " +
+                "FROM SanPham sp " +
+                "INNER JOIN QuyDoiDonVi qd ON sp.maSanPham = qd.maSanPham " +
+                "INNER JOIN DonViTinh dvt ON qd.maDonVi = dvt.maDonVi " +
+                "ORDER BY sp.maSanPham ASC, qd.tyLeQuyDoi ASC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sqlSP);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(new Object[]{
+                        rs.getString("maSanPham"),
+                        rs.getString("tenSanPham"),
+                        rs.getString("moTa"),
+                        rs.getString("maVach"),
+                        rs.getString("maQuyDoi"),
+                        (long) rs.getDouble("giaBan"),
+                        rs.getString("tenDonVi"),
+                        rs.getInt("tyLe"),
+                        rs.getInt("tonKhoCoSo")
+                });
+            }
+        }
+        return list;
+    }
 }
+

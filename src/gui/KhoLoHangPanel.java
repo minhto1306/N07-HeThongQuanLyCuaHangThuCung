@@ -1,4 +1,4 @@
-package views;
+package gui;
 
 import utils.IconHelper;
 import utils.ThemeColors;
@@ -66,19 +66,22 @@ public class KhoLoHangPanel extends JPanel {
     private static void khoiTaoLoHangMacDinhNeuCan() {
         if (DANH_SACH_LO_HANG.isEmpty()) {
             try {
-                models.dao.LoHangDAO loDao = new models.dao.LoHangDAO();
-                List<models.entity.LoHang> dbList = loDao.getAllLoHang();
+                bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
+                List<entity.LoHang> dbList = khoBus.layDanhSachLoHang();
                 if (dbList != null && !dbList.isEmpty()) {
-                    for (models.entity.LoHang lh : dbList) {
+                    for (entity.LoHang lh : dbList) {
                         String nsxStr = lh.getNgaySanXuat() != null ? lh.getNgaySanXuat().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
                         String hsdStr = lh.getHanSuDung() != null ? lh.getHanSuDung().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
                         long days = lh.getHanSuDung() != null ? java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), lh.getHanSuDung()) : 999;
                         String fefo;
-                        if (days <= 0) fefo = "ĐÃ HẾT HẠN SỬ DỤNG";
+                        if (lh.getSoLuongTon() <= 0) fefo = "ĐÃ HẾT TỒN LÔ";
+                        else if (days <= 0) fefo = "ĐÃ HẾT HẠN SỬ DỤNG";
                         else if (days <= 30) fefo = "CẬN DATE NGUY CẤP (" + days + " ngày) - CẦN THANH LÝ";
-                        else if (days <= 90) fefo = "CẬN DATE (" + (days / 30) + " tháng) - ƯU TIÊN XUẤT SỚM";
-                        else fefo = "HẠN DÙNG AN TOÀN (> 6 tháng)";
+                        else if (days <= 60) fefo = "CẬN DATE (" + days + " ngày) - ƯU TIÊN XUẤT SỚM";
+                        else fefo = "HẠN DÙNG AN TOÀN (> 60 ngày)";
 
+                        String dvtCoSo = (lh.getSanPham() != null && lh.getSanPham().getDonViCoSo() != null && !lh.getSanPham().getDonViCoSo().isEmpty())
+                                ? lh.getSanPham().getDonViCoSo() : "Đơn vị";
                         DANH_SACH_LO_HANG.add(new LoHangRecord(
                                 lh.getSoLo(),
                                 lh.getSanPham() != null ? lh.getSanPham().getMaSanPham() : "",
@@ -89,7 +92,7 @@ public class KhoLoHangPanel extends JPanel {
                                 String.format("%,d đ", lh.getDonGiaNhapCoSo() != null ? lh.getDonGiaNhapCoSo().longValue() : 0L),
                                 lh.getSoLuongNhap(),
                                 lh.getSoLuongTon(),
-                                "Đơn vị",
+                                dvtCoSo,
                                 fefo
                         ));
                     }
@@ -106,17 +109,7 @@ public class KhoLoHangPanel extends JPanel {
     }
 
     public static int demSoLoCanhBaoFEFO() {
-        khoiTaoLoHangMacDinhNeuCan();
-        int count = 0;
-        for (LoHangRecord lo : DANH_SACH_LO_HANG) {
-            if (lo.soLuongTon > 0) {
-                String st = lo.trangThaiFEFO != null ? lo.trangThaiFEFO.toUpperCase() : "";
-                if (st.contains("CẬN DATE") || st.contains("NGUY CẤP") || st.contains("HẾT HẠN") || st.contains("ƯU TIÊN") || lo.soLuongTon <= 15) {
-                    count++;
-                }
-            }
-        }
-        return count;
+        return new bus.KhoLoHangBus().demSoLoCanhBaoHanDung();
     }
 
     public static void dongBoLoHangTuDatabase() {
@@ -133,14 +126,14 @@ public class KhoLoHangPanel extends JPanel {
         if (maSP == null || soLuongMua <= 0) return;
         khoiTaoLoHangMacDinhNeuCan();
         int canTru = soLuongMua;
-        models.dao.LoHangDAO loDao = new models.dao.LoHangDAO();
+        bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
         for (LoHangRecord lo : DANH_SACH_LO_HANG) {
             boolean match = lo.maSP.equalsIgnoreCase(maSP) || lo.tenSP.equalsIgnoreCase(maSP);
             if (match && lo.soLuongTon > 0 && canTru > 0) {
                 int tru = Math.min(lo.soLuongTon, canTru);
                 lo.soLuongTon -= tru;
                 canTru -= tru;
-                try { loDao.truTonKho(lo.soLo, tru); } catch (Exception ignored) {}
+                try { khoBus.truTonKho(lo.soLo, tru); } catch (Exception ignored) {}
                 if (lo.soLuongTon == 0) {
                     lo.trangThaiFEFO = "ĐÃ HẾT TỒN LÔ";
                 } else if (lo.soLuongTon <= 10 && !lo.trangThaiFEFO.toUpperCase().contains("CẬN DATE")
@@ -159,12 +152,12 @@ public class KhoLoHangPanel extends JPanel {
     public static void congTonKho(String maSP, int soLuongHoan) {
         if (maSP == null || soLuongHoan <= 0) return;
         khoiTaoLoHangMacDinhNeuCan();
-        models.dao.LoHangDAO loDao = new models.dao.LoHangDAO();
+        bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
         for (LoHangRecord lo : DANH_SACH_LO_HANG) {
             boolean match = lo.maSP.equalsIgnoreCase(maSP) || lo.tenSP.equalsIgnoreCase(maSP);
             if (match) {
                 lo.soLuongTon += soLuongHoan;
-                try { loDao.congTonKho(lo.soLo, soLuongHoan); } catch (Exception ignored) {}
+                try { khoBus.congTonKho(lo.soLo, soLuongHoan); } catch (Exception ignored) {}
                 if ("ĐÃ HẾT TỒN LÔ".equalsIgnoreCase(lo.trangThaiFEFO)) {
                     lo.trangThaiFEFO = "AN TOÀN (> 6 tháng)";
                 }
@@ -186,6 +179,7 @@ public class KhoLoHangPanel extends JPanel {
     private DefaultTableModel modelLoHang;
     private JTable tblLoHang;
     private TableRowSorter<DefaultTableModel> sorterLoHang;
+    private JComboBox<String> cboLocHSD;
 
     private DefaultTableModel modelROP;
     private JTable tblROP;
@@ -221,6 +215,14 @@ public class KhoLoHangPanel extends JPanel {
 
     public void chonTabLoHangFEFO() {
         if (tabbedPane != null) tabbedPane.setSelectedIndex(1);
+    }
+
+    public void moTabCanhBaoHanDung() {
+        dongBoLoHangTuDatabase();
+        chonTabLoHangFEFO();
+        if (cboLocHSD != null) {
+            cboLocHSD.setSelectedIndex(1);
+        }
     }
 
     public void chonTabDiemDatHangROP() {
@@ -289,8 +291,13 @@ public class KhoLoHangPanel extends JPanel {
         pnlToolbar.setOpaque(false);
 
         JButton btnNhapLo = ThemeColors.createPrimaryButton("Nhập Lô hàng mới (FEFO)", IconHelper.getIcon(IconHelper.PLUS, 14, Color.WHITE));
-        JComboBox<String> cboLocHSD = new JComboBox<>(new String[]{"Tất cả lô hàng", "Lô ưu tiên xuất (FEFO)", "Lô hạn dưới 30 ngày / Nguy cấp", "Lô hết hạn"});
-        cboLocHSD.setPreferredSize(new Dimension(230, 36));
+        cboLocHSD = new JComboBox<>(new String[]{
+                "Tất cả lô hàng",
+                "Cảnh báo hạn dùng (≤ 60 ngày / Hết hạn)",
+                "Lô hạn dưới 30 ngày / Nguy cấp",
+                "Lô hết hạn"
+        });
+        cboLocHSD.setPreferredSize(new Dimension(260, 36));
 
         JButton btnKiemKe = ThemeColors.createSecondaryButton("Kiểm kê tồn kho", IconHelper.getIcon(IconHelper.CLIPBOARD_CHECK, 14, ThemeColors.TEXT_SECONDARY));
 
@@ -342,11 +349,11 @@ public class KhoLoHangPanel extends JPanel {
             if (idx == 0) {
                 sorterLoHang.setRowFilter(null);
             } else if (idx == 1) {
-                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Ưu tiên|Cận date"));
+                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Cận date|Nguy cấp|Hết hạn", 9));
             } else if (idx == 2) {
-                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Nguy cấp|ngày"));
+                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Nguy cấp", 9));
             } else if (idx == 3) {
-                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Hết hạn|Quá hạn|Đã hết|Hết",9));
+                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Hết hạn|Quá hạn|Đã hết", 9));
             }
         });
 
@@ -360,14 +367,14 @@ public class KhoLoHangPanel extends JPanel {
         if (modelSanPham == null) return;
         modelSanPham.setRowCount(0);
         try {
-            models.dao.SanPhamDAO spDao = new models.dao.SanPhamDAO();
-            List<models.entity.SanPham> dsSP = spDao.getAllSanPham();
+            bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
+            List<entity.SanPham> dsSP = khoBus.layDanhSachSanPham();
             if (dsSP != null && !dsSP.isEmpty()) {
-                for (models.entity.SanPham sp : dsSP) {
+                for (entity.SanPham sp : dsSP) {
                     String dmTen = sp.getDanhMucHang() != null ? sp.getDanhMucHang().getTenDanhMuc() : "Hàng hóa";
-                    List<models.entity.QuyDoiDonVi> listQd = spDao.getQuyDoiBySanPham(sp.getMaSanPham());
+                    List<entity.QuyDoiDonVi> listQd = khoBus.layQuyDoiBySanPham(sp.getMaSanPham());
                     if (listQd != null && !listQd.isEmpty()) {
-                        for (models.entity.QuyDoiDonVi qd : listQd) {
+                        for (entity.QuyDoiDonVi qd : listQd) {
                             String dvtTen = qd.getDonViTinh() != null ? qd.getDonViTinh().getTenDonVi() : "Đơn vị";
                             long gia = qd.getGiaBan() != null ? qd.getGiaBan().longValue() : 0L;
                             modelSanPham.addRow(new Object[]{
@@ -413,43 +420,32 @@ public class KhoLoHangPanel extends JPanel {
     public void moDialogNhapHang() {
         Frame topFrame = (Frame) SwingUtilities.getWindowAncestor(this);
         NhapSanPhamVaLoHangDialog dialog = new NhapSanPhamVaLoHangDialog(topFrame, (maSP, tenSP, danhMuc, dvtCoSo, soLo, ncc, nsx, hsd, giaNhap, giaBan, slNhap, fefo) -> {
-            // 1. Thêm vào bảng Sản phẩm
-            modelSanPham.addRow(new Object[]{
-                    maSP, tenSP, danhMuc, dvtCoSo, "1", "Có", df.format(giaBan), "Mặt hàng nhập kho mới"
-            });
-
-            // 2. Thêm vào danh sách và làm mới bảng Lô hàng FEFO
-            LoHangRecord loMoi = new LoHangRecord(
-                    soLo, maSP, tenSP, ncc, nsx, hsd, df.format(giaNhap), slNhap, slNhap, dvtCoSo, fefo
-            );
-            DANH_SACH_LO_HANG.add(0, loMoi);
-            for (KhoLoHangPanel inst : INSTANCES) {
-                inst.lamMoiBangLoHang();
-            }
-            TongQuanPanel.lamMoiDuLieuDashboardAll();
-
-            // 3. Ghi nhận trực tiếp vào CSDL qua SanPhamDAO & LoHangDAO
+            // 1. Ghi nhận trực tiếp vào CSDL qua KhoLoHangBus trước khi đồng bộ giao diện
             try {
-                models.dao.SanPhamDAO spDao = new models.dao.SanPhamDAO();
-                models.dao.LoHangDAO loDao = new models.dao.LoHangDAO();
-                if (spDao.getSanPhamById(maSP) == null) {
-                    models.entity.DanhMucHang dm = new models.entity.DanhMucHang("DM01", danhMuc, "");
-                    models.entity.SanPham spMoi = new models.entity.SanPham(maSP, dm, tenSP, "Nhập kho mới");
-                    spDao.insertSanPham(spMoi);
-                    models.entity.DonViTinh dvt = new models.entity.DonViTinh("DVT01", dvtCoSo);
-                    models.entity.QuyDoiDonVi qd = new models.entity.QuyDoiDonVi("QD" + System.currentTimeMillis() % 100000, spMoi, dvt, 1, true, java.math.BigDecimal.valueOf(giaBan));
-                    spDao.insertQuyDoi(qd);
+                bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
+                if (khoBus.laySanPhamById(maSP) == null) {
+                    entity.DanhMucHang dm = new entity.DanhMucHang("DM01", danhMuc, "");
+                    entity.SanPham spMoi = new entity.SanPham(maSP, dm, tenSP, "", dvtCoSo, java.math.BigDecimal.valueOf(giaBan), "Nhập kho mới");
+                    khoBus.themSanPham(spMoi);
+                    entity.DonViTinh dvt = new entity.DonViTinh("DVT01", dvtCoSo);
+                    entity.QuyDoiDonVi qd = new entity.QuyDoiDonVi(utils.MaTuSinhHelper.sinhMaQuyDoi(), spMoi, dvt, 1, true, java.math.BigDecimal.valueOf(giaBan));
+                    khoBus.themQuyDoi(qd);
                 }
                 java.time.format.DateTimeFormatter dtfParse = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
                 java.time.LocalDate dNgaySX = java.time.LocalDate.parse(nsx, dtfParse);
                 java.time.LocalDate dHanSD = java.time.LocalDate.parse(hsd, dtfParse);
-                models.entity.SanPham spRef = new models.entity.SanPham(maSP, null, tenSP, "");
-                models.entity.NhaCungCap nccRef = new models.entity.NhaCungCap("NCC01", ncc, "", "");
-                models.entity.LoHang lhMoi = new models.entity.LoHang(soLo, spRef, nccRef, dNgaySX, dHanSD, java.math.BigDecimal.valueOf(giaNhap), slNhap, slNhap);
-                loDao.insertLoHang(lhMoi);
+                entity.SanPham spRef = new entity.SanPham(maSP, null, tenSP, "");
+                entity.NhaCungCap nccRef = new entity.NhaCungCap("NCC01", ncc, "", "");
+                entity.LoHang lhMoi = new entity.LoHang(soLo, spRef, nccRef, dNgaySX, dHanSD, java.math.BigDecimal.valueOf(giaNhap), slNhap, slNhap);
+                khoBus.nhapLoHang(lhMoi);
             } catch (Exception ex) {
                 System.err.println("[KhoLoHangPanel] Lỗi lưu CSDL SQL Server: " + ex.getMessage());
             }
+
+            // 2. Đồng bộ toàn diện Kho, POS Catalog và Dashboard từ CSDL
+            dongBoLoHangTuDatabase();
+            BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
+            TongQuanPanel.lamMoiDuLieuDashboardAll();
         });
         dialog.setVisible(true);
     }
@@ -507,18 +503,14 @@ public class KhoLoHangPanel extends JPanel {
         if (input != null && !input.trim().isEmpty()) {
             try {
                 int tonThucTe = Integer.parseInt(input.trim());
+                bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
                 for (LoHangRecord lo : DANH_SACH_LO_HANG) {
                     if (lo.soLo.equalsIgnoreCase(soLo)) {
                         lo.soLuongTon = Math.max(0, tonThucTe);
                         if (lo.soLuongTon == 0) {
                             lo.trangThaiFEFO = "ĐÃ HẾT TỒN LÔ";
                         }
-                        try (java.sql.Connection conn = utils.DBConnection.getConnection();
-                             java.sql.PreparedStatement ps = conn.prepareStatement("UPDATE LoHang SET soLuongTon = ? WHERE soLo = ?")) {
-                            ps.setInt(1, lo.soLuongTon);
-                            ps.setString(2, soLo);
-                            ps.executeUpdate();
-                        } catch (Exception ignored) {}
+                        khoBus.capNhatSoLuongTon(soLo, lo.soLuongTon);
                         break;
                     }
                 }
@@ -611,8 +603,8 @@ public class KhoLoHangPanel extends JPanel {
 
         List<SpConfig> configs = new ArrayList<>();
         try {
-            List<models.entity.SanPham> dsSP = new models.dao.SanPhamDAO().getAllSanPham();
-            for (models.entity.SanPham sp : dsSP) {
+            List<entity.SanPham> dsSP = new bus.KhoLoHangBus().layDanhSachSanPham();
+            for (entity.SanPham sp : dsSP) {
                 String ncc = "Nhà phân phối chính hãng";
                 long giaNhap = 50000L;
                 for (LoHangRecord lo : DANH_SACH_LO_HANG) {

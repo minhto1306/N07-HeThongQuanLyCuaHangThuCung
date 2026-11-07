@@ -1,4 +1,4 @@
-package models.entity;
+package entity;
 
 /**
  * Thực thể Nhà cung cấp hàng hóa
