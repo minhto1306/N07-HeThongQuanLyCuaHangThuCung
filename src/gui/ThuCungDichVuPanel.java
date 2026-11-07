@@ -189,7 +189,7 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogDangKyThuCung() {
-        String maTC = utils.MaTuSinhHelper.sinhMaThuCung();
+        String maTC = controller.sinhMaThuCungMoi();
         JTextField txtMaTC = new JTextField(maTC);
         txtMaTC.setEditable(false);
         txtMaTC.setBackground(new Color(0xF1, 0xF5, 0xF9));
@@ -281,7 +281,7 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogKhamSucKhoe() {
-        String maSK = utils.MaTuSinhHelper.sinhMaSucKhoe();
+        String maSK = "SK00" + (System.currentTimeMillis() % 100);
         JTextField txtMaSK = new JTextField(maSK);
         txtMaSK.setEditable(false);
         txtMaSK.setBackground(new Color(0xF1, 0xF5, 0xF9));

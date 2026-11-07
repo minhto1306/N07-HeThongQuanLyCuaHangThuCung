@@ -86,15 +86,21 @@ public class TaiKhoanDAO {
      * @param matKhauHash Mật khẩu băm SHA-256
      * @return TaiKhoan nếu hợp lệ và đang hoạt động, null nếu sai thông tin
      */
-    public TaiKhoan kiemTraDangNhap(String soDienThoai, String matKhauHash) throws SQLException {
-        String sql = "SELECT * FROM TaiKhoan WHERE soDienThoai = ? AND matKhau = ? AND trangThaiHoatDong = 1";
+    public TaiKhoan kiemTraDangNhap(String identifier, String matKhauRaw) throws SQLException {
+        String sql = "{CALL dbo.sp_DangNhap(?, ?)}";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, soDienThoai);
-            ps.setString(2, matKhauHash);
+            ps.setString(1, identifier);
+            ps.setString(2, matKhauRaw);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return mapResultSetToTaiKhoan(rs);
+                    TaiKhoan tk = new TaiKhoan();
+                    tk.setMaTaiKhoan(rs.getString("maTaiKhoan"));
+                    tk.setSoDienThoai(rs.getString("soDienThoai"));
+                    tk.setEmail(rs.getString("email"));
+                    tk.setVaiTro(rs.getString("vaiTro"));
+                    tk.setTrangThaiHoatDong(rs.getBoolean("trangThaiHoatDong"));
+                    return tk;
                 }
             }
         }
@@ -104,12 +110,12 @@ public class TaiKhoanDAO {
     /**
      * Đổi mật khẩu tài khoản theo mã tài khoản (maTaiKhoan).
      */
-    public boolean doiMatKhau(String maTaiKhoan, String matKhauMoiHash) throws SQLException {
-        String sql = "UPDATE TaiKhoan SET matKhau = ? WHERE maTaiKhoan = ?";
+    public boolean doiMatKhau(String maTaiKhoan, String matKhauMoiRaw) throws SQLException {
+        String sql = "{CALL dbo.sp_DoiMatKhau(?, ?)}";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, matKhauMoiHash);
-            ps.setString(2, maTaiKhoan);
+            ps.setString(1, maTaiKhoan);
+            ps.setString(2, matKhauMoiRaw);
             return ps.executeUpdate() > 0;
         }
     }
@@ -117,11 +123,11 @@ public class TaiKhoanDAO {
     /**
      * Đổi mật khẩu tài khoản theo Số điện thoại (dùng cho Quên mật khẩu).
      */
-    public boolean doiMatKhauTheoSoDienThoai(String soDienThoai, String matKhauMoiHash) throws SQLException {
-        String sql = "UPDATE TaiKhoan SET matKhau = ? WHERE soDienThoai = ?";
+    public boolean doiMatKhauTheoSoDienThoai(String soDienThoai, String matKhauMoiRaw) throws SQLException {
+        String sql = "UPDATE TaiKhoan SET matKhau = dbo.fn_HashPassword(?) WHERE soDienThoai = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, matKhauMoiHash);
+            ps.setString(1, matKhauMoiRaw);
             ps.setString(2, soDienThoai);
             return ps.executeUpdate() > 0;
         }
@@ -176,7 +182,7 @@ public class TaiKhoanDAO {
      */
     public boolean insertTaiKhoan(TaiKhoan tk) throws SQLException {
         String sql = "INSERT INTO TaiKhoan (maTaiKhoan, soDienThoai, email, matKhau, vaiTro, trangThaiHoatDong) " +
-                     "VALUES (?, ?, ?, ?, ?, ?)";
+                     "VALUES (?, ?, ?, dbo.fn_HashPassword(?), ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, tk.getMaTaiKhoan());

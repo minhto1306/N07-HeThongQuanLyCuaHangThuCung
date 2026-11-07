@@ -836,7 +836,7 @@ public class DoiTraHangPanel extends JPanel {
         }
 
         // Lưu Phiếu Đổi Trả vào SQL Server
-        String maPhieu = utils.MaTuSinhHelper.sinhMaPhieuDoiTra();
+        String maPhieu = new bus.DoiTraBus().sinhMaPhieuDoiTraMoi();
         try {
             entity.PhieuDoiTra pdt = new entity.PhieuDoiTra();
             pdt.setMaPhieuDoiTra(maPhieu);

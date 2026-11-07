@@ -17,6 +17,10 @@ import java.util.List;
  */
 public class GiaoCaBus {
 
+    public String sinhMaGiaoCaMoi() {
+        return bangGiaoCaDAO.sinhMaGiaoCaMoi();
+    }
+
     private final BangGiaoCaDAO bangGiaoCaDAO;
     private BangGiaoCa caHienTai;
 

@@ -605,8 +605,8 @@ public class DatLichHenDialog extends JDialog {
             return;
         }
 
-        String maLH = utils.MaTuSinhHelper.sinhMaLichHen();
-        KhachHang kh = new KhachHang(utils.MaTuSinhHelper.sinhMaKhachHang(), hoTen, sdt, 0);
+        String maLH = new dao.LichHenDAO().sinhMaLichHenMoi();
+        KhachHang kh = new KhachHang(new dao.KhachHangDAO().sinhMaKhachHangMoi(), hoTen, sdt, 0);
 
         String ktvSelected = (String) cboKtv.getSelectedItem();
         NhanVien ktv = null;
@@ -625,7 +625,7 @@ public class DatLichHenDialog extends JDialog {
         }
 
         String gioiTinh = radDuc.isSelected() ? "Đực" : "Cái";
-        ThuCung tc = new ThuCung(utils.MaTuSinhHelper.sinhMaThuCung(), tenTc, (String) cboGiongLoai.getSelectedItem(), null, gioiTinh);
+        ThuCung tc = new ThuCung(new dao.ThuCungDAO().sinhMaThuCungMoi(), tenTc, (String) cboGiongLoai.getSelectedItem(), null, gioiTinh);
 
         String dvStr = (String) cboDichVu.getSelectedItem();
         String maDv = dvStr.substring(0, 5);

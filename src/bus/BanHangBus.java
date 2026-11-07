@@ -15,6 +15,10 @@ import java.util.List;
 // controller xử lý bán hàng và khách hàng
 public class BanHangBus {
 
+    public String sinhMaHoaDonMoi(String maNV) {
+        return hoaDonDAO.sinhMaHoaDonMoi(maNV);
+    }
+
     // list tạm lưu khách trên ram để tìm cho nhanh đỡ lag
     private static final List<KhachHang> DANH_SACH_KHACH_HANG = new ArrayList<>();
     private static final KhachHangDAO STATIC_KH_DAO = new KhachHangDAO();
@@ -52,7 +56,7 @@ public class BanHangBus {
     public void khoiTaoHoaDonMoi(String maHoaDon, NhanVien nhanVien) {
         // chưa có mã thì tự sinh mã theo ngày
         if (maHoaDon == null || maHoaDon.trim().isEmpty()) {
-            maHoaDon = utils.MaTuSinhHelper.sinhMaHoaDon(nhanVien != null ? nhanVien.getMaNhanVien() : utils.UserSession.getUserId());
+            maHoaDon = hoaDonDAO.sinhMaHoaDonMoi(nhanVien != null ? nhanVien.getMaNhanVien() : utils.UserSession.getUserId());
         }
         // khởi tạo hóa đơn mới
         this.hoaDonHienTai = new HoaDon(
@@ -302,9 +306,9 @@ public class BanHangBus {
         return khMoi;
     }
 
-    // Gọi MaTuSinhHelper để sinh mã khách hàng tự tăng dạng KH0001 dựa trên mã lớn nhất trong CSDL
+    // Gọi KhachHangDAO để sinh mã khách hàng tự tăng dạng KH0001 từ T-SQL Function fn_SinhMaKhachHang
     public static String sinhMaKhachHangMoi() {
-        return utils.MaTuSinhHelper.sinhMaKhachHang();
+        return new dao.KhachHangDAO().sinhMaKhachHangMoi();
     }
 
     // Cập nhật thông tin chi tiết khách hàng: chuẩn hóa dữ liệu đầu vào và lưu xuống CSDL

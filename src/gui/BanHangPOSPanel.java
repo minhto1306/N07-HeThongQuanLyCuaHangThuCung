@@ -1337,7 +1337,7 @@ public class BanHangPOSPanel extends JPanel {
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblTitle.setForeground(ThemeColors.TEXT_PRIMARY);
 
-        lblMaHoaDon = new JLabel(utils.MaTuSinhHelper.sinhMaHoaDon(utils.UserSession.getUserId()), SwingConstants.RIGHT);
+        lblMaHoaDon = new JLabel(controller.sinhMaHoaDonMoi(utils.UserSession.getUserId()), SwingConstants.RIGHT);
         lblMaHoaDon.setFont(new Font("Segoe UI", Font.BOLD, 12));
         lblMaHoaDon.setForeground(ThemeColors.PRIMARY_ACTIVE);
 
@@ -2369,7 +2369,7 @@ public class BanHangPOSPanel extends JPanel {
             pnlThongBaoDoiTra.setVisible(false);
         }
         modelGioHang.setRowCount(0);
-        lblMaHoaDon.setText(utils.MaTuSinhHelper.sinhMaHoaDon(utils.UserSession.getUserId()));
+        lblMaHoaDon.setText(controller.sinhMaHoaDonMoi(utils.UserSession.getUserId()));
         dangCapNhatKhach = true;
         try {
             txtSdtKhachHang.setText("");
@@ -2415,7 +2415,7 @@ public class BanHangPOSPanel extends JPanel {
             return;
         }
         HoaDonDaThanhToan hd = new HoaDonDaThanhToan();
-        hd.maHoaDon = (lblMaHoaDon != null ? lblMaHoaDon.getText() : utils.MaTuSinhHelper.sinhMaHoaDon(utils.UserSession.getUserId())) + " (Tạm)";
+        hd.maHoaDon = (lblMaHoaDon != null ? lblMaHoaDon.getText() : controller.sinhMaHoaDonMoi(utils.UserSession.getUserId())) + " (Tạm)";
         hd.thoiGian = LocalDateTime.now().format(STATIC_DTF);
         hd.tenKhach = (txtTenKhachHang != null && !txtTenKhachHang.getText().trim().isEmpty()) ? txtTenKhachHang.getText().trim() : "Khách vãng lai";
         hd.sdt = (txtSdtKhachHang != null) ? txtSdtKhachHang.getText().trim() : "";
@@ -2891,7 +2891,7 @@ public class BanHangPOSPanel extends JPanel {
             // 2. CHỈ KHI TỒN KHO ĐẦY ĐỦ: NẾU CÓ ĐỔI TRẢ, LƯU PHIẾU ĐỔI TRẢ VÀO CSDL (GIAO DỊCH CHẶT CHẼ)
             if (thongTinDoiTraHienTai != null) {
                 entity.PhieuDoiTra pdt = new entity.PhieuDoiTra();
-                pdt.setMaPhieuDoiTra(utils.MaTuSinhHelper.sinhMaPhieuDoiTra());
+                pdt.setMaPhieuDoiTra(new bus.DoiTraBus().sinhMaPhieuDoiTraMoi());
                 entity.HoaDon hdGoc = new entity.HoaDon();
                 hdGoc.setMaHoaDon(thongTinDoiTraHienTai.getMaHoaDonGoc());
                 pdt.setHoaDonGoc(hdGoc);

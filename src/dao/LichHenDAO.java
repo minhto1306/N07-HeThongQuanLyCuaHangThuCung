@@ -13,6 +13,16 @@ import java.util.List;
  */
 public class LichHenDAO {
 
+    public String sinhMaLichHenMoi() {
+        String sql = "SELECT dbo.fn_SinhMaLichHen()";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getString(1);
+        } catch (SQLException ignored) {}
+        return "LH001";
+    }
+
     /**
      * Lấy toàn bộ danh sách lịch hẹn kèm khách hàng và chi tiết dịch vụ
      */

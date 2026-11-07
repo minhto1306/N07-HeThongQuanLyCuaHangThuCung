@@ -4,7 +4,6 @@ import bus.NhanVienBus;
 import entity.NhanVien;
 import entity.TaiKhoan;
 import utils.IconHelper;
-import utils.MaTuSinhHelper;
 import utils.ThemeColors;
 
 import javax.swing.*;
@@ -23,7 +22,7 @@ import java.util.List;
  * Màn hình Quản lý Nhân viên & Phân quyền Hệ thống (Dành riêng cho Quản lý NVQL).
  * Giao diện hiện đại dạng Lưới thẻ (Grid Cards):
  * - Thẻ nhân viên hiển thị Avatar tròn, Họ tên, Mã NV tự sinh, Email công việc, SĐT đăng nhập.
- * - Mã NV tự động tăng từ MaTuSinhHelper, không cho phép chỉnh sửa bằng tay.
+ * - Mã NV tự động tăng từ T-SQL fn_SinhMaNhanVien, không cho phép chỉnh sửa bằng tay.
  * - Thao tác nhanh: Đổi vai trò, Cấp lại mật khẩu (tự động băm SHA-256), Khóa / Mở khóa tài khoản.
  */
 public class QuanLyNhanVienPanel extends JPanel {
@@ -389,7 +388,7 @@ public class QuanLyNhanVienPanel extends JPanel {
     }
 
     public void moDialogThemNhanVien() {
-        String maTuDong = MaTuSinhHelper.sinhMaNhanVien();
+        String maTuDong = controller.sinhMaNhanVienMoi();
         JTextField txtMaNV = new JTextField(maTuDong);
         txtMaNV.setEditable(false);
         txtMaNV.setBackground(new Color(0xF1, 0xF5, 0xF9));

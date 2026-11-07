@@ -362,12 +362,12 @@ public class ThietLapQuyDoiDialog extends JDialog {
 
             try {
                 bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
-                String maDvt = utils.MaTuSinhHelper.sinhMaDonViTinh();
+                String maDvt = "DVT" + (khoBus.layTatCaDonViTinh().size() + 1);
                 entity.DonViTinh dvt = new entity.DonViTinh(maDvt, tenDvt);
                 khoBus.themDonViTinh(dvt);
                 entity.SanPham sp = new entity.SanPham(maSP, null, tenSP, "");
                 entity.QuyDoiDonVi qd = new entity.QuyDoiDonVi(
-                        utils.MaTuSinhHelper.sinhMaQuyDoi(),
+                        khoBus.sinhMaQuyDoiMoi(),
                         sp, dvt, tyLe, false, java.math.BigDecimal.valueOf(giaBan)
                 );
                 khoBus.themQuyDoi(qd);

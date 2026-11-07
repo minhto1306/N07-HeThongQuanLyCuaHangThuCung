@@ -396,16 +396,361 @@ PRINT N'-> Hoàn thành tạo cấu trúc bảng (Schema) thành công!';
 GO
 
 -- ======================================================================================
+-- PHẦN I.B: CÁC HÀM (UDF) & THỦ TỤC (STORED PROCEDURES) T-SQL
+-- 1. BẢO MẬT & BĂM MẬT KHẨU SHA-256 (TỰ ĐỘNG THỰC HIỆN TRONG CSDL)
+-- 2. TỰ ĐỘNG SINH MÃ NGHIỆP VỤ TỰ TĂNG TRỰC TIẾP TRONG CSDL
+-- ======================================================================================
+
+-- 1.1 Hàm băm mật khẩu SHA-256 trả về chuỗi 64 ký tự hex thường
+IF OBJECT_ID('dbo.fn_HashPassword', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_HashPassword;
+GO
+CREATE FUNCTION dbo.fn_HashPassword(@matKhau NVARCHAR(255))
+RETURNS VARCHAR(64)
+AS
+BEGIN
+    IF @matKhau IS NULL RETURN NULL;
+    RETURN LOWER(CONVERT(VARCHAR(64), HASHBYTES('SHA2_256', @matKhau), 2));
+END;
+GO
+
+-- 1.2 Thủ tục Đăng nhập tài khoản bằng SĐT hoặc Email hoặc Mã NV và mật khẩu thô
+IF OBJECT_ID('dbo.sp_DangNhap', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_DangNhap;
+GO
+CREATE PROCEDURE dbo.sp_DangNhap
+    @identifier NVARCHAR(100),
+    @matKhauRaw NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @hashed VARCHAR(64) = dbo.fn_HashPassword(@matKhauRaw);
+
+    SELECT TOP 1 
+        tk.maTaiKhoan,
+        tk.soDienThoai,
+        tk.email,
+        tk.vaiTro,
+        tk.trangThaiHoatDong,
+        nv.maNhanVien,
+        nv.hoTen,
+        nv.chucVu
+    FROM TaiKhoan tk
+    LEFT JOIN NhanVien nv ON tk.maTaiKhoan = nv.maTaiKhoan
+    WHERE (tk.soDienThoai = @identifier OR tk.email = @identifier OR tk.maTaiKhoan = @identifier)
+      AND tk.matKhau = @hashed;
+END;
+GO
+
+-- 1.3 Thủ tục Đổi mật khẩu
+IF OBJECT_ID('dbo.sp_DoiMatKhau', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_DoiMatKhau;
+GO
+CREATE PROCEDURE dbo.sp_DoiMatKhau
+    @maTaiKhoan NVARCHAR(20),
+    @matKhauMoiRaw NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @hashed VARCHAR(64) = dbo.fn_HashPassword(@matKhauMoiRaw);
+    UPDATE TaiKhoan
+    SET matKhau = @hashed
+    WHERE maTaiKhoan = @maTaiKhoan;
+END;
+GO
+
+-- 1.4 Thủ tục Tạo tài khoản mới
+IF OBJECT_ID('dbo.sp_TaoTaiKhoan', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_TaoTaiKhoan;
+GO
+CREATE PROCEDURE dbo.sp_TaoTaiKhoan
+    @maTaiKhoan NVARCHAR(20),
+    @soDienThoai NVARCHAR(15),
+    @email NVARCHAR(100),
+    @matKhauRaw NVARCHAR(255),
+    @vaiTro NVARCHAR(20)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @hashed VARCHAR(64) = dbo.fn_HashPassword(@matKhauRaw);
+    INSERT INTO TaiKhoan (maTaiKhoan, soDienThoai, email, matKhau, vaiTro, trangThaiHoatDong)
+    VALUES (@maTaiKhoan, @soDienThoai, @email, @hashed, @vaiTro, 1);
+END;
+GO
+
+-- ======================================================================================
+-- 2. CÁC HÀM TỰ SINH MÃ NGHIỆP VỤ TỰ TĂNG TRỰC TIẾP TRONG T-SQL
+-- ======================================================================================
+
+-- 2.1 Sinh mã Nhân Viên (NV001, NV002, ...)
+IF OBJECT_ID('dbo.fn_SinhMaNhanVien', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaNhanVien;
+GO
+CREATE FUNCTION dbo.fn_SinhMaNhanVien()
+RETURNS NVARCHAR(20)
+AS
+BEGIN
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maNhanVien, 3, LEN(maNhanVien)) AS INT)), 0)
+    FROM NhanVien
+    WHERE maNhanVien LIKE 'NV[0-9]%';
+    RETURN 'NV' + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+END;
+GO
+
+-- 2.2 Sinh mã Sản Phẩm (SP001, SP002, ...)
+IF OBJECT_ID('dbo.fn_SinhMaSanPham', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaSanPham;
+GO
+CREATE FUNCTION dbo.fn_SinhMaSanPham()
+RETURNS NVARCHAR(20)
+AS
+BEGIN
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maSanPham, 3, LEN(maSanPham)) AS INT)), 0)
+    FROM SanPham
+    WHERE maSanPham LIKE 'SP[0-9]%';
+    RETURN 'SP' + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+END;
+GO
+
+-- 2.3 Sinh mã Dịch Vụ (DV001, DV002, ...)
+IF OBJECT_ID('dbo.fn_SinhMaDichVu', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaDichVu;
+GO
+CREATE FUNCTION dbo.fn_SinhMaDichVu()
+RETURNS NVARCHAR(20)
+AS
+BEGIN
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maDichVu, 3, LEN(maDichVu)) AS INT)), 0)
+    FROM DichVu
+    WHERE maDichVu LIKE 'DV[0-9]%';
+    RETURN 'DV' + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+END;
+GO
+
+-- 2.4 Sinh mã Khách Hàng (KH0001, KH0002, ...)
+IF OBJECT_ID('dbo.fn_SinhMaKhachHang', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaKhachHang;
+GO
+CREATE FUNCTION dbo.fn_SinhMaKhachHang()
+RETURNS NVARCHAR(20)
+AS
+BEGIN
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maKhachHang, 3, LEN(maKhachHang)) AS INT)), 0)
+    FROM KhachHang
+    WHERE maKhachHang LIKE 'KH[0-9]%';
+    RETURN 'KH' + RIGHT('0000' + CAST(@max + 1 AS VARCHAR(10)), 4);
+END;
+GO
+
+-- 2.5 Sinh mã Thú Cưng (TC0001, TC0002, ...)
+IF OBJECT_ID('dbo.fn_SinhMaThuCung', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaThuCung;
+GO
+CREATE FUNCTION dbo.fn_SinhMaThuCung()
+RETURNS NVARCHAR(20)
+AS
+BEGIN
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maThuCung, 3, LEN(maThuCung)) AS INT)), 0)
+    FROM ThuCung
+    WHERE maThuCung LIKE 'TC[0-9]%';
+    RETURN 'TC' + RIGHT('0000' + CAST(@max + 1 AS VARCHAR(10)), 4);
+END;
+GO
+
+-- 2.6 Sinh mã Giao Ca (GC001, GC002, ...)
+IF OBJECT_ID('dbo.fn_SinhMaGiaoCa', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaGiaoCa;
+GO
+CREATE FUNCTION dbo.fn_SinhMaGiaoCa()
+RETURNS NVARCHAR(20)
+AS
+BEGIN
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maGiaoCa, 3, LEN(maGiaoCa)) AS INT)), 0)
+    FROM BangGiaoCa
+    WHERE maGiaoCa LIKE 'GC[0-9]%';
+    RETURN 'GC' + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+END;
+GO
+
+-- 2.7 Sinh mã Quy Đổi ĐVT (QD001, QD002, ...)
+IF OBJECT_ID('dbo.fn_SinhMaQuyDoi', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaQuyDoi;
+GO
+CREATE FUNCTION dbo.fn_SinhMaQuyDoi()
+RETURNS NVARCHAR(20)
+AS
+BEGIN
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maQuyDoi, 3, LEN(maQuyDoi)) AS INT)), 0)
+    FROM QuyDoiDonVi
+    WHERE maQuyDoi LIKE 'QD[0-9]%';
+    RETURN 'QD' + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+END;
+GO
+
+-- 2.8 Sinh mã Lô Hàng: LO-{yyMMdd}-{seq 3 số} (Ví dụ: LO-261107-001)
+IF OBJECT_ID('dbo.fn_SinhMaLoHang', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaLoHang;
+GO
+CREATE FUNCTION dbo.fn_SinhMaLoHang()
+RETURNS NVARCHAR(30)
+AS
+BEGIN
+    DECLARE @prefix VARCHAR(10) = 'LO-' + CONVERT(VARCHAR(6), GETDATE(), 12) + '-';
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(RIGHT(soLo, 3) AS INT)), 0)
+    FROM LoHang
+    WHERE soLo LIKE @prefix + '%';
+    RETURN @prefix + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+END;
+GO
+
+-- 2.9 Sinh mã Hóa Đơn: HD{yyMMdd}-{seq 2 số} (Ví dụ: HD261107-01)
+IF OBJECT_ID('dbo.fn_SinhMaHoaDon', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaHoaDon;
+GO
+CREATE FUNCTION dbo.fn_SinhMaHoaDon(@maNhanVien NVARCHAR(20))
+RETURNS NVARCHAR(30)
+AS
+BEGIN
+    DECLARE @prefix VARCHAR(10) = 'HD' + CONVERT(VARCHAR(6), GETDATE(), 12) + '-';
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maHoaDon, LEN(@prefix) + 1, LEN(maHoaDon)) AS INT)), 0)
+    FROM HoaDon
+    WHERE maHoaDon LIKE @prefix + '%';
+    RETURN @prefix + RIGHT('00' + CAST(@max + 1 AS VARCHAR(10)), 2);
+END;
+GO
+
+-- 2.10 Sinh mã Lịch Hẹn: LH{yyMMdd}-{seq 3 số} (Ví dụ: LH261107-001)
+IF OBJECT_ID('dbo.fn_SinhMaLichHen', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaLichHen;
+GO
+CREATE FUNCTION dbo.fn_SinhMaLichHen()
+RETURNS NVARCHAR(30)
+AS
+BEGIN
+    DECLARE @prefix VARCHAR(10) = 'LH' + CONVERT(VARCHAR(6), GETDATE(), 12) + '-';
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maLichHen, LEN(@prefix) + 1, LEN(maLichHen)) AS INT)), 0)
+    FROM LichHen
+    WHERE maLichHen LIKE @prefix + '%';
+    IF @max = 0
+    BEGIN
+        SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maLichHen, 3, LEN(maLichHen)) AS INT)), 0)
+        FROM LichHen
+        WHERE maLichHen LIKE 'LH[0-9]%';
+        IF @max > 0 RETURN 'LH' + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+    END
+    RETURN @prefix + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+END;
+GO
+
+-- 2.11 Sinh mã Phiếu Đổi Trả: DT{yyMMdd}-{seq 3 số} (Ví dụ: DT261107-001)
+IF OBJECT_ID('dbo.fn_SinhMaPhieuDoiTra', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaPhieuDoiTra;
+GO
+CREATE FUNCTION dbo.fn_SinhMaPhieuDoiTra()
+RETURNS NVARCHAR(30)
+AS
+BEGIN
+    DECLARE @prefix VARCHAR(10) = 'DT' + CONVERT(VARCHAR(6), GETDATE(), 12) + '-';
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maPhieuDoiTra, LEN(@prefix) + 1, LEN(maPhieuDoiTra)) AS INT)), 0)
+    FROM PhieuDoiTra
+    WHERE maPhieuDoiTra LIKE @prefix + '%';
+    IF @max = 0
+    BEGIN
+        SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maPhieuDoiTra, 3, LEN(maPhieuDoiTra)) AS INT)), 0)
+        FROM PhieuDoiTra
+        WHERE maPhieuDoiTra LIKE 'DT[0-9]%';
+        IF @max > 0 RETURN 'DT' + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+    END
+    RETURN @prefix + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+END;
+GO
+
+-- 2.12 Sinh mã Thẻ Spa Pass: PASS_{sdt}_{seq 2 số}
+IF OBJECT_ID('dbo.fn_SinhMaTheSpaPass', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_SinhMaTheSpaPass;
+GO
+CREATE FUNCTION dbo.fn_SinhMaTheSpaPass(@sdt NVARCHAR(15))
+RETURNS NVARCHAR(50)
+AS
+BEGIN
+    DECLARE @cleanSdt NVARCHAR(15) = ISNULL(@sdt, '0000000000');
+    DECLARE @prefix NVARCHAR(30) = 'PASS_' + @cleanSdt + '_';
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(RIGHT(maThe, 2) AS INT)), 0)
+    FROM TheSpaPass
+    WHERE maThe LIKE @prefix + '%';
+    RETURN @prefix + RIGHT('00' + CAST(@max + 1 AS VARCHAR(10)), 2);
+END;
+GO
+
+-- 2.13 Sinh mã Hồ Sơ Thú Cưng (HS001, HS002, ...)
+IF OBJECT_ID('dbo.fn_SinhMaHoSo', 'FN') IS NOT NULL DROP FUNCTION dbo.fn_SinhMaHoSo;
+GO
+CREATE FUNCTION dbo.fn_SinhMaHoSo()
+RETURNS NVARCHAR(20)
+AS
+BEGIN
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maHoSo, 3, LEN(maHoSo)) AS INT)), 0)
+    FROM HoSoThuCung
+    WHERE maHoSo LIKE 'HS[0-9]%';
+    RETURN 'HS' + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+END;
+GO
+
+-- 2.14 Sinh mã Sức Khỏe Thú Cưng (SK001, SK002, ...)
+IF OBJECT_ID('dbo.fn_SinhMaSucKhoe', 'FN') IS NOT NULL DROP FUNCTION dbo.fn_SinhMaSucKhoe;
+GO
+CREATE FUNCTION dbo.fn_SinhMaSucKhoe()
+RETURNS NVARCHAR(20)
+AS
+BEGIN
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maSucKhoe, 3, LEN(maSucKhoe)) AS INT)), 0)
+    FROM HoSoSucKhoe
+    WHERE maSucKhoe LIKE 'SK[0-9]%';
+    RETURN 'SK' + RIGHT('000' + CAST(@max + 1 AS VARCHAR(10)), 3);
+END;
+GO
+
+-- 2.15 Sinh mã Đơn Vị Tính (DVT01, DVT02, ...)
+IF OBJECT_ID('dbo.fn_SinhMaDonViTinh', 'FN') IS NOT NULL DROP FUNCTION dbo.fn_SinhMaDonViTinh;
+GO
+CREATE FUNCTION dbo.fn_SinhMaDonViTinh()
+RETURNS NVARCHAR(20)
+AS
+BEGIN
+    DECLARE @max INT = 0;
+    SELECT @max = ISNULL(MAX(CAST(SUBSTRING(maDonVi, 4, LEN(maDonVi)) AS INT)), 0)
+    FROM DonViTinh
+    WHERE maDonVi LIKE 'DVT[0-9]%';
+    RETURN 'DVT' + RIGHT('00' + CAST(@max + 1 AS VARCHAR(10)), 2);
+END;
+GO
+
+
+-- ======================================================================================
 -- PHẦN II: NẠP DỮ LIỆU MẪU KIỂM THỬ MỌI KỊCH BẢN VÀ TRƯỜNG HỢP NGHIỆP VỤ (SEED DATA)
 -- ======================================================================================
 -- 1. Tài khoản & Nhân viên (4 thành viên phụ trách 4 phân hệ cốt lõi + KTV + NV nghỉ việc)
 INSERT INTO TaiKhoan (maTaiKhoan, soDienThoai, email, matKhau, vaiTro, trangThaiHoatDong) VALUES
-('NV001', '0901234567', 'minh.quanly@miopet.vn', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVQL',  1),
-('NV002', '0923456789', 'dat.kho@miopet.vn',      '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVQL',  1),
-('NV003', '0912345678', 'minh.thungan@miopet.vn',  '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVTN',  1),
-('NV004', '0945678901', 'ngoc.spa@miopet.vn',      '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVCS',  1),
-('NV005', '0934567890', 'ha.ktv@miopet.vn',        '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVCS',  1),
-('NV006', '0956789012', 'hung.banhang@miopet.vn',  '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'NVBH',  0);
+('NV001', '0901234567', 'minh.quanly@miopet.vn', dbo.fn_HashPassword('123456'), 'NVQL',  1),
+('NV002', '0923456789', 'dat.kho@miopet.vn',      dbo.fn_HashPassword('123456'), 'NVQL',  1),
+('NV003', '0912345678', 'minh.thungan@miopet.vn',  dbo.fn_HashPassword('123456'), 'NVTN',  1),
+('NV004', '0945678901', 'ngoc.spa@miopet.vn',      dbo.fn_HashPassword('123456'), 'NVCS',  1),
+('NV005', '0934567890', 'ha.ktv@miopet.vn',        dbo.fn_HashPassword('123456'), 'NVCS',  1),
+('NV006', '0956789012', 'hung.banhang@miopet.vn',  dbo.fn_HashPassword('123456'), 'NVBH',  0);
 INSERT INTO NhanVien (maNhanVien, hoTen, chucVu, soDienThoai, email, maTaiKhoan) VALUES
 ('NV001', N'Lê Khãi Minh',    N'Quản lý hệ thống',        '0901234567', 'minh.quanly@miopet.vn', 'NV001'),
 ('NV002', N'Tô Thành Đạt',     N'Quản lý kho & Lô hàng',   '0923456789', 'dat.kho@miopet.vn',      'NV002'),

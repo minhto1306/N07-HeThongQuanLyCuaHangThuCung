@@ -3,8 +3,6 @@ package bus;
 import dao.NhanVienDAO;
 import entity.NhanVien;
 import entity.TaiKhoan;
-import utils.MaTuSinhHelper;
-import utils.PasswordHasher;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -16,6 +14,10 @@ import java.util.List;
  * Kết nối trực tiếp 100% CSDL SQL Server qua NhanVienDAO.
  */
 public class NhanVienBus {
+
+    public String sinhMaNhanVienMoi() {
+        return nhanVienDAO.sinhMaNhanVienMoi();
+    }
 
     private final NhanVienDAO nhanVienDAO;
 
@@ -40,17 +42,17 @@ public class NhanVienBus {
      */
     public boolean themNhanVien(String hoTen, String chucVu, String soDienThoai, String email,
                                 String matKhau, String vaiTro) {
-        String maNV = MaTuSinhHelper.sinhMaNhanVien();
-        String passHash = PasswordHasher.hashSHA256((matKhau != null && !matKhau.trim().isEmpty()) ? matKhau.trim() : "123456");
+        String maNV = nhanVienDAO.sinhMaNhanVienMoi();
+        String rawPass = (matKhau != null && !matKhau.trim().isEmpty()) ? matKhau.trim() : "123456";
         String role = (vaiTro != null && !vaiTro.trim().isEmpty()) ? vaiTro.trim() : "NVTN";
         String sdt = (soDienThoai != null) ? soDienThoai.trim() : "";
         String mail = (email != null && !email.trim().isEmpty()) ? email.trim() : maNV.toLowerCase() + "@mio.vn";
 
-        TaiKhoan tk = new TaiKhoan(maNV, sdt, mail, passHash, role, true);
+        TaiKhoan tk = new TaiKhoan(maNV, sdt, mail, rawPass, role, true);
         NhanVien nv = new NhanVien(maNV, hoTen, chucVu, sdt, mail, tk);
 
         try {
-            return nhanVienDAO.insertNhanVien(nv, passHash, role);
+            return nhanVienDAO.insertNhanVien(nv, rawPass, role);
         } catch (SQLException e) {
             System.err.println("[NhanVienBus] Lỗi insert CSDL: " + e.getMessage());
             return false;
@@ -75,9 +77,8 @@ public class NhanVienBus {
      */
     public boolean resetMatKhau(String maNVHoacSdt, String matKhauMoi) {
         String rawPass = (matKhauMoi != null && !matKhauMoi.trim().isEmpty()) ? matKhauMoi.trim() : "123456";
-        String hash = PasswordHasher.hashSHA256(rawPass);
         try {
-            return nhanVienDAO.resetMatKhau(maNVHoacSdt, hash);
+            return nhanVienDAO.resetMatKhau(maNVHoacSdt, rawPass);
         } catch (SQLException e) {
             System.err.println("[NhanVienBus] Lỗi reset mật khẩu CSDL: " + e.getMessage());
             return false;

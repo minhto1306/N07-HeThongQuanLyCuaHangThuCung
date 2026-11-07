@@ -15,6 +15,16 @@ import java.util.List;
  */
 public class LoHangDAO {
 
+    public String sinhMaLoHangMoi() {
+        String sql = "SELECT dbo.fn_SinhMaLoHang()";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getString(1);
+        } catch (SQLException ignored) {}
+        return "LO-001";
+    }
+
     /**
      * Lấy toàn bộ danh sách lô hàng trong kho
      */

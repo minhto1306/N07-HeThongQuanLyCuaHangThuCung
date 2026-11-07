@@ -428,7 +428,7 @@ public class KhoLoHangPanel extends JPanel {
                     entity.SanPham spMoi = new entity.SanPham(maSP, dm, tenSP, "", dvtCoSo, java.math.BigDecimal.valueOf(giaBan), "Nhập kho mới");
                     khoBus.themSanPham(spMoi);
                     entity.DonViTinh dvt = new entity.DonViTinh("DVT01", dvtCoSo);
-                    entity.QuyDoiDonVi qd = new entity.QuyDoiDonVi(utils.MaTuSinhHelper.sinhMaQuyDoi(), spMoi, dvt, 1, true, java.math.BigDecimal.valueOf(giaBan));
+                    entity.QuyDoiDonVi qd = new entity.QuyDoiDonVi(khoBus.sinhMaQuyDoiMoi(), spMoi, dvt, 1, true, java.math.BigDecimal.valueOf(giaBan));
                     khoBus.themQuyDoi(qd);
                 }
                 java.time.format.DateTimeFormatter dtfParse = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");

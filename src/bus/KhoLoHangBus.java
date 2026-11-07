@@ -20,6 +20,26 @@ import java.util.List;
  */
 public class KhoLoHangBus {
 
+    public String sinhMaSanPhamMoi() {
+        return sanPhamDAO.sinhMaSanPhamMoi();
+    }
+
+    public String sinhMaLoHangMoi() {
+        return loHangDAO.sinhMaLoHangMoi();
+    }
+
+    public String sinhMaQuyDoiMoi() {
+        return sanPhamDAO.sinhMaQuyDoiMoi();
+    }
+
+    public List<entity.DonViTinh> layTatCaDonViTinh() {
+        try {
+            return sanPhamDAO.getAllDonViTinh();
+        } catch (Exception ignored) {
+            return new ArrayList<>();
+        }
+    }
+
     private final LoHangDAO loHangDAO;
     private final SanPhamDAO sanPhamDAO;
 

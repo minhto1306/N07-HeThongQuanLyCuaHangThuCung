@@ -16,6 +16,28 @@ import java.util.List;
  */
 public class HoaDonDAO {
 
+    public String sinhMaHoaDonMoi(String maNhanVien) {
+        String sql = "SELECT dbo.fn_SinhMaHoaDon(?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maNhanVien != null ? maNhanVien : "NV001");
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString(1);
+            }
+        } catch (SQLException ignored) {}
+        return "HD01";
+    }
+
+    public String sinhMaPhieuDoiTraMoi() {
+        String sql = "SELECT dbo.fn_SinhMaPhieuDoiTra()";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getString(1);
+        } catch (SQLException ignored) {}
+        return "DT001";
+    }
+
     /**
      * Lưu và thanh toán hóa đơn với giao dịch phân tán trên nhiều bảng:
      * 1. Thêm bản ghi HoaDon

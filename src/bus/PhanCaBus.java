@@ -242,7 +242,7 @@ public class PhanCaBus {
             }
         }
 
-        String maPC = utils.MaTuSinhHelper.sinhMaPhanCong();
+        String maPC = "PC" + (danhSachPhanCong.size() + 1);
         BangPhanCong pcMoi = new BangPhanCong(maPC, nv, ca, ngay, "Chưa bắt đầu", ghiChu != null ? ghiChu : "");
         try {
             if (!phanCaDAO.insertPhanCong(pcMoi)) return false;

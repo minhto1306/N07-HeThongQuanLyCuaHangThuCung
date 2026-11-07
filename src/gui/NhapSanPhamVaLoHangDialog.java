@@ -131,7 +131,7 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         card.add(new JLabel("Mã sản phẩm:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
      //  Tự động lấy mã tiếp theo từ Database
-        txtMaSP = new JTextField(utils.MaTuSinhHelper.sinhMaSanPham());
+        txtMaSP = new JTextField(new bus.KhoLoHangBus().sinhMaSanPhamMoi());
         txtMaSP.setPreferredSize(new Dimension(0, 32));
         txtMaSP.setBorder(ThemeColors.createInputBorder());
 
@@ -226,7 +226,7 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.35;
         card.add(new JLabel("Số lô hàng:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.65;
-        txtSoLo = new JTextField(utils.MaTuSinhHelper.sinhSoLo());
+        txtSoLo = new JTextField(new bus.KhoLoHangBus().sinhMaLoHangMoi());
         txtSoLo.setPreferredSize(new Dimension(0, 32));
         txtSoLo.setBorder(ThemeColors.createInputBorder());
         txtSoLo.setEditable(false);

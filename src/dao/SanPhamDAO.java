@@ -13,6 +13,28 @@ import java.util.List;
  */
 public class SanPhamDAO {
 
+    public String sinhMaSanPhamMoi() {
+        String sql = "SELECT dbo.fn_SinhMaSanPham()";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getString(1);
+        } catch (SQLException ignored) {}
+        return "SP001";
+    }
+
+    public String sinhMaQuyDoiMoi() {
+        String sql = "SELECT dbo.fn_SinhMaQuyDoi()";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getString(1);
+        } catch (SQLException ignored) {}
+        return "QD001";
+    }
+
+
+
     private SanPham mapResultSetToSanPham(ResultSet rs) throws SQLException {
         DanhMucHang dm = new DanhMucHang(
                 rs.getString("maDanhMuc"),

@@ -13,6 +13,10 @@ import java.util.Map;
  */
 public class DoiTraBus {
 
+    public String sinhMaPhieuDoiTraMoi() {
+        return hoaDonDAO.sinhMaPhieuDoiTraMoi();
+    }
+
     private final HoaDonDAO hoaDonDAO;
 
     public DoiTraBus() {

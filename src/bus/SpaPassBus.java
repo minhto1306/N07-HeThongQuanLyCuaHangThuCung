@@ -13,6 +13,7 @@ import java.util.List;
  * Lưu trữ bền vững xuống CSDL SQL Server qua TheSpaPassDAO.
  */
 public class SpaPassBus {
+    private final dao.DichVuDAO dichVuDAO = new dao.DichVuDAO();
 
     private static final List<TheSpaPass> DANH_SACH_THE = new ArrayList<>();
     private static final TheSpaPassDAO dao = new TheSpaPassDAO();
@@ -131,7 +132,7 @@ public class SpaPassBus {
     public TheSpaPass kichHoatTheMoi(String sdt, String tenKhach, String maGoi, int soBuoi, long donGia) {
         if (sdt == null || sdt.trim().isEmpty()) return null;
         String tenGoi = "Gói Spa Chăm Sóc (" + soBuoi + " Buổi)";
-        String maThe = utils.MaTuSinhHelper.sinhMaTheSpaPass(sdt);
+        String maThe = dao.sinhMaTheSpaPass(sdt);
         TheSpaPass theMoi = new TheSpaPass(
                 maThe,
                 sdt.trim(),

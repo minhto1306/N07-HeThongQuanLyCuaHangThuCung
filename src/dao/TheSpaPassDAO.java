@@ -14,6 +14,18 @@ import java.util.List;
  */
 public class TheSpaPassDAO {
 
+    public String sinhMaTheSpaPass(String sdt) {
+        String sql = "SELECT dbo.fn_SinhMaTheSpaPass(?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, sdt);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString(1);
+            }
+        } catch (SQLException ignored) {}
+        return "PASS_" + (sdt != null ? sdt : "000") + "_01";
+    }
+
     public List<TheSpaPass> getAllTheSpaPass() throws SQLException {
         List<TheSpaPass> list = new ArrayList<>();
         String sql = "SELECT * FROM TheSpaPass ORDER BY ngayKichHoat DESC";

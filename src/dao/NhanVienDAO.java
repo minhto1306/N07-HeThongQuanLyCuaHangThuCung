@@ -3,7 +3,6 @@ package dao;
 import entity.NhanVien;
 import entity.TaiKhoan;
 import utils.DBConnection;
-import utils.MaTuSinhHelper;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -18,6 +17,20 @@ import java.util.List;
  * Đăng nhập bằng số điện thoại, mật khẩu băm SHA-256.
  */
 public class NhanVienDAO {
+
+    public String sinhMaNhanVienMoi() {
+        String sql = "SELECT dbo.fn_SinhMaNhanVien()";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getString(1);
+        } catch (SQLException ignored) {}
+        return "NV001";
+    }
+
+    public String taoMaNhanVienMoi() {
+        return sinhMaNhanVienMoi();
+    }
 
     private static final String SELECT_BASE =
             "SELECT nv.maNhanVien, nv.hoTen, nv.chucVu, nv.soDienThoai, nv.email AS nvEmail, nv.maTaiKhoan, " +
@@ -89,11 +102,11 @@ public class NhanVienDAO {
 
     /**
      * Thêm nhân viên mới kèm tài khoản (Transaction JDBC an toàn).
-     * Tự động sinh mã NVxxx qua MaTuSinhHelper nếu chưa có.
+     * Tự động sinh mã NVxxx qua T-SQL Function fn_SinhMaNhanVien nếu chưa có.
      */
     public boolean insertNhanVien(NhanVien nv, String matKhauHash, String vaiTro) throws SQLException {
         String sqlTK = "INSERT INTO TaiKhoan (maTaiKhoan, soDienThoai, email, matKhau, vaiTro, trangThaiHoatDong) " +
-                       "VALUES (?, ?, ?, ?, ?, 1)";
+                       "VALUES (?, ?, ?, dbo.fn_HashPassword(?), ?, 1)";
         String sqlNV = "INSERT INTO NhanVien (maNhanVien, hoTen, chucVu, soDienThoai, email, maTaiKhoan) " +
                        "VALUES (?, ?, ?, ?, ?, ?)";
 
@@ -104,7 +117,7 @@ public class NhanVienDAO {
 
             String maNV = nv.getMaNhanVien();
             if (maNV == null || maNV.trim().isEmpty()) {
-                maNV = MaTuSinhHelper.sinhMaNhanVien();
+                maNV = sinhMaNhanVienMoi();
                 nv.setMaNhanVien(maNV);
             }
 
@@ -114,7 +127,7 @@ public class NhanVienDAO {
             String sdt = nv.getSoDienThoai() != null ? nv.getSoDienThoai().trim() : "";
             String passHash = (matKhauHash != null && !matKhauHash.trim().isEmpty())
                     ? matKhauHash.trim()
-                    : utils.PasswordHasher.hashSHA256("123456");
+                    : "123456";
             String role = (vaiTro != null && !vaiTro.trim().isEmpty()) ? vaiTro.trim() : "NVTN";
 
             // 1. Thêm bản ghi TaiKhoan
@@ -247,11 +260,11 @@ public class NhanVienDAO {
     /**
      * Đặt lại mật khẩu tài khoản nhân viên (nhận mã hash SHA-256).
      */
-    public boolean resetMatKhau(String maNVHoacSdt, String matKhauMoiHash) throws SQLException {
-        String sql = "UPDATE TaiKhoan SET matKhau = ? WHERE maTaiKhoan = ? OR soDienThoai = ?";
+    public boolean resetMatKhau(String maNVHoacSdt, String matKhauMoiRaw) throws SQLException {
+        String sql = "UPDATE TaiKhoan SET matKhau = dbo.fn_HashPassword(?) WHERE maTaiKhoan = ? OR soDienThoai = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, matKhauMoiHash);
+            ps.setString(1, matKhauMoiRaw);
             ps.setString(2, maNVHoacSdt);
             ps.setString(3, maNVHoacSdt);
             return ps.executeUpdate() > 0;
