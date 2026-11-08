@@ -158,7 +158,8 @@ public class LichHenDAO {
             throw e;
         } finally {
             if (conn != null) {
-                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
+                try { conn.close(); } catch (SQLException ignored) {}
             }
         }
     }
@@ -222,6 +223,7 @@ public class LichHenDAO {
         } finally {
             if (conn != null) {
                 try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
+                try { conn.close(); } catch (SQLException ignored) {}
             }
         }
     }
