@@ -194,6 +194,15 @@ public class BanHangBus {
         if (diemSuDung < 0) {
             throw new IllegalArgumentException("Điểm sử dụng không được là số âm: " + diemSuDung);
         }
+        if (hd != null && hd.getDsChiTiet() != null) {
+            for (ChiTietHoaDon ct : hd.getDsChiTiet()) {
+                if (ct == null) continue;
+                if (ct.getDonGiaLucBan() == null) ct.setDonGiaLucBan(BigDecimal.ZERO);
+                if (ct.getThanhTien() == null) {
+                    ct.setThanhTien(ct.getDonGiaLucBan().multiply(BigDecimal.valueOf(Math.max(1, ct.getSoLuong()))));
+                }
+            }
+        }
         if (diemThuHoiDoTraHang < 0) {
             throw new IllegalArgumentException("Điểm thu hồi do trả hàng không được là số âm: " + diemThuHoiDoTraHang);
         }
@@ -306,7 +315,7 @@ public class BanHangBus {
         return kq;
     }
 
-    // Lưu mới hoặc cập nhật thông tin khách hàng xuống SQL Server (hồ sơ giữ nguyên điểm tích lũy CSDL)
+    // Lưu mới hoặc cập nhật thông tin khách hàng và điểm tích lũy xuống SQL Server
     public static KhachHang luuHoacCapNhatKhachHang(String soDienThoai, String hoTen, int diemMoi) {
         if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
             return null;
@@ -318,22 +327,17 @@ public class BanHangBus {
             sdt = sdt.substring(0, 15);
         }
 
-        // Trường hợp 1: Nếu khách đã tồn tại trong hệ thống -> Cập nhật tên, bỏ qua diemMoi và giữ nguyên điểm CSDL
+        // Trường hợp 1: Nếu khách đã tồn tại trong hệ thống -> Cập nhật tên và điểm tích lũy
         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
             if (kh.getSoDienThoai().equalsIgnoreCase(sdt)) {
-                String tenCapNhat = (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai"))
-                        ? hoTen.trim() : kh.getHoTen();
-                KhachHang updateObj = new KhachHang(kh.getMaKhachHang(), tenCapNhat, sdt, kh.getDiemTichLuy(), kh.getEmail(), kh.getDiaChi());
+                if (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai")) {
+                    kh.setHoTen(hoTen.trim());
+                }
+                // Đảm bảo điểm tích lũy không bao giờ bị âm
+                kh.setDiemTichLuy(Math.max(0, diemMoi));
                 try {
-                    if (STATIC_KH_DAO.updateProfile(updateObj)) {
-                        kh.setHoTen(tenCapNhat);
-                        KhachHang persisted = STATIC_KH_DAO.findByMaKhachHang(kh.getMaKhachHang());
-                        if (persisted != null) {
-                            kh.setDiemTichLuy(persisted.getDiemTichLuy());
-                        }
-                        return kh;
-                    }
-                    return null;
+                    STATIC_KH_DAO.update(kh);
+                    return kh;
                 } catch (SQLException e) {
                     System.err.println("[BanHangBus] Lỗi update KhachHang CSDL: " + e.getMessage());
                     return null;
@@ -341,18 +345,16 @@ public class BanHangBus {
             }
         }
 
-        // Trường hợp 2: Khách hàng mới toanh -> Tự động sinh mã KH mới và bắt đầu với 0 điểm
+        // Trường hợp 2: Khách hàng mới toanh -> Tự động sinh mã KH mới và thêm vào CSDL
         String tenMoi = (hoTen == null || hoTen.trim().isEmpty() || hoTen.trim().equalsIgnoreCase("Khách vãng lai"))
                 ? "Khách hàng mới"
                 : hoTen.trim();
         String maMoi = sinhMaKhachHangMoi();
-        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, 0);
+        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi));
         try {
-            if (STATIC_KH_DAO.insert(khMoi)) {
-                DANH_SACH_KHACH_HANG.add(khMoi);
-                return khMoi;
-            }
-            return null;
+            STATIC_KH_DAO.insert(khMoi);
+            DANH_SACH_KHACH_HANG.add(khMoi);
+            return khMoi;
         } catch (SQLException e) {
             System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
             return null;
@@ -369,32 +371,19 @@ public class BanHangBus {
         return capNhatThongTinKhachHang(maKH, hoTenMoi, sdtMoi, diemMoi, "", "");
     }
 
-    // overload cập nhật thông tin khách hàng: chỉ quản lý mới được chỉnh sửa điểm, nhân viên chỉ sửa hồ sơ
+    // overload cập nhật thông tin khách hàng có cả email và địa chỉ để gửi mail thông báo
     public static boolean capNhatThongTinKhachHang(String maKH, String hoTenMoi, String sdtMoi, int diemMoi, String emailMoi, String diaChiMoi) {
         dongBoKhachHangTuDatabase();
         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
             if (kh.getMaKhachHang().equalsIgnoreCase(maKH)) {
-                boolean isManager = utils.UserSession.isQuanLy();
-                String ten = hoTenMoi != null ? hoTenMoi.trim() : kh.getHoTen();
-                String sdt = sdtMoi != null ? sdtMoi.trim() : kh.getSoDienThoai();
-                String email = emailMoi != null ? emailMoi.trim() : "";
-                String diaChi = diaChiMoi != null ? diaChiMoi.trim() : "";
-                int diem = isManager ? Math.max(0, diemMoi) : kh.getDiemTichLuy();
-                KhachHang updateObj = new KhachHang(kh.getMaKhachHang(), ten, sdt, diem, email, diaChi);
+                kh.setHoTen(hoTenMoi.trim());
+                kh.setSoDienThoai(sdtMoi.trim());
+                kh.setDiemTichLuy(Math.max(0, diemMoi));
+                kh.setEmail(emailMoi != null ? emailMoi.trim() : "");
+                kh.setDiaChi(diaChiMoi != null ? diaChiMoi.trim() : "");
                 try {
-                    boolean ok = isManager ? STATIC_KH_DAO.update(updateObj) : STATIC_KH_DAO.updateProfile(updateObj);
-                    if (ok) {
-                        kh.setHoTen(ten);
-                        kh.setSoDienThoai(sdt);
-                        kh.setEmail(email);
-                        kh.setDiaChi(diaChi);
-                        KhachHang persisted = STATIC_KH_DAO.findByMaKhachHang(kh.getMaKhachHang());
-                        if (persisted != null) {
-                            kh.setDiemTichLuy(persisted.getDiemTichLuy());
-                        }
-                        return true;
-                    }
-                    return false;
+                    STATIC_KH_DAO.update(kh);
+                    return true;
                 } catch (SQLException e) {
                     System.err.println("[BanHangBus] Lỗi capNhatThongTinKhachHang CSDL: " + e.getMessage());
                     return false;
@@ -404,7 +393,7 @@ public class BanHangBus {
         return false;
     }
 
-    // thêm khách hàng mới hoặc cập nhật kèm cả email và địa chỉ nhà (hồ sơ giữ nguyên điểm tích lũy CSDL)
+    // thêm khách hàng mới hoặc cập nhật kèm cả email và địa chỉ nhà
     public static KhachHang luuHoacCapNhatKhachHang(String soDienThoai, String hoTen, int diemMoi, String email, String diaChi) {
         if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
             return null;
@@ -417,23 +406,15 @@ public class BanHangBus {
 
         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
             if (kh.getSoDienThoai().equalsIgnoreCase(sdt)) {
-                String tenCapNhat = (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai"))
-                        ? hoTen.trim() : kh.getHoTen();
-                String emailCapNhat = (email != null && !email.trim().isEmpty()) ? email.trim() : kh.getEmail();
-                String diaChiCapNhat = (diaChi != null && !diaChi.trim().isEmpty()) ? diaChi.trim() : kh.getDiaChi();
-                KhachHang updateObj = new KhachHang(kh.getMaKhachHang(), tenCapNhat, sdt, kh.getDiemTichLuy(), emailCapNhat, diaChiCapNhat);
+                if (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai")) {
+                    kh.setHoTen(hoTen.trim());
+                }
+                kh.setDiemTichLuy(Math.max(0, diemMoi));
+                if (email != null && !email.trim().isEmpty()) kh.setEmail(email.trim());
+                if (diaChi != null && !diaChi.trim().isEmpty()) kh.setDiaChi(diaChi.trim());
                 try {
-                    if (STATIC_KH_DAO.updateProfile(updateObj)) {
-                        kh.setHoTen(tenCapNhat);
-                        kh.setEmail(emailCapNhat);
-                        kh.setDiaChi(diaChiCapNhat);
-                        KhachHang persisted = STATIC_KH_DAO.findByMaKhachHang(kh.getMaKhachHang());
-                        if (persisted != null) {
-                            kh.setDiemTichLuy(persisted.getDiemTichLuy());
-                        }
-                        return kh;
-                    }
-                    return null;
+                    STATIC_KH_DAO.update(kh);
+                    return kh;
                 } catch (SQLException e) {
                     System.err.println("[BanHangBus] Lỗi update KhachHang CSDL: " + e.getMessage());
                     return null;
@@ -445,13 +426,11 @@ public class BanHangBus {
                 ? "Khách hàng mới"
                 : hoTen.trim();
         String maMoi = sinhMaKhachHangMoi();
-        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, 0, email, diaChi);
+        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi), email, diaChi);
         try {
-            if (STATIC_KH_DAO.insert(khMoi)) {
-                DANH_SACH_KHACH_HANG.add(khMoi);
-                return khMoi;
-            }
-            return null;
+            STATIC_KH_DAO.insert(khMoi);
+            DANH_SACH_KHACH_HANG.add(khMoi);
+            return khMoi;
         } catch (SQLException e) {
             System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
             return null;
@@ -486,50 +465,86 @@ public class BanHangBus {
     /**
      * Thêm sản phẩm vào giỏ hàng: Tự động tìm Lô hàng có hạn sử dụng gần nhất (FEFO)
      */
-    // Xuất kho theo chiến lược FEFO (First Expired, First Out): kiểm tra tồn kho và ưu tiên lô có hạn dùng gần nhất
+    // Xuất kho theo chiến lược FEFO (First Expired, First Out): kiểm tra tồn kho và phân bổ đa lô tự động (BH01)
     public boolean themSanPhamXuatLo(SanPham sp, QuyDoiDonVi qd, int soLuong) throws Exception {
         // kiểm tra dữ liệu truyền vào
         if (sp == null || qd == null || soLuong <= 0) {
             throw new IllegalArgumentException("Thông tin sản phẩm hoặc số lượng không hợp lệ!");
         }
 
-        // đổi ra số lượng cơ sở
-        int soLuongCoSoCanXuat = soLuong * qd.getTyLeQuyDoi();
+        // kiểm tra tỷ lệ quy đổi (fail fast: không chấp nhận <= 0)
+        if (qd.getTyLeQuyDoi() <= 0) {
+            throw new IllegalArgumentException("Tỷ lệ quy đổi không hợp lệ!");
+        }
+        int tyLe = qd.getTyLeQuyDoi();
 
-        // lấy mấy lô còn hạn theo thứ tự fefo
+        // đổi ra số lượng cơ sở (kiểm tra chống tràn số nguyên)
+        long soLuongCoSoCanXuatLong = (long) soLuong * tyLe;
+        if (soLuongCoSoCanXuatLong > Integer.MAX_VALUE || soLuongCoSoCanXuatLong <= 0) {
+            throw new IllegalArgumentException("Số lượng xuất kho vượt quá giới hạn cho phép của hệ thống!");
+        }
+        int soLuongCoSoCanXuat = (int) soLuongCoSoCanXuatLong;
+
+        // lấy các lô còn hạn theo thứ tự FEFO (cận date nhất lên trước)
         List<LoHang> dsLoHang = loHangDAO.getAvailableLotsFEFO(sp.getMaSanPham());
         if (dsLoHang.isEmpty()) {
-            throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] hết hàng hoặc hết date rồi");
+            throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] đã hết hàng hoặc hết hạn sử dụng!");
         }
 
-        // chọn lô cận date nhất mà còn đủ hàng
-        LoHang loChon = null;
+        long tongTonKhaDungLong = dsLoHang.stream().mapToLong(LoHang::getSoLuongTon).sum();
+        if (tongTonKhaDungLong < soLuongCoSoCanXuatLong) {
+            throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] chỉ còn tổng tồn " + tongTonKhaDungLong
+                    + " đơn vị cơ sở, không đủ xuất số lượng yêu cầu (" + soLuongCoSoCanXuat + ")!");
+        }
+
+        // Phân bổ xuất hàng qua nhiều lô FEFO nếu một lô không đủ số lượng (BH01)
+        int conLaiCoSo = soLuongCoSoCanXuat;
         for (LoHang lo : dsLoHang) {
-            if (lo.getSoLuongTon() >= soLuongCoSoCanXuat) {
-                loChon = lo;
-                break;
+            if (lo.getSoLuongTon() <= 0) continue;
+            int xuatLoNayCoSo = Math.min(conLaiCoSo, lo.getSoLuongTon());
+
+            int slXuat;
+            BigDecimal donGiaXuat = qd.getGiaBan();
+            QuyDoiDonVi qdXuat = qd;
+
+            if (xuatLoNayCoSo == soLuongCoSoCanXuat) {
+                slXuat = soLuong;
+            } else if (tyLe > 1 && xuatLoNayCoSo % tyLe == 0) {
+                slXuat = xuatLoNayCoSo / tyLe;
+            } else if (tyLe > 1) {
+                // Xuất lẻ theo đơn vị cơ sở vì lô không đủ nguyên thùng/hộp (giữ chuẩn scale 2 và tránh NPE)
+                slXuat = xuatLoNayCoSo;
+                if (sp.getGiaBanCoSo() != null && sp.getGiaBanCoSo().compareTo(BigDecimal.ZERO) > 0) {
+                    donGiaXuat = sp.getGiaBanCoSo();
+                } else {
+                    donGiaXuat = qd.getGiaBan().divide(BigDecimal.valueOf(tyLe), 2, java.math.RoundingMode.HALF_UP);
+                }
+                // Tạo đối tượng QuyDoiDonVi cơ sở để không bao giờ bị NPE khi format/in hóa đơn
+                String tenDvCoSo = (sp.getDonViCoSo() != null && !sp.getDonViCoSo().isEmpty()) ? sp.getDonViCoSo() : "Đơn vị";
+                qdXuat = new QuyDoiDonVi("QD_CS_" + sp.getMaSanPham(), sp, new entity.DonViTinh("DVT_CS", tenDvCoSo), 1, true, donGiaXuat);
+            } else {
+                slXuat = xuatLoNayCoSo;
+            }
+
+            String maCT = hoaDonHienTai.getMaHoaDon() + "_SP" + (hoaDonHienTai.getDsChiTiet().size() + 1);
+            ChiTietXuatLo ctXuatLo = new ChiTietXuatLo(
+                    maCT,
+                    hoaDonHienTai,
+                    slXuat,
+                    donGiaXuat,
+                    lo,
+                    qdXuat
+            );
+            ctXuatLo.setSoLuongXuatCoSo(xuatLoNayCoSo);
+            ctXuatLo.setThanhTien(donGiaXuat.multiply(BigDecimal.valueOf(slXuat)));
+            hoaDonHienTai.addChiTiet(ctXuatLo);
+
+            conLaiCoSo -= xuatLoNayCoSo;
+            if (conLaiCoSo <= 0) {
+                break; // FEFO: stop when done
             }
         }
 
-        if (loChon == null) {
-            loChon = dsLoHang.get(0);
-            if (loChon.getSoLuongTon() < soLuongCoSoCanXuat) {
-                throw new IllegalStateException("Lô [" + loChon.getSoLo() + "] còn có " + loChon.getSoLuongTon() + ", ko đủ xuất");
-            }
-        }
-
-        // tạo dòng chi tiết xuất lô
-        String maCT = hoaDonHienTai.getMaHoaDon() + "_SP" + (hoaDonHienTai.getDsChiTiet().size() + 1);
-        ChiTietXuatLo ctXuatLo = new ChiTietXuatLo(
-                maCT,
-                hoaDonHienTai,
-                soLuong,
-                qd.getGiaBan(),
-                loChon,
-                qd
-        );
-
-        hoaDonHienTai.addChiTiet(ctXuatLo);
         return true;
     }
 
@@ -635,7 +650,10 @@ public class BanHangBus {
 
     public static long tinhGiamGiaVIP(long tongTienHang, boolean isVIP) {
         if (!isVIP || tongTienHang <= 0) return 0L;
-        return Math.round(tongTienHang * 0.05);
+        return BigDecimal.valueOf(tongTienHang)
+                .multiply(new BigDecimal("0.05"))
+                .setScale(0, java.math.RoundingMode.HALF_UP)
+                .longValueExact();
     }
 
     public static long tinhTienGiamTuDiem(int soDiemMuonDung, int diemHienCo, long tongTienSauVIP) {
@@ -645,7 +663,10 @@ public class BanHangBus {
     }
 
     public static long tinhTongThanhToan(long tongTienHang, long tienGiamVIP, long tienDoiDiem, long tienKhauTruDoiTra) {
-        return Math.max(0L, tongTienHang - tienGiamVIP - tienDoiDiem - tienKhauTruDoiTra);
+        return TaiChinhHoaDonBus.tinhThanhToan(
+                BigDecimal.valueOf(tongTienHang), BigDecimal.valueOf(tienGiamVIP),
+                BigDecimal.valueOf(tienDoiDiem), BigDecimal.valueOf(tienKhauTruDoiTra))
+                .getTienPhaiThanhToan().longValueExact();
     }
 
     public static int tinhDiemThuongMoi(long tongThanhToan) {
@@ -654,5 +675,37 @@ public class BanHangBus {
     }
 
     private void unusedEndMarker() {
+    }
+
+    // note lại: tính thành tiền chi tiết (đơn giá x số lượng), tách khỏi entity ChiTietDichVu và ChiTietHoaDon
+    public static java.math.BigDecimal tinhThanhTien(java.math.BigDecimal donGia, int soLuong) {
+        if (donGia == null || soLuong <= 0) return java.math.BigDecimal.ZERO;
+        return donGia.multiply(java.math.BigDecimal.valueOf(soLuong));
+    }
+
+    // note lại: tính số lượng quy đổi ra đơn vị cơ sở để trừ tồn kho, tách khỏi entity ChiTietXuatLo
+    public static int tinhSoLuongXuatCoSo(int soLuong, int tyLeQuyDoi) {
+        return Math.max(0, soLuong) * Math.max(1, tyLeQuyDoi);
+    }
+
+    // note lại: tính tổng tiền hóa đơn sau khi trừ giảm giá, đổi điểm và bù trừ đổi trả
+    public static void tinhTongTienHoaDon(entity.HoaDon hd) {
+        if (hd == null) return;
+        java.math.BigDecimal tong = java.math.BigDecimal.ZERO;
+        if (hd.getDsChiTiet() != null) {
+            for (entity.ChiTietHoaDon ct : hd.getDsChiTiet()) {
+                if (ct != null && ct.getThanhTien() != null) {
+                    tong = tong.add(ct.getThanhTien());
+                }
+            }
+        }
+        java.math.BigDecimal giam = hd.getGiamGia() != null ? hd.getGiamGia() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal doiDiem = hd.getTienDoiDiem() != null ? hd.getTienDoiDiem() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal buTru = hd.getTienBuTruDoiTra() != null ? hd.getTienBuTruDoiTra() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal thanhTien = tong.subtract(giam).subtract(doiDiem).subtract(buTru);
+        if (thanhTien.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            thanhTien = java.math.BigDecimal.ZERO;
+        }
+        hd.setThanhTien(thanhTien);
     }
 }

@@ -16,6 +16,8 @@ public class HoaDon {
     private LocalDateTime ngayLap;
     private LocalDateTime thoiGianThanhToan;
     private BigDecimal giamGia;
+    private BigDecimal tienDoiDiem;
+    private BigDecimal tienBuTruDoiTra;
     private BigDecimal thanhTien;
     private String phuongThucThanhToan; // Tiền mặt, Chuyển khoản, Thẻ
     private String trangThaiHoaDon;     // Chờ thanh toán, Đã thanh toán, Đã hủy
@@ -24,6 +26,8 @@ public class HoaDon {
     public HoaDon() {
         this.ngayLap = LocalDateTime.now();
         this.giamGia = BigDecimal.ZERO;
+        this.tienDoiDiem = BigDecimal.ZERO;
+        this.tienBuTruDoiTra = BigDecimal.ZERO;
         this.thanhTien = BigDecimal.ZERO;
         this.trangThaiHoaDon = "Chờ thanh toán";
         this.dsChiTiet = new ArrayList<>();
@@ -36,6 +40,8 @@ public class HoaDon {
         this.nhanVien = nhanVien;
         this.ngayLap = ngayLap != null ? ngayLap : LocalDateTime.now();
         this.giamGia = giamGia != null ? giamGia : BigDecimal.ZERO;
+        this.tienDoiDiem = BigDecimal.ZERO;
+        this.tienBuTruDoiTra = BigDecimal.ZERO;
         this.phuongThucThanhToan = phuongThucThanhToan;
         this.trangThaiHoaDon = trangThaiHoaDon != null ? trangThaiHoaDon : "Chờ thanh toán";
         this.dsChiTiet = new ArrayList<>();
@@ -88,12 +94,28 @@ public class HoaDon {
 
     public void setGiamGia(BigDecimal giamGia) {
         this.giamGia = giamGia != null ? giamGia : BigDecimal.ZERO;
-        capNhatTongTien();
+        this.tienDoiDiem = BigDecimal.ZERO;
+        this.tienBuTruDoiTra = BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTienDoiDiem() {
+        return tienDoiDiem;
+    }
+
+    public void setTienDoiDiem(BigDecimal tienDoiDiem) {
+        this.tienDoiDiem = tienDoiDiem != null ? tienDoiDiem : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTienBuTruDoiTra() {
+        return tienBuTruDoiTra;
+    }
+
+    public void setTienBuTruDoiTra(BigDecimal tienBuTruDoiTra) {
+        this.tienBuTruDoiTra = tienBuTruDoiTra != null ? tienBuTruDoiTra : BigDecimal.ZERO;
     }
 
     public BigDecimal getThanhTien() {
-        if (this.thanhTien == null) {
-            capNhatTongTien();
+        if (this.thanhTien == null || this.thanhTien.compareTo(BigDecimal.ZERO) == 0) {
         }
         return thanhTien;
     }
@@ -124,38 +146,17 @@ public class HoaDon {
 
     public void setDsChiTiet(List<ChiTietHoaDon> dsChiTiet) {
         this.dsChiTiet = dsChiTiet;
-        capNhatTongTien();
     }
 
     public void addChiTiet(ChiTietHoaDon chiTiet) {
         this.dsChiTiet.add(chiTiet);
-        capNhatTongTien();
     }
 
     public void removeChiTiet(ChiTietHoaDon chiTiet) {
         this.dsChiTiet.remove(chiTiet);
-        capNhatTongTien();
     }
 
-    /**
-     * Tự động tính toán tổng thành tiền của hóa đơn:
-     * Tổng tiền = (Tổng thành tiền các dòng chi tiết) - Giảm giá.
-     */
-    public void capNhatTongTien() {
-        BigDecimal tong = BigDecimal.ZERO;
-        if (this.dsChiTiet != null) {
-            for (ChiTietHoaDon ct : this.dsChiTiet) {
-                if (ct.getThanhTien() != null) {
-                    tong = tong.add(ct.getThanhTien());
-                }
-            }
-        }
-        if (this.giamGia != null) {
-            tong = tong.subtract(this.giamGia);
-        }
-        // Đảm bảo không âm
-        this.thanhTien = tong.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : tong;
-    }
+
 
     @Override
     public String toString() {

@@ -131,9 +131,7 @@ public class DoiTraHangPanel extends JPanel {
         return header;
     }
 
-    // ==========================================
     // KHU VỰC 1: TRA CỨU HÓA ĐƠN GỐC
-    // ==========================================
     private JPanel taoKhuVucTraCuu() {
         JPanel pnl = new JPanel(new BorderLayout(0, 8));
         pnl.setBackground(ThemeColors.SURFACE);
@@ -211,9 +209,7 @@ public class DoiTraHangPanel extends JPanel {
         return pnl;
     }
 
-    // ==========================================
     // KHU VỰC 2: BẢNG SẢN PHẨM CẦN ĐỔI / TRẢ
-    // ==========================================
     private JPanel taoKhuVucBangSanPham() {
         JPanel pnl = new JPanel(new BorderLayout(0, 8));
         pnl.setBackground(ThemeColors.SURFACE);
@@ -315,9 +311,7 @@ public class DoiTraHangPanel extends JPanel {
         return pnl;
     }
 
-    // ==========================================
     // KHU VỰC 3: XỬ LÝ 2 KỊCH BẢN NGHIỆP VỤ
-    // ==========================================
     private JPanel taoKhuVucKichBanNghiepVu() {
         JPanel pnl = new JPanel(new BorderLayout(0, 10));
         pnl.setBackground(ThemeColors.SURFACE);
@@ -456,9 +450,7 @@ public class DoiTraHangPanel extends JPanel {
         capNhatTinhToanKichBan();
     }
 
-    // ==========================================
     // KHU VỰC 4: THAO TÁC & IN PHIẾU ĐỔI TRẢ
-    // ==========================================
     private JPanel taoKhuVucThaoTac() {
         JPanel pnl = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 4));
         pnl.setOpaque(false);
@@ -480,9 +472,7 @@ public class DoiTraHangPanel extends JPanel {
         return pnl;
     }
 
-    // ==========================================
     // LOGIC NGHIỆP VỤ & TÍNH TOÁN
-    // ==========================================
     private void napHoaDonMacDinh() {
         List<BanHangPOSPanel.HoaDonDaThanhToan> ds = BanHangPOSPanel.layDanhSachHoaDonDaThanhToan();
         if (!ds.isEmpty()) {
@@ -587,13 +577,7 @@ public class DoiTraHangPanel extends JPanel {
         lblInfoTongTien.setText("• Tổng thanh toán: " + df.format(hd.tongThanhToan) + " (" + hd.phuongThuc + ")");
 
         // Tra cứu số lượng đã đổi trả ở các lần trước từ CSDL để chống trả lố / trả trùng
-        java.util.Map<String, Integer> mapDaTra;
-        try { mapDaTra = doiTraBus.layMapSoLuongDaTra(hd.maHoaDon); }
-        catch (RuntimeException ex) {
-            modelSanPham.setRowCount(0);
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Không tải được lịch sử trả", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        java.util.Map<String, Integer> mapDaTra = doiTraBus.layMapSoLuongDaTra(hd.maHoaDon);
 
         // Đổ sản phẩm vào bảng
         modelSanPham.setRowCount(0);
@@ -607,28 +591,15 @@ public class DoiTraHangPanel extends JPanel {
             int slMua = mon.length > 4 && mon[4] instanceof Integer ? (Integer) mon[4] : 1;
             String giaStr = mon.length > 5 && mon[5] != null ? mon[5].toString() : "0 đ";
             long giaHoanSauGiam = tinhGiaHoanSauGiamGia(parseGia(giaStr));
-                        String soLo = mon.length > 7 && mon[7] != null ? mon[7].toString().trim() : null;
-            if (soLo != null && (soLo.equals("—") || soLo.equals("-") || soLo.equalsIgnoreCase("Hoàn thành") || soLo.isBlank())) {
-                soLo = null;
-            }
-            if (soLo == null && hd.maHoaDon != null && ma.startsWith("SP")) {
-                java.util.List<String> dsLo = doiTraBus.layDanhSachSoLoXuat(hd.maHoaDon, ma);
-                if (dsLo != null && dsLo.size() == 1) {
-                    soLo = dsLo.get(0);
-                }
-            }
+            String soLo = mon.length > 7 && mon[7] != null ? mon[7].toString() : null;
             int tongSoLuongCoSo = mon.length > 8 && mon[8] instanceof Number
                     ? ((Number) mon[8]).intValue() : slMua;
             int soLuongCoSoMoiDonVi = slMua > 0 ? Math.max(1, tongSoLuongCoSo / slMua) : 1;
 
             // Chỉ cho phép đổi trả hàng hóa vật lý (bắt đầu bằng SP), không đổi dịch vụ đã thực hiện
             if (ma.startsWith("SP")) {
-                String productKey = ma.trim().toUpperCase();
-                int daTraCoSo = mapDaTra.getOrDefault(productKey, 0);
-                int consumed = Math.min(tongSoLuongCoSo, daTraCoSo);
-                mapDaTra.put(productKey, Math.max(0, daTraCoSo - consumed));
-                int slConDuocTra = Math.max(0, (tongSoLuongCoSo - consumed) / soLuongCoSoMoiDonVi);
-                int slDaTra = slMua - slConDuocTra;
+                int slDaTra = mapDaTra.getOrDefault(ma.trim().toUpperCase(), 0);
+                int slConDuocTra = Math.max(0, slMua - slDaTra);
                 if (slConDuocTra > 0) {
                     String tenHienThi = slDaTra > 0 ? (ten + " (Đã trả " + slDaTra + "/" + slMua + ")") : ten;
                     modelSanPham.addRow(new Object[]{
@@ -736,9 +707,7 @@ public class DoiTraHangPanel extends JPanel {
                 .longValue();
     }
 
-    // ==========================================
     // XÁC NHẬN & IN PHIẾU ĐỔI TRẢ
-    // ==========================================
     public void thucHienXacNhanDoiTra() {
         if (btnXacNhanInPhieu != null) {
             if (!btnXacNhanInPhieu.isEnabled()) return;
@@ -914,20 +883,9 @@ public class DoiTraHangPanel extends JPanel {
                         pdt, new entity.SanPham(ma, null, "", ""), sl,
                         java.math.BigDecimal.valueOf(thanhTien)
                 );
-                int baseTra = (Integer) mon[9];
-                chiTiet.setSoLuongCoSoTra(baseTra);
                 if ((Boolean) mon[7]) {
-                    String lot = (String) mon[8];
-                    if (lot != null && !lot.isBlank() && !lot.equals("—") && !lot.equals("-")) {
-                        chiTiet.setSoLo(lot);
-                        chiTiet.setSoLuongCoSoHoan(baseTra);
-                    } else {
-                        chiTiet.setSoLo(null);
-                        chiTiet.setSoLuongCoSoHoan(0);
-                    }
-                } else {
-                    chiTiet.setSoLo(null);
-                    chiTiet.setSoLuongCoSoHoan(0);
+                    chiTiet.setSoLo((String) mon[8]);
+                    chiTiet.setSoLuongCoSoHoan((Integer) mon[9]);
                 }
                 pdt.addChiTietDoiTra(chiTiet);
             }

@@ -16,11 +16,21 @@ public class PhieuDoiTra {
     private String lyDoDoiTra;
     private BigDecimal tongTienHoan;
     private String trangThaiDoiTra;
+    private BigDecimal giaTriHangTra;
+    private BigDecimal giaTriHangDoi;
+    private BigDecimal tienHoanThucTe;
+    private BigDecimal tienKhachTraThem;
+    private String phuongThucHoanTien;
     private List<ChiTietDoiTra> dsChiTietDoiTra;
 
     public PhieuDoiTra() {
         this.ngayDoiTra = LocalDateTime.now();
         this.tongTienHoan = BigDecimal.ZERO;
+        this.giaTriHangTra = BigDecimal.ZERO;
+        this.giaTriHangDoi = BigDecimal.ZERO;
+        this.tienHoanThucTe = BigDecimal.ZERO;
+        this.tienKhachTraThem = BigDecimal.ZERO;
+        this.phuongThucHoanTien = "CHUA_XAC_DINH";
         this.trangThaiDoiTra = "Hoàn thành";
         this.dsChiTietDoiTra = new ArrayList<>();
     }
@@ -93,31 +103,59 @@ public class PhieuDoiTra {
         this.trangThaiDoiTra = trangThaiDoiTra;
     }
 
+    public BigDecimal getGiaTriHangTra() {
+        return giaTriHangTra;
+    }
+
+    public void setGiaTriHangTra(BigDecimal giaTriHangTra) {
+        this.giaTriHangTra = giaTriHangTra != null ? giaTriHangTra : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getGiaTriHangDoi() {
+        return giaTriHangDoi;
+    }
+
+    public void setGiaTriHangDoi(BigDecimal giaTriHangDoi) {
+        this.giaTriHangDoi = giaTriHangDoi != null ? giaTriHangDoi : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTienHoanThucTe() {
+        return tienHoanThucTe;
+    }
+
+    public void setTienHoanThucTe(BigDecimal tienHoanThucTe) {
+        this.tienHoanThucTe = tienHoanThucTe != null ? tienHoanThucTe : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTienKhachTraThem() {
+        return tienKhachTraThem;
+    }
+
+    public void setTienKhachTraThem(BigDecimal tienKhachTraThem) {
+        this.tienKhachTraThem = tienKhachTraThem != null ? tienKhachTraThem : BigDecimal.ZERO;
+    }
+
+    public String getPhuongThucHoanTien() {
+        return phuongThucHoanTien;
+    }
+
+    public void setPhuongThucHoanTien(String phuongThucHoanTien) {
+        this.phuongThucHoanTien = phuongThucHoanTien != null ? phuongThucHoanTien : "CHUA_XAC_DINH";
+    }
+
     public List<ChiTietDoiTra> getDsChiTietDoiTra() {
         return dsChiTietDoiTra;
     }
 
     public void setDsChiTietDoiTra(List<ChiTietDoiTra> dsChiTietDoiTra) {
         this.dsChiTietDoiTra = dsChiTietDoiTra;
-        capNhatTongTienHoan();
     }
 
     public void addChiTietDoiTra(ChiTietDoiTra chiTiet) {
         this.dsChiTietDoiTra.add(chiTiet);
-        capNhatTongTienHoan();
     }
 
-    public void capNhatTongTienHoan() {
-        BigDecimal tong = BigDecimal.ZERO;
-        if (this.dsChiTietDoiTra != null) {
-            for (ChiTietDoiTra ct : this.dsChiTietDoiTra) {
-                if (ct.getTienHoanLai() != null) {
-                    tong = tong.add(ct.getTienHoanLai());
-                }
-            }
-        }
-        this.tongTienHoan = tong;
-    }
+
 
     @Override
     public String toString() {

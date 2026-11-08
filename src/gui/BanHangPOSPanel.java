@@ -61,9 +61,7 @@ public class BanHangPOSPanel extends JPanel {
     public static final String VIEW_DON_CHO = "VIEW_DON_CHO";
     public static final String VIEW_LICH_SU = "VIEW_LICH_SU";
 
-    // ==========================================
     // DATA MODELS CHO ĐƠN CHỜ & LỊCH SỬ HÓA ĐƠN
-    // ==========================================
     public static class DonHangTam implements java.io.Serializable {
         private static final long serialVersionUID = 1L;
         public String maHoaDon;
@@ -614,7 +612,6 @@ public class BanHangPOSPanel extends JPanel {
             System.err.println("[BanHangPOSPanel] Lỗi nạp Catalog từ CSDL: " + e.getMessage());
         }
     }
-//    -----
 
     private void dongBoLichSuHoaDon() {
         dongBoLichSuHoaDonNeuCan();
@@ -691,9 +688,7 @@ public class BanHangPOSPanel extends JPanel {
         }
     }
 
-    // ==========================================
     // 1. TAB BÁN HÀNG POS CHÍNH (CATALOG + CART)
-    // ==========================================
     private JPanel taoTabPosBanHang() {
         JPanel pnl = new JPanel(new GridBagLayout());
         pnl.setBorder(new EmptyBorder(10, 12, 10, 12));
@@ -1329,7 +1324,6 @@ public class BanHangPOSPanel extends JPanel {
                 return; // Chặn lại, không cho phép thêm vào giỏ
             }
         }
-        // -------------------------------------------------------------------
 
         for (int i = 0; i < modelGioHang.getRowCount(); i++) {
             String ma = (String) modelGioHang.getValueAt(i, 1);
@@ -1375,7 +1369,6 @@ public class BanHangPOSPanel extends JPanel {
         }
         return count;
     }
-//    -----
 
     private JPanel taoPanelHoaDonVaThanhToan() {
         JPanel pnl = new JPanel(new BorderLayout(0, 6));
@@ -1909,9 +1902,6 @@ public class BanHangPOSPanel extends JPanel {
             }
         });
         btnThanhToan.addActionListener(e -> thucHienThanhToan());
-        registerKeyboardAction(e -> {
-            if (isShowing() && btnThanhToan.isEnabled()) btnThanhToan.doClick();
-        }, KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F9, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
 
         pnlActionButtons.add(pnlSubActions, BorderLayout.WEST);
         pnlActionButtons.add(btnThanhToan, BorderLayout.CENTER);
@@ -2268,7 +2258,7 @@ public class BanHangPOSPanel extends JPanel {
                         lblSpaPassStatus.setForeground(ThemeColors.PRIMARY_ACTIVE);
                     }
                     if (btnDungSpaPass != null) {
-                        btnDungSpaPass.setEnabled(theSpaPassHienTai.isKhaDung());
+                        btnDungSpaPass.setEnabled(bus.SpaPassBus.isKhaDung(theSpaPassHienTai));
                     }
                 } else {
                     if (lblSpaPassStatus != null) {
@@ -2350,6 +2340,33 @@ public class BanHangPOSPanel extends JPanel {
         for (int i = 0; i < modelGioHang.getRowCount(); i++) {
             modelGioHang.setValueAt(i + 1, i, 0);
         }
+    }
+
+    static long docSoTienGioHang(Object raw, String tenTruong) {
+        String value = raw == null ? "" : raw.toString().trim();
+        if (!value.matches("(?:[0-9]+|[0-9]{1,3}(?:[.,][0-9]{3})+)(?:\\s*đ)?")) {
+            throw new IllegalArgumentException(tenTruong + " không phải số tiền không âm hợp lệ: " + value);
+        }
+        String digits = value.replaceAll("[^0-9]", "");
+        try {
+            return Long.parseLong(digits);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(tenTruong + " vượt giới hạn số tiền cho phép", e);
+        }
+    }
+
+    static int docSoLuongGioHang(Object raw) {
+        String value = raw == null ? "" : raw.toString().trim();
+        if (!value.matches("[0-9]+")) {
+            throw new IllegalArgumentException("Số lượng trong giỏ hàng phải là số nguyên dương: " + value);
+        }
+        try {
+            int count = Integer.parseInt(value);
+            if (count > 0) return count;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Số lượng trong giỏ hàng vượt giới hạn", e);
+        }
+        throw new IllegalArgumentException("Số lượng trong giỏ hàng phải lớn hơn 0");
     }
 
     private void capNhatTongTien() {
@@ -2672,12 +2689,16 @@ public class BanHangPOSPanel extends JPanel {
                         break;
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ex) {
+                System.err.println("[BanHangPOSPanel] Không thể tra dịch vụ lịch hẹn từ CSDL: " + ex.getMessage());
+            }
         }
         if (maDV == null) {
-            maDV = "DV001";
-            giaDV = 300000L;
-            dvt = "90 phút";
+            JOptionPane.showMessageDialog(this,
+                    "Không tìm thấy dịch vụ [" + tenDichVu + "] trong CSDL.\n"
+                    + "Vui lòng đồng bộ lại danh mục trước khi thêm vào giỏ hàng.",
+                    "Dịch vụ chưa được đồng bộ", JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
         int stt = modelGioHang.getRowCount() + 1;
@@ -2731,14 +2752,14 @@ public class BanHangPOSPanel extends JPanel {
         if (data.getDsMonMoi() != null) {
             for (DoiTraTransferData.MonDoiMoi item : data.getDsMonMoi()) {
                 int stt = modelGioHang.getRowCount() + 1;
-                long thanhTien = item.donGia * item.soLuong;
+                long thanhTien = Math.multiplyExact(item.getDonGia(), (long) item.getSoLuong());
                 modelGioHang.addRow(new Object[]{
                         stt,
-                        item.maSP,
-                        item.tenSP,
-                        item.dvt,
-                        item.soLuong,
-                        df.format(item.donGia),
+                        item.getMaSP(),
+                        item.getTenSP(),
+                        item.getDvt(),
+                        item.getSoLuong(),
+                        df.format(item.getDonGia()),
                         df.format(thanhTien),
                         CAC_BUOC_TIEN_DO[0]
                 });
@@ -2887,7 +2908,7 @@ public class BanHangPOSPanel extends JPanel {
         int diemDaDung = (spnDiemDung != null && diemHienCo > 0) ? ((Number) spnDiemDung.getValue()).intValue() : 0;
         if (diemDaDung < 0) diemDaDung = 0;
         if (diemDaDung > diemHienCo) diemDaDung = diemHienCo;
-        int diemThuongMoi = (sdt.isEmpty() && tenKhach.equalsIgnoreCase("Khách vãng lai")) ? 0 : (int) (canTra / 100000L);
+        int diemThuongMoi = (int) (canTra / 100000L);
         int diemKhauTruDT = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getDiemKhauTru() : 0;
         int tongDiemMoi = Math.max(0, diemHienCo - diemDaDung - diemKhauTruDT) + diemThuongMoi;
 
@@ -2899,14 +2920,11 @@ public class BanHangPOSPanel extends JPanel {
             if (khSaved != null) {
                 tenKhach = khSaved.getHoTen();
                 sdt = khSaved.getSoDienThoai();
-            } else {
-                JOptionPane.showMessageDialog(this, "Không lưu được hồ sơ khách hàng. Vui lòng kiểm tra kết nối và thử lại.",
-                        "Chưa thanh toán", JOptionPane.ERROR_MESSAGE);
-                return;
             }
         }
 
         // Lưu Hóa đơn & trừ tồn kho FEFO vào CSDL SQL Server qua BanHangBus
+        List<String> dsMaPhongHotel = new ArrayList<>();
         try {
             bus.BanHangBus busThanhToan = new bus.BanHangBus();
             bus.KhoLoHangBus busKho = new bus.KhoLoHangBus();
@@ -2916,7 +2934,9 @@ public class BanHangPOSPanel extends JPanel {
             hdReal.setMaHoaDon(maHD);
             hdReal.setNgayLap(LocalDateTime.now());
             hdReal.setThoiGianThanhToan(LocalDateTime.now());
-            hdReal.setGiamGia(java.math.BigDecimal.valueOf(tienGiamGia + tienKhauTruDoiTra));
+            hdReal.setGiamGia(java.math.BigDecimal.valueOf(tienGiamGia - tienDoiDiem));
+            hdReal.setTienDoiDiem(java.math.BigDecimal.valueOf(tienDoiDiem));
+            hdReal.setTienBuTruDoiTra(java.math.BigDecimal.valueOf(tienKhauTruDoiTra));
             hdReal.setThanhTien(java.math.BigDecimal.valueOf(canTra));
             hdReal.setPhuongThucThanhToan(pttt);
             hdReal.setTrangThaiHoaDon("Đã thanh toán");
@@ -2942,9 +2962,9 @@ public class BanHangPOSPanel extends JPanel {
             for (int i = 0; i < modelGioHang.getRowCount(); i++) {
                 String ma = (String) modelGioHang.getValueAt(i, 1);
                 String dvt = modelGioHang.getValueAt(i, 3) != null ? modelGioHang.getValueAt(i, 3).toString() : "";
-                int sl = Integer.parseInt(modelGioHang.getValueAt(i, 4).toString().replaceAll("[^0-9]", ""));
-                String dgStr = modelGioHang.getValueAt(i, 5).toString().replaceAll("[^0-9]", "");
-                java.math.BigDecimal dg = dgStr.isEmpty() ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(dgStr);
+                int sl = docSoLuongGioHang(modelGioHang.getValueAt(i, 4));
+                java.math.BigDecimal dg = java.math.BigDecimal.valueOf(
+                        docSoTienGioHang(modelGioHang.getValueAt(i, 5), "Đơn giá dòng " + (i + 1)));
 
                 if (ma != null && ma.startsWith("SP")) {
                     entity.QuyDoiDonVi qd = null;
@@ -2964,9 +2984,8 @@ public class BanHangPOSPanel extends JPanel {
                     } catch (Exception ignored) {}
 
                     int tyLe = (qd != null && qd.getTyLeQuyDoi() > 0) ? qd.getTyLeQuyDoi() : 1;
-                    int soLuongCoSoCanXuat = sl * tyLe;
+                    int soLuongCoSoCanXuat = Math.multiplyExact(sl, tyLe);
                     int remainingCoSo = soLuongCoSoCanXuat;
-                    java.math.BigDecimal remainingLineMoney = dg.multiply(java.math.BigDecimal.valueOf(sl));
 
                     if (allLo != null) {
                         for (entity.LoHang candidate : allLo) {
@@ -2981,9 +3000,8 @@ public class BanHangPOSPanel extends JPanel {
                                 candidate.setSoLuongTon(candidate.getSoLuongTon() - take);
 
                                 java.math.BigDecimal itemTotal = dg.multiply(java.math.BigDecimal.valueOf(sl));
-                                java.math.BigDecimal ctTotal = (take == remainingCoSo) ? remainingLineMoney
+                                java.math.BigDecimal ctTotal = (take == soLuongCoSoCanXuat) ? itemTotal
                                         : itemTotal.multiply(java.math.BigDecimal.valueOf(take)).divide(java.math.BigDecimal.valueOf(soLuongCoSoCanXuat), 0, java.math.RoundingMode.HALF_UP);
-                                remainingLineMoney = remainingLineMoney.subtract(ctTotal);
 
                                 int slXuat;
                                 java.math.BigDecimal donGiaXuat = dg;
@@ -2995,7 +3013,7 @@ public class BanHangPOSPanel extends JPanel {
                                 } else if (tyLe > 1) {
                                     // Bán lẻ theo đơn vị cơ sở vì lô chia không tròn quy cách hộp/thùng
                                     slXuat = take;
-                                    donGiaXuat = ctTotal.divide(java.math.BigDecimal.valueOf(take), 2, java.math.RoundingMode.HALF_UP);
+                                    donGiaXuat = dg.divide(java.math.BigDecimal.valueOf(tyLe), 0, java.math.RoundingMode.HALF_UP);
                                     qdXuat = null;
                                 } else {
                                     slXuat = take;
@@ -3051,14 +3069,13 @@ public class BanHangPOSPanel extends JPanel {
                         }
                     } catch (Exception ignored) {}
 
-                    java.math.BigDecimal hoaHong = dg.multiply(java.math.BigDecimal.valueOf(sl))
-                            .multiply(new java.math.BigDecimal("0.10")).setScale(0, java.math.RoundingMode.HALF_UP);
+                    java.math.BigDecimal thanhTienDV = dg.multiply(java.math.BigDecimal.valueOf(sl));
+                    java.math.BigDecimal hoaHong = thanhTienDV.multiply(new java.math.BigDecimal("0.10")).setScale(0, java.math.RoundingMode.HALF_UP);
 
                     entity.ChiTietDichVu ct = new entity.ChiTietDichVu(
                             maHD + "_CT" + (ctSeq++), hdReal, sl, dg, dv, null, ktvThucHien, hoaHong
                     );
-                    if (ma.startsWith("DV-HOTEL-")) ct.setMaPhongHotel(ma.substring("DV-HOTEL-".length()));
-                    ct.setSuDungSpaPass("DV_SPAPASS".equals(ma));
+                    ct.setThanhTien(thanhTienDV);
                     hdReal.addChiTiet(ct);
                 }
             }
@@ -3085,23 +3102,19 @@ public class BanHangPOSPanel extends JPanel {
                         entity.ChiTietDoiTra ctDoiTra = new entity.ChiTietDoiTra(
                                 pdt.getMaPhieuDoiTra() + "_" + (idx++),
                                 pdt,
-                                new entity.SanPham(mon.maSP, null, "", ""),
-                                mon.soLuong,
-                                java.math.BigDecimal.valueOf(mon.thanhTien)
+                                new entity.SanPham(mon.getMaSP(), null, "", ""),
+                                mon.getSoLuong(),
+                                java.math.BigDecimal.valueOf(mon.getThanhTien())
                         );
-                        ctDoiTra.setSoLo(mon.soLo);
-                        ctDoiTra.setSoLuongCoSoHoan(mon.soLuongCoSoHoan);
-                        ctDoiTra.setSoLuongCoSoTra(mon.soLuongCoSoTra);
+                        ctDoiTra.setSoLo(mon.getSoLo());
+                        ctDoiTra.setSoLuongCoSoHoan(mon.getSoLuongCoSoHoan());
                         pdt.addChiTietDoiTra(ctDoiTra);
                     }
                 }
             }
 
-            if (pdt != null) pdt.setTongTienHoan(java.math.BigDecimal.valueOf(tienHoanThua));
-
             String maTheSuDung = null;
             entity.TheSpaPass theMoi = null;
-            List<String> dsMaPhongHotel = new ArrayList<>();
             List<entity.HotelCheckoutSnapshot> dsSnapshotsHotel = new ArrayList<>();
             for (int i = 0; i < modelGioHang.getRowCount(); i++) {
                 String ma = String.valueOf(modelGioHang.getValueAt(i, 1));
@@ -3115,7 +3128,7 @@ public class BanHangPOSPanel extends JPanel {
                     }
                 }
                 if ("DV_SPAPASS".equals(ma)) {
-                    if (theSpaPassHienTai == null || !theSpaPassHienTai.isKhaDung()) {
+                    if (theSpaPassHienTai == null || !bus.SpaPassBus.isKhaDung(theSpaPassHienTai)) {
                         throw new IllegalStateException("Không tìm thấy Spa Pass còn hiệu lực để trừ lượt");
                     }
                     maTheSuDung = theSpaPassHienTai.getMaThe();
@@ -3148,22 +3161,6 @@ public class BanHangPOSPanel extends JPanel {
             if (!okHD) {
                 throw new SQLException("Lưu hóa đơn và cập nhật kho không thành công trong CSDL SQL Server!");
             }
-
-            if (hdReal.getKhachHang() == null) {
-                diemThuongMoi = 0;
-                tongDiemMoi = 0;
-            } else {
-                entity.KhachHang persisted = new bus.KhachHangBus().timKhachHangTheoSoDienThoai(sdt);
-                if (persisted != null) tongDiemMoi = persisted.getDiemTichLuy();
-            }
-
-            // Đồng bộ lại từ DB; không cộng RAM thủ công để tránh hoàn kho hai lần/sai lô.
-            KhoLoHangPanel.dongBoLoHangTuDatabase();
-            BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
-            SpaPassBus.dongBoDuLieuTuDatabase();
-            if (!dsMaPhongHotel.isEmpty()) {
-                PetHotelPanel.dongBoVaLamMoiGiaoDien();
-            }
         } catch (Exception ex) {
             System.err.println("[BanHangPOSPanel] Lỗi ghi Hóa đơn CSDL: " + ex.getMessage());
             JOptionPane.showMessageDialog(this,
@@ -3174,9 +3171,22 @@ public class BanHangPOSPanel extends JPanel {
             return;
         }
 
-        // Đồng bộ tức thời tồn kho Catalog và Lô hàng FEFO từ Database xuống giao diện
-        dongBoToanBoCatalogVaGiaoDien();
-        gui.KhoLoHangPanel.dongBoLoHangTuDatabase();
+        // Commit đã hoàn tất. Lỗi làm mới giao diện không được báo thành lỗi lưu hóa đơn.
+        try {
+            KhoLoHangPanel.dongBoLoHangTuDatabase();
+            BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
+            SpaPassBus.dongBoDuLieuTuDatabase();
+            if (!dsMaPhongHotel.isEmpty()) {
+                PetHotelPanel.dongBoVaLamMoiGiaoDien();
+            }
+        } catch (RuntimeException refreshError) {
+            System.err.println("[BanHangPOSPanel] Hóa đơn " + maHD
+                    + " đã lưu, nhưng làm mới giao diện lỗi: " + refreshError.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Hóa đơn " + maHD + " đã được lưu vào CSDL. Không thanh toán lại.\n"
+                    + "Vui lòng mở lại màn hình để cập nhật dữ liệu mới nhất.",
+                    "Đã lưu hóa đơn, cần làm mới giao diện", JOptionPane.WARNING_MESSAGE);
+        }
 
         HoaDonDaThanhToan hd = new HoaDonDaThanhToan();
         hd.maHoaDon = maHD;
@@ -3339,7 +3349,7 @@ public class BanHangPOSPanel extends JPanel {
      * Mô hình 1: Thẻ Spa Pass Punch Card - Dùng 1 buổi
      */
     private void suDungLuotSpaPass() {
-        if (theSpaPassHienTai == null || !theSpaPassHienTai.isKhaDung()) {
+        if (theSpaPassHienTai == null || !bus.SpaPassBus.isKhaDung(theSpaPassHienTai)) {
             JOptionPane.showMessageDialog(this, "Khách hàng không có thẻ Spa Pass hoặc thẻ đã hết số buổi khả dụng!", "Spa Pass", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -3418,7 +3428,7 @@ public class BanHangPOSPanel extends JPanel {
             model.setRowCount(0);
             String kw = txtSearch.getText().trim().toLowerCase();
             for (TheSpaPass the : SpaPassBus.layTatCaThe()) {
-                the.capNhatTrangThai();
+                SpaPassBus.capNhatTrangThai(the); // goi qua bus cap nhat trang thai the
                 if (!kw.isEmpty()) {
                     boolean match = (the.getMaThe() != null && the.getMaThe().toLowerCase().contains(kw))
                             || (the.getTenKhachHang() != null && the.getTenKhachHang().toLowerCase().contains(kw))
@@ -3475,7 +3485,7 @@ public class BanHangPOSPanel extends JPanel {
                     lblSpaPassStatus.setForeground(ThemeColors.PRIMARY_ACTIVE);
                 }
                 if (btnDungSpaPass != null) {
-                    btnDungSpaPass.setEnabled(the.isKhaDung());
+                    btnDungSpaPass.setEnabled(bus.SpaPassBus.isKhaDung(the));
                 }
                 dlg.dispose();
                 JOptionPane.showMessageDialog(this, "Đã liên kết Thẻ Spa Pass của [" + the.getTenKhachHang() + "] vào đơn hiện tại!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
@@ -3494,9 +3504,7 @@ public class BanHangPOSPanel extends JPanel {
         dlg.setVisible(true);
     }
 
-    // ==========================================
     // 2. TAB HÓA ĐƠN CHỜ PHỤC VỤ (GRID CARDS 1 CHẠM)
-    // ==========================================
     private JPanel taoTabDonChoGrid() {
         JPanel pnl = new JPanel(new BorderLayout(0, 12));
         pnl.setBackground(ThemeColors.BACKGROUND);
@@ -3972,9 +3980,7 @@ public class BanHangPOSPanel extends JPanel {
         }
     }
 
-    // ==========================================
     // 3. TAB LỊCH SỬ HÓA ĐƠN ĐÃ THANH TOÁN (JTABLE)
-    // ==========================================
     private JPanel taoTabLichSuHoaDon() {
         JPanel pnl = new JPanel(new BorderLayout(0, 12));
         pnl.setBackground(ThemeColors.BACKGROUND);
