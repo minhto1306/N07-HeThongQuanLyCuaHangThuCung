@@ -2,6 +2,7 @@ package entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Thực thể Lô hàng (Quản lý hạn sử dụng & xuất kho theo FEFO)
@@ -12,6 +13,7 @@ public class LoHang {
     private NhaCungCap nhaCungCap;
     private LocalDate ngaySanXuat;
     private LocalDate hanSuDung;
+    private LocalDateTime ngayNhap;
     private BigDecimal donGiaNhapCoSo;
     private int soLuongNhap;
     private int soLuongTon;
@@ -20,6 +22,7 @@ public class LoHang {
         this.donGiaNhapCoSo = BigDecimal.ZERO;
         this.soLuongNhap = 0;
         this.soLuongTon = 0;
+        this.ngayNhap = LocalDateTime.now();
     }
 
     public LoHang(String soLo, SanPham sanPham, NhaCungCap nhaCungCap, LocalDate ngaySanXuat,
@@ -90,6 +93,14 @@ public class LoHang {
         this.soLuongNhap = soLuongNhap;
     }
 
+    public LocalDateTime getNgayNhap() {
+        return ngayNhap;
+    }
+
+    public void setNgayNhap(LocalDateTime ngayNhap) {
+        this.ngayNhap = ngayNhap;
+    }
+
     public int getSoLuongTon() {
         return soLuongTon;
     }
@@ -98,12 +109,8 @@ public class LoHang {
         this.soLuongTon = soLuongTon;
     }
 
-    /**
-     * Kiểm tra lô hàng đã quá hạn sử dụng hay chưa
-     */
-    public boolean isHetHan() {
-        return hanSuDung != null && hanSuDung.isBefore(LocalDate.now());
-    }
+    // note lai: ham kiem tra het han da duoc chuyen sang KhoLoHangBus.isHetHan()
+    // entity LoHang chi giu thuan thuoc tinh va getter/setter theo kien truc n-tier
 
     @Override
     public String toString() {

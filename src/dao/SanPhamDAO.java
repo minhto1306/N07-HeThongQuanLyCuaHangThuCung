@@ -50,8 +50,17 @@ public class SanPhamDAO {
      * Lấy toàn bộ danh sách sản phẩm kèm danh mục
      */
     public List<SanPham> getAllSanPham() throws SQLException {
+        return getAllSanPham(0);
+    }
+
+    /**
+     * Lấy danh sách sản phẩm có giới hạn an toàn
+     */
+    public List<SanPham> getAllSanPham(int limit) throws SQLException {
         List<SanPham> list = new ArrayList<>();
-        String sql = "SELECT s.*, d.tenDanhMuc, d.moTa AS moTaDM " +
+        int safeLimit = Math.max(0, Math.min(limit, 1000));
+        String topClause = safeLimit > 0 ? "TOP (" + safeLimit + ") " : "";
+        String sql = "SELECT " + topClause + "s.*, d.tenDanhMuc, d.moTa AS moTaDM " +
                      "FROM SanPham s JOIN DanhMucHang d ON s.maDanhMuc = d.maDanhMuc ORDER BY s.maSanPham ASC";
 
         try (Connection conn = DBConnection.getConnection();
@@ -59,6 +68,62 @@ public class SanPhamDAO {
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 list.add(mapResultSetToSanPham(rs));
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Lấy nhanh danh sách sản phẩm kèm quy đổi (1 query duy nhất, loại bỏ N+1).
+     */
+    public List<Object[]> layDanhSachSanPhamVaQuyDoi(int limit) throws SQLException {
+        List<Object[]> list = new ArrayList<>();
+        int safeLimit = Math.max(0, Math.min(limit, 1000));
+        String sql;
+        if (safeLimit > 0) {
+            sql = "WITH TopSP AS ( " +
+                    "    SELECT TOP (" + safeLimit + ") maSanPham, tenSanPham, maDanhMuc, donViCoSo, giaBanCoSo, moTa " +
+                    "    FROM SanPham " +
+                    "    ORDER BY maSanPham ASC " +
+                    ") " +
+                    "SELECT sp.maSanPham, sp.tenSanPham, ISNULL(dm.tenDanhMuc, N'Hàng hóa') AS tenDanhMuc, " +
+                    "       ISNULL(dvt.tenDonVi, ISNULL(sp.donViCoSo, N'Đơn vị')) AS tenDonVi, ISNULL(qd.tyLeQuyDoi, 1) AS tyLe, " +
+                    "       ISNULL(qd.laDonViCoSo, CAST(1 AS BIT)) AS laDonViCoSo, " +
+                    "       ISNULL(qd.giaBan, sp.giaBanCoSo) AS giaBan, " +
+                    "       ISNULL(sp.moTa, '') AS moTa " +
+                    "FROM TopSP sp " +
+                    "LEFT JOIN DanhMucHang dm ON sp.maDanhMuc = dm.maDanhMuc " +
+                    "LEFT JOIN QuyDoiDonVi qd ON sp.maSanPham = qd.maSanPham " +
+                    "LEFT JOIN DonViTinh dvt ON qd.maDonVi = dvt.maDonVi " +
+                    "ORDER BY sp.maSanPham ASC, qd.tyLeQuyDoi ASC";
+        } else {
+            sql = "SELECT sp.maSanPham, sp.tenSanPham, ISNULL(dm.tenDanhMuc, N'Hàng hóa') AS tenDanhMuc, " +
+                    "       ISNULL(dvt.tenDonVi, ISNULL(sp.donViCoSo, N'Đơn vị')) AS tenDonVi, ISNULL(qd.tyLeQuyDoi, 1) AS tyLe, " +
+                    "       ISNULL(qd.laDonViCoSo, CAST(1 AS BIT)) AS laDonViCoSo, " +
+                    "       ISNULL(qd.giaBan, sp.giaBanCoSo) AS giaBan, " +
+                    "       ISNULL(sp.moTa, '') AS moTa " +
+                    "FROM SanPham sp " +
+                    "LEFT JOIN DanhMucHang dm ON sp.maDanhMuc = dm.maDanhMuc " +
+                    "LEFT JOIN QuyDoiDonVi qd ON sp.maSanPham = qd.maSanPham " +
+                    "LEFT JOIN DonViTinh dvt ON qd.maDonVi = dvt.maDonVi " +
+                    "ORDER BY sp.maSanPham ASC, qd.tyLeQuyDoi ASC";
+        }
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                java.math.BigDecimal gb = rs.getBigDecimal("giaBan");
+                long giaLong = (gb != null) ? gb.longValue() : 0L;
+                list.add(new Object[]{
+                        rs.getString("maSanPham"),
+                        rs.getString("tenSanPham"),
+                        rs.getString("tenDanhMuc"),
+                        rs.getString("tenDonVi"),
+                        rs.getInt("tyLe"),
+                        rs.getBoolean("laDonViCoSo"),
+                        giaLong,
+                        rs.getString("moTa")
+                });
             }
         }
         return list;
@@ -363,7 +428,7 @@ public class SanPhamDAO {
     public List<Object[]> layDanhSachSanPhamCatalogPOS() throws SQLException {
         List<Object[]> list = new ArrayList<>();
         String sqlSP = "SELECT sp.maSanPham, sp.tenSanPham, sp.moTa, ISNULL(sp.maVach, '') AS maVach, qd.maQuyDoi, qd.giaBan, dvt.tenDonVi, qd.tyLeQuyDoi AS tyLe, " +
-                "       ISNULL((SELECT SUM(soLuongTon) FROM LoHang WHERE maSanPham = sp.maSanPham AND soLuongTon > 0 AND hanSuDung >= CAST(GETDATE() AS DATE)), 0) AS tonKhoCoSo " +
+                "       ISNULL((SELECT SUM(soLuongTon) FROM LoHang WHERE maSanPham = sp.maSanPham AND soLuongTon > 0), 0) AS tonKhoCoSo " +
                 "FROM SanPham sp " +
                 "INNER JOIN QuyDoiDonVi qd ON sp.maSanPham = qd.maSanPham " +
                 "INNER JOIN DonViTinh dvt ON qd.maDonVi = dvt.maDonVi " +

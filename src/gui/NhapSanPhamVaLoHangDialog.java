@@ -297,7 +297,6 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         pnlHanSD.add(txtHanSD, BorderLayout.CENTER);
         pnlHanSD.add(btnChonHSD, BorderLayout.EAST);
         card.add(pnlHanSD, gbc);
-//        ----
         // Đánh giá FEFO Live
         gbc.gridx = 0; gbc.gridy = 4;
         card.add(new JLabel("Đánh giá FEFO:"), gbc);
@@ -381,6 +380,10 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
             long giaBan = Long.parseLong(txtGiaBan.getText().replace(",", "").replace(".", "").trim());
             int sl = (int) spnSoLuongNhap.getValue();
 
+            if (giaNhap < 0 || giaBan < 0 || sl <= 0) {
+                throw new IllegalArgumentException("Giá nhập, giá bán không được âm và số lượng phải lớn hơn 0");
+            }
+
             String maSP = txtMaSP.getText().trim();
             String danhMuc = (String) cboDanhMuc.getSelectedItem();
             String ncc = (String) cboNhaCungCap.getSelectedItem();
@@ -431,6 +434,8 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
             dispose();
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Đơn giá nhập và giá bán phải là số hợp lệ!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Lỗi định dạng ngày tháng (dd/MM/yyyy)!", "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
@@ -558,5 +563,4 @@ public class NhapSanPhamVaLoHangDialog extends JDialog {
         popup.add(pnlCalendar);
         popup.show(invoker, 0, invoker.getHeight() + 2);
     }
-//    -----
 }

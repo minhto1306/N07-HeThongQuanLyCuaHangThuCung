@@ -114,19 +114,8 @@ public class SanPham {
         this.dsQuyDoi = dsQuyDoi != null ? dsQuyDoi : new ArrayList<>();
     }
 
-    /**
-     * Tính tổng số lượng tồn kho khả dụng từ tất cả các lô hàng còn hạn sử dụng.
-     */
-    public int tinhTongTonKhaDung() {
-        if (dsLoHang == null || dsLoHang.isEmpty()) return 0;
-        int tong = 0;
-        for (LoHang lo : dsLoHang) {
-            if (!lo.isHetHan() && lo.getSoLuongTon() > 0) {
-                tong += lo.getSoLuongTon();
-            }
-        }
-        return tong;
-    }
+    // note lai: ham tinh tong ton kho da duoc chuyen sang KhoLoHangBus.tinhTongTonKhaDung(sp, dsLo)
+    // entity SanPham chi thuan chua thuoc tinh maSP, tenSP, donVi, giaBan... dung chuan JavaBean
 
     @Override
     public String toString() {

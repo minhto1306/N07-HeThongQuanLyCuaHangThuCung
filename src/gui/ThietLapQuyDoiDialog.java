@@ -342,7 +342,6 @@ public class ThietLapQuyDoiDialog extends JDialog {
         }
     }
     
-//    ---------------
 
     private void xuLyThemQuyDoi() {
         String tenDvt = txtDonViMoi.getText().trim();
@@ -364,17 +363,13 @@ public class ThietLapQuyDoiDialog extends JDialog {
                 bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
                 String maDvt = utils.MaTuSinhHelper.sinhMaDonViTinh();
                 entity.DonViTinh dvt = new entity.DonViTinh(maDvt, tenDvt);
-                if (!khoBus.themDonViTinh(dvt)) {
-                    throw new java.sql.SQLException("Không thể thêm đơn vị tính [" + tenDvt + "] vào CSDL");
-                }
+                khoBus.themDonViTinh(dvt);
                 entity.SanPham sp = new entity.SanPham(maSP, null, tenSP, "");
                 entity.QuyDoiDonVi qd = new entity.QuyDoiDonVi(
                         utils.MaTuSinhHelper.sinhMaQuyDoi(),
                         sp, dvt, tyLe, false, java.math.BigDecimal.valueOf(giaBan)
                 );
-                if (!khoBus.themQuyDoi(qd)) {
-                    throw new java.sql.SQLException("Không thể thêm quy đổi đơn vị vào CSDL");
-                }
+                khoBus.themQuyDoi(qd);
             } catch (Exception ex) {
                 System.err.println("[ThietLapQuyDoiDialog] Lỗi lưu quy đổi CSDL: " + ex.getMessage());
                 JOptionPane.showMessageDialog(this, "Không thể lưu quy cách mới vào CSDL: " + ex.getMessage(), "Lỗi CSDL", JOptionPane.ERROR_MESSAGE);

@@ -355,11 +355,11 @@ public class KhoLoHangPanel extends JPanel {
             if (idx == 0) {
                 sorterLoHang.setRowFilter(null);
             } else if (idx == 1) {
-                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Cận date|Nguy cấp|Hết hạn", 9));
+                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?iu)Cận date|Nguy cấp|Hết hạn", 9));
             } else if (idx == 2) {
-                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Nguy cấp", 9));
+                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?iu)Nguy cấp", 9));
             } else if (idx == 3) {
-                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)Hết hạn|Quá hạn", 9));
+                sorterLoHang.setRowFilter(RowFilter.regexFilter("(?iu)Hết hạn|Quá hạn", 9));
             }
         });
 
@@ -374,28 +374,18 @@ public class KhoLoHangPanel extends JPanel {
         modelSanPham.setRowCount(0);
         try {
             bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
-            List<entity.SanPham> dsSP = khoBus.layDanhSachSanPham();
+            List<Object[]> dsSP = khoBus.layDanhSachSanPhamVaQuyDoi(0);
             if (dsSP != null && !dsSP.isEmpty()) {
-                for (entity.SanPham sp : dsSP) {
-                    String dmTen = sp.getDanhMucHang() != null ? sp.getDanhMucHang().getTenDanhMuc() : "Hàng hóa";
-                    List<entity.QuyDoiDonVi> listQd = khoBus.layQuyDoiBySanPham(sp.getMaSanPham());
-                    if (listQd != null && !listQd.isEmpty()) {
-                        for (entity.QuyDoiDonVi qd : listQd) {
-                            String dvtTen = qd.getDonViTinh() != null ? qd.getDonViTinh().getTenDonVi() : "Đơn vị";
-                            long gia = qd.getGiaBan() != null ? qd.getGiaBan().longValue() : 0L;
-                            modelSanPham.addRow(new Object[]{
-                                    sp.getMaSanPham(), sp.getTenSanPham(), dmTen, dvtTen,
-                                    String.valueOf(qd.getTyLeQuyDoi()),
-                                    qd.isLaDonViCoSo() ? "Có" : "Không",
-                                    df.format(gia),
-                                    sp.getMoTa() != null ? sp.getMoTa() : ""
-                            });
-                        }
-                    } else {
-                        modelSanPham.addRow(new Object[]{
-                                sp.getMaSanPham(), sp.getTenSanPham(), dmTen, "Đơn vị", "1", "Có", "0 đ", sp.getMoTa() != null ? sp.getMoTa() : ""
-                        });
-                    }
+                for (Object[] r : dsSP) {
+                    long gia = (r[6] instanceof Number) ? ((Number) r[6]).longValue() : 0L;
+                    boolean laCoSo = (r[5] instanceof Boolean) ? (Boolean) r[5] : true;
+                    modelSanPham.addRow(new Object[]{
+                            r[0], r[1], r[2], r[3],
+                            String.valueOf(r[4]),
+                            laCoSo ? "Có" : "Không",
+                            df.format(gia),
+                            r[7] != null ? r[7].toString() : ""
+                    });
                 }
                 return;
             }
@@ -419,7 +409,7 @@ public class KhoLoHangPanel extends JPanel {
         if (kw.isEmpty()) {
             sorterSanPham.setRowFilter(null);
         } else {
-            sorterSanPham.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(kw)));
+            sorterSanPham.setRowFilter(RowFilter.regexFilter("(?iu)" + Pattern.quote(kw)));
         }
     }
 
@@ -470,7 +460,7 @@ public class KhoLoHangPanel extends JPanel {
     public void traCuuTonKhoFEFO(String kw) {
         chonTabLoHangFEFO();
         if (sorterLoHang != null && kw != null && !kw.trim().isEmpty()) {
-            sorterLoHang.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(kw.trim())));
+            sorterLoHang.setRowFilter(RowFilter.regexFilter("(?iu)" + Pattern.quote(kw.trim())));
         }
     }
 
@@ -608,10 +598,8 @@ public class KhoLoHangPanel extends JPanel {
         return tbl;
     }
 
-    // =========================================================================
     // MÔ HÌNH 5: ĐIỂM TÁI ĐẶT HÀNG (ROP) & ĐỀ XUẤT NHẬP KHO DỰ PHÒNG
     // Công thức: ROP = (d * L) + SS
-    // =========================================================================
 
     public static class ROPItem {
         public String maSP;
@@ -743,11 +731,11 @@ public class KhoLoHangPanel extends JPanel {
             int idx = cboLoc.getSelectedIndex();
             if (sorterROP == null) return;
             if (idx == 1) {
-                sorterROP.setRowFilter(RowFilter.regexFilter("(?i)CẦN NHẬP", 8));
+                sorterROP.setRowFilter(RowFilter.regexFilter("(?iu)CẦN NHẬP", 8));
             } else if (idx == 2) {
-                sorterROP.setRowFilter(RowFilter.regexFilter("(?i)CẬN DATE", 8));
+                sorterROP.setRowFilter(RowFilter.regexFilter("(?iu)CẬN DATE", 8));
             } else if (idx == 3) {
-                sorterROP.setRowFilter(RowFilter.regexFilter("(?i)AN TOÀN", 8));
+                sorterROP.setRowFilter(RowFilter.regexFilter("(?iu)AN TOÀN", 8));
             } else {
                 sorterROP.setRowFilter(null);
             }
@@ -856,7 +844,7 @@ public class KhoLoHangPanel extends JPanel {
         if (text.isEmpty()) {
             sorterROP.setRowFilter(null);
         } else {
-            sorterROP.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(text), 1, 2, 8, 10));
+            sorterROP.setRowFilter(RowFilter.regexFilter("(?iu)" + Pattern.quote(text), 1, 2, 8, 10));
         }
     }
 

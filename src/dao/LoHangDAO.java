@@ -19,12 +19,44 @@ public class LoHangDAO {
      * Lấy toàn bộ danh sách lô hàng trong kho
      */
     public List<LoHang> getAllLoHang() throws SQLException {
+        return getAllLoHang(0);
+    }
+
+    /**
+     * Lấy danh sách các lô hàng còn tồn khả dụng của một sản phẩm, sắp xếp theo hạn sử dụng tăng dần (FEFO).
+     */
+    public List<LoHang> layDanhSachLoKhaDungTheoSanPham(String maSanPham) throws SQLException {
         List<LoHang> list = new ArrayList<>();
+        if (maSanPham == null || maSanPham.trim().isEmpty()) return list;
         String sql = "SELECT l.*, s.tenSanPham, n.tenNhaCungCap " +
                 "FROM LoHang l " +
                 "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
                 "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
-                "ORDER BY l.hanSuDung ASC";
+                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 AND l.hanSuDung >= CAST(GETDATE() AS DATE) " +
+                "ORDER BY l.hanSuDung ASC, l.soLuongTon DESC";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maSanPham.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapResultSetToLoHang(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+    public List<LoHang> getAllLoHang(int limit) throws SQLException {
+        List<LoHang> list = new ArrayList<>();
+        int safeLimit = Math.max(0, Math.min(limit, 1000));
+        String topClause = safeLimit > 0 ? "TOP (" + safeLimit + ") " : "";
+        String sql = "SELECT " + topClause + "l.soLo, l.maSanPham, l.maNhaCungCap, l.ngaySanXuat, l.hanSuDung, l.donGiaNhapCoSo, l.soLuongNhap, l.soLuongTon, " +
+                "s.tenSanPham, n.tenNhaCungCap " +
+                "FROM LoHang l " +
+                "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
+                "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
+                "ORDER BY l.hanSuDung ASC, l.soLuongTon DESC";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -66,11 +98,28 @@ public class LoHangDAO {
                 "FROM LoHang l " +
                 "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
                 "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
-                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 AND l.hanSuDung >= CAST(GETDATE() AS DATE) " +
+                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 " +
                 "ORDER BY l.hanSuDung ASC";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maSanPham);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToLoHang(rs);
+                }
+            }
+        }
+
+        // Nếu hết hàng hoặc chưa có lô, thử lấy lô bất kỳ của sản phẩm
+        String sqlFallback = "SELECT TOP 1 l.*, s.tenSanPham, n.tenNhaCungCap " +
+                "FROM LoHang l " +
+                "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
+                "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
+                "WHERE l.maSanPham = ? " +
+                "ORDER BY l.hanSuDung DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sqlFallback)) {
             ps.setString(1, maSanPham);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -137,9 +186,6 @@ public class LoHangDAO {
      * Trừ tồn kho của một lô hàng cụ thể
      */
     public boolean truTonKho(String soLo, int soLuongXuat) throws SQLException {
-        if (soLuongXuat <= 0) {
-            return false;
-        }
         String sql = "UPDATE LoHang SET soLuongTon = soLuongTon - ? WHERE soLo = ? AND soLuongTon >= ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -154,9 +200,6 @@ public class LoHangDAO {
      * Cộng hoàn trả tồn kho cho một lô hàng cụ thể (khi đổi trả hàng nguyên tem)
      */
     public boolean congTonKho(String soLo, int soLuongCong) throws SQLException {
-        if (soLuongCong <= 0) {
-            return false;
-        }
         String sql = "UPDATE LoHang SET soLuongTon = soLuongTon + ? WHERE soLo = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -170,13 +213,10 @@ public class LoHangDAO {
      * Cập nhật số lượng tồn kho thực tế sau kiểm kê
      */
     public boolean capNhatSoLuongTon(String soLo, int soLuongMoi) throws SQLException {
-        if (soLuongMoi < 0) {
-            return false;
-        }
         String sql = "UPDATE LoHang SET soLuongTon = ? WHERE soLo = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, soLuongMoi);
+            ps.setInt(1, Math.max(0, soLuongMoi));
             ps.setString(2, soLo);
             return ps.executeUpdate() > 0;
         }
