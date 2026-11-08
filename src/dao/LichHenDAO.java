@@ -119,6 +119,39 @@ public class LichHenDAO {
     /**
      * Thêm lịch hẹn mới kèm chi tiết (Transaction JDBC an toàn)
      */
+    /**
+     * Kiểm tra xem kỹ thuật viên đã có lịch hẹn trong khung giờ dự kiến hay chưa.
+     * Thuật toán: Hai khoảng thời gian [A, B] và [C, D] giao nhau khi: A < D AND B > C.
+     */
+    public boolean kiemTraTrungLich(String maKtv, java.time.LocalDateTime ngayHen, int thoiLuongPhut) {
+        if (maKtv == null || maKtv.trim().isEmpty() || ngayHen == null) return false;
+        int phut = Math.max(15, thoiLuongPhut);
+        java.time.LocalDateTime ngayHenKetThuc = ngayHen.plusMinutes(phut);
+
+        String sql = "SELECT COUNT(*) FROM ChiTietLichHen ct " +
+                     "JOIN LichHen lh ON ct.maLichHen = lh.maLichHen " +
+                     "JOIN DichVu dv ON ct.maDichVu = dv.maDichVu " +
+                     "WHERE ct.maKtvChiDinh = ? " +
+                     "AND lh.trangThaiLichHen NOT IN (N'Đã hủy', N'Hoàn thành') " +
+                     "AND lh.ngayHen < ? " +
+                     "AND DATEADD(minute, ISNULL(dv.thoiLuongPhut, 45), lh.ngayHen) > ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maKtv.trim());
+            ps.setTimestamp(2, java.sql.Timestamp.valueOf(ngayHenKetThuc));
+            ps.setTimestamp(3, java.sql.Timestamp.valueOf(ngayHen));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[LichHenDAO] Cảnh báo kiểm tra trùng lịch: " + e.getMessage());
+        }
+        return false;
+    }
+
     public boolean insertLichHen(LichHen lh) throws SQLException {
         String sqlLH = "INSERT INTO LichHen (maLichHen, maKhachHang, maNhanVienTiepNhan, ngayHen, trangThaiLichHen, ghiChu) VALUES (?, ?, ?, ?, ?, ?)";
         String sqlCT = "INSERT INTO ChiTietLichHen (maChiTietLichHen, maLichHen, maThuCung, maDichVu, maKtvChiDinh) VALUES (?, ?, ?, ?, ?)";
@@ -158,8 +191,7 @@ public class LichHenDAO {
             throw e;
         } finally {
             if (conn != null) {
-                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
-                try { conn.close(); } catch (SQLException ignored) {}
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
             }
         }
     }

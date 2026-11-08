@@ -70,6 +70,35 @@ public class TheSpaPassDAO {
         return null;
     }
 
+    public TheSpaPass findByMaThe(String maThe) throws SQLException {
+        if (maThe == null || maThe.trim().isEmpty()) return null;
+        String sql = "SELECT * FROM TheSpaPass WHERE maThe = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maThe.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Date dKh = rs.getDate("ngayKichHoat");
+                    Date dHh = rs.getDate("ngayHetHan");
+                    TheSpaPass the = new TheSpaPass(
+                            rs.getString("maThe"),
+                            rs.getString("sdtKhachHang"),
+                            rs.getString("tenKhachHang"),
+                            rs.getString("tenGoi"),
+                            rs.getInt("tongSoBuoi"),
+                            rs.getInt("soBuoiDaDung"),
+                            rs.getBigDecimal("donGiaGoi").longValue(),
+                            dKh != null ? dKh.toLocalDate() : LocalDate.now(),
+                            dHh != null ? dHh.toLocalDate() : LocalDate.now().plusDays(90)
+                    );
+                    the.setTrangThai(rs.getString("trangThai"));
+                    return the;
+                }
+            }
+        }
+        return null;
+    }
+
     public boolean insertTheSpaPass(TheSpaPass the) throws SQLException {
         String sql = "INSERT INTO TheSpaPass (maThe, sdtKhachHang, tenKhachHang, tenGoi, tongSoBuoi, soBuoiDaDung, donGiaGoi, ngayKichHoat, ngayHetHan, trangThai) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -104,7 +133,8 @@ public class TheSpaPassDAO {
 
     public boolean suDungMotBuoi(String maThe, String maHoaDon, String maNhanVien, String ghiChu)
             throws SQLException {
-        String sqlUpdate = "UPDATE TheSpaPass SET soBuoiDaDung=soBuoiDaDung+1 "
+        String sqlUpdate = "UPDATE TheSpaPass SET soBuoiDaDung = soBuoiDaDung + 1, "
+                + "trangThai = CASE WHEN soBuoiDaDung + 1 >= tongSoBuoi THEN N'ĐÃ HẾT LƯỢT' ELSE trangThai END "
                 + "WHERE maThe=? AND trangThai=N'ĐANG HOẠT ĐỘNG' AND ngayHetHan>=CAST(GETDATE() AS DATE) "
                 + "AND soBuoiDaDung<tongSoBuoi";
         String sqlHistory = "INSERT INTO LichSuSuDungSpaPass(maThe,maHoaDon,maNhanVien,thoiGianSuDung,ghiChu) "

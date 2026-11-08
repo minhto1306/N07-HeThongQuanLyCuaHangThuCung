@@ -11,6 +11,8 @@ public class ChiTietDichVu extends ChiTietHoaDon {
     private ThuCung thuCung;
     private NhanVien ktvThucHien;
     private BigDecimal tienHoaHong;
+    private String maPhongHotel;
+    private boolean suDungSpaPass;
 
     public ChiTietDichVu() {
         super();
@@ -37,6 +39,11 @@ public class ChiTietDichVu extends ChiTietHoaDon {
         this.dichVu = dichVu;
         super.dichVu = dichVu;
     }
+
+    public String getMaPhongHotel() { return maPhongHotel; }
+    public void setMaPhongHotel(String value) { maPhongHotel = value; }
+    public boolean isSuDungSpaPass() { return suDungSpaPass; }
+    public void setSuDungSpaPass(boolean value) { suDungSpaPass = value; }
 
     public ThuCung getThuCung() {
         return thuCung;

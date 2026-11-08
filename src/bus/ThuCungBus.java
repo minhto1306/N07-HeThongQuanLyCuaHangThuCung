@@ -28,11 +28,27 @@ public class ThuCungBus {
 
     // Nạp toàn bộ hồ sơ thú cưng từ CSDL lên, nếu lỗi thì trả về danh sách rỗng để UI không bị NullPointerException
     public List<HoSoThuCung> layDanhSachHoSoThuCung() {
+        return layDanhSachHoSoThuCung(10);
+    }
+
+    public List<HoSoThuCung> layDanhSachHoSoThuCung(int limit) {
         try {
-            List<HoSoThuCung> dbList = thuCungDAO.getAllHoSoThuCung();
+            List<HoSoThuCung> dbList = thuCungDAO.getAllHoSoThuCung(limit);
             return dbList != null ? dbList : Collections.emptyList();
         } catch (SQLException e) {
             System.err.println("[ThuCungBus] Lỗi lấy HoSoThuCung từ CSDL: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public List<HoSoThuCung> timKiemHoSoThuCung(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return layDanhSachHoSoThuCung(10);
+        }
+        try {
+            return thuCungDAO.timKiemHoSoThuCung(keyword.trim(), 20);
+        } catch (SQLException e) {
+            System.err.println("[ThuCungBus] Lỗi tìm kiếm HoSoThuCung: " + e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -93,8 +109,12 @@ public class ThuCungBus {
 
     // Lấy lịch sử khám, tiêm chủng và theo dõi thể trạng định kỳ của các bé cưng
     public List<HoSoSucKhoe> layDanhSachHoSoSucKhoe() {
+        return layDanhSachHoSoSucKhoe(10);
+    }
+
+    public List<HoSoSucKhoe> layDanhSachHoSoSucKhoe(int limit) {
         try {
-            List<HoSoSucKhoe> dbList = thuCungDAO.getAllHoSoSucKhoe();
+            List<HoSoSucKhoe> dbList = thuCungDAO.getAllHoSoSucKhoe(limit);
             return dbList != null ? dbList : Collections.emptyList();
         } catch (SQLException e) {
             System.err.println("[ThuCungBus] Lỗi lấy HoSoSucKhoe từ CSDL: " + e.getMessage());

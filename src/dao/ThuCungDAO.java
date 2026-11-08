@@ -24,8 +24,14 @@ public class ThuCungDAO {
      * Lấy toàn bộ danh sách thú cưng kèm thông tin chủ nuôi và mã Microchip
      */
     public List<HoSoThuCung> getAllHoSoThuCung() throws SQLException {
+        return getAllHoSoThuCung(0);
+    }
+
+    public List<HoSoThuCung> getAllHoSoThuCung(int limit) throws SQLException {
         List<HoSoThuCung> list = new ArrayList<>();
-        String sql = "SELECT hs.maHoSo, hs.soMicrochip, hs.ngayDangKy, hs.trangThaiNuoi, " +
+        int safeLimit = Math.max(0, Math.min(limit, 1000));
+        String topClause = safeLimit > 0 ? "TOP (" + safeLimit + ") " : "";
+        String sql = "SELECT " + topClause + "hs.maHoSo, hs.soMicrochip, hs.ngayDangKy, hs.trangThaiNuoi, " +
                 "tc.maThuCung, tc.tenThuCung, tc.giongLoai, tc.ngaySinh, tc.gioiTinh, " +
                 "kh.maKhachHang, kh.hoTen AS tenKhachHang, kh.soDienThoai, kh.diemTichLuy " +
                 "FROM HoSoThuCung hs " +
@@ -66,6 +72,62 @@ public class ThuCungDAO {
                         rs.getString("trangThaiNuoi")
                 );
                 list.add(hs);
+            }
+        }
+        return list;
+    }
+
+    public List<HoSoThuCung> timKiemHoSoThuCung(String keyword, int limit) throws SQLException {
+        List<HoSoThuCung> list = new ArrayList<>();
+        int safeLimit = Math.max(0, Math.min(limit, 1000));
+        String topClause = safeLimit > 0 ? "TOP (" + safeLimit + ") " : "";
+        String sql = "SELECT " + topClause + "hs.maHoSo, hs.soMicrochip, hs.ngayDangKy, hs.trangThaiNuoi, " +
+                "tc.maThuCung, tc.tenThuCung, tc.giongLoai, tc.ngaySinh, tc.gioiTinh, " +
+                "kh.maKhachHang, kh.hoTen AS tenKhachHang, kh.soDienThoai, kh.diemTichLuy " +
+                "FROM HoSoThuCung hs " +
+                "JOIN ThuCung tc ON hs.maThuCung = tc.maThuCung " +
+                "JOIN KhachHang kh ON hs.maKhachHang = kh.maKhachHang " +
+                "WHERE tc.tenThuCung LIKE ? OR tc.maThuCung LIKE ? OR hs.soMicrochip LIKE ? OR kh.soDienThoai LIKE ? " +
+                "ORDER BY hs.ngayDangKy DESC";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            String kw = "%" + (keyword == null ? "" : keyword.trim()) + "%";
+            ps.setString(1, kw);
+            ps.setString(2, kw);
+            ps.setString(3, kw);
+            ps.setString(4, kw);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    KhachHang kh = new KhachHang(
+                            rs.getString("maKhachHang"),
+                            rs.getString("tenKhachHang"),
+                            rs.getString("soDienThoai"),
+                            rs.getInt("diemTichLuy")
+                    );
+
+                    Date ns = rs.getDate("ngaySinh");
+                    LocalDate ngaySinh = (ns != null) ? ns.toLocalDate() : null;
+                    ThuCung tc = new ThuCung(
+                            rs.getString("maThuCung"),
+                            rs.getString("tenThuCung"),
+                            rs.getString("giongLoai"),
+                            ngaySinh,
+                            rs.getString("gioiTinh")
+                    );
+
+                    Date ndk = rs.getDate("ngayDangKy");
+                    LocalDate ngayDangKy = (ndk != null) ? ndk.toLocalDate() : LocalDate.now();
+
+                    list.add(new HoSoThuCung(
+                            rs.getString("maHoSo"),
+                            kh,
+                            tc,
+                            rs.getString("soMicrochip"),
+                            ngayDangKy,
+                            rs.getString("trangThaiNuoi")
+                    ));
+                }
             }
         }
         return list;
@@ -191,46 +253,34 @@ public class ThuCungDAO {
     }
 
     /**
-     * Xóa thú cưng kèm hồ sơ sức khỏe và hồ sơ nuôi (Transaction)
+     * Ngừng theo dõi thú cưng (Soft Delete) để bảo toàn lịch sử tiêm phòng, khám sức khỏe và hóa đơn dịch vụ (DV06)
      */
     public boolean deleteThuCung(String maThuCung) throws SQLException {
-        String sqlSK = "DELETE FROM HoSoSucKhoe WHERE maThuCung = ?";
-        String sqlHS = "DELETE FROM HoSoThuCung WHERE maThuCung = ?";
+        String sqlSoftDelete = "UPDATE HoSoThuCung SET trangThaiNuoi = N'NGỪNG THEO DÕI' WHERE maThuCung = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sqlSoftDelete)) {
+            ps.setString(1, maThuCung);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                return true;
+            }
+        }
+        // Trường hợp thú cưng chưa có HoSoThuCung, kiểm tra xem có ràng buộc FK trong dịch vụ/lịch hẹn không
+        String sqlCheckFK = "SELECT COUNT(*) FROM ChiTietDichVu WHERE maThuCung = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement psCheck = conn.prepareStatement(sqlCheckFK)) {
+            psCheck.setString(1, maThuCung);
+            try (ResultSet rs = psCheck.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    throw new SQLException("Thú cưng [" + maThuCung + "] đã có lịch sử dịch vụ hóa đơn, không thể xóa để bảo toàn dữ liệu tài chính!");
+                }
+            }
+        }
         String sqlTC = "DELETE FROM ThuCung WHERE maThuCung = ?";
-
-        Connection conn = null;
-        try {
-            conn = DBConnection.getConnection();
-            conn.setAutoCommit(false);
-
-            try (PreparedStatement ps1 = conn.prepareStatement(sqlSK)) {
-                ps1.setString(1, maThuCung);
-                ps1.executeUpdate();
-            }
-
-            try (PreparedStatement ps2 = conn.prepareStatement(sqlHS)) {
-                ps2.setString(1, maThuCung);
-                ps2.executeUpdate();
-            }
-
-            int rows;
-            try (PreparedStatement ps3 = conn.prepareStatement(sqlTC)) {
-                ps3.setString(1, maThuCung);
-                rows = ps3.executeUpdate();
-            }
-
-            conn.commit();
-            return rows > 0;
-        } catch (SQLException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ignored) {}
-            }
-            throw e;
-        } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
-                try { conn.close(); } catch (SQLException ignored) {}
-            }
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sqlTC)) {
+            ps.setString(1, maThuCung);
+            return ps.executeUpdate() > 0;
         }
     }
 
@@ -238,8 +288,14 @@ public class ThuCungDAO {
      * Lấy danh sách lịch sử kiểm tra sức khỏe thể trạng
      */
     public List<HoSoSucKhoe> getAllHoSoSucKhoe() throws SQLException {
+        return getAllHoSoSucKhoe(0);
+    }
+
+    public List<HoSoSucKhoe> getAllHoSoSucKhoe(int limit) throws SQLException {
         List<HoSoSucKhoe> list = new ArrayList<>();
-        String sql = "SELECT sk.*, tc.tenThuCung, tc.giongLoai, nv.hoTen AS tenNhanVien " +
+        int safeLimit = Math.max(0, Math.min(limit, 1000));
+        String topClause = safeLimit > 0 ? "TOP (" + safeLimit + ") " : "";
+        String sql = "SELECT " + topClause + "sk.*, tc.tenThuCung, tc.giongLoai, nv.hoTen AS tenNhanVien " +
                 "FROM HoSoSucKhoe sk " +
                 "JOIN ThuCung tc ON sk.maThuCung = tc.maThuCung " +
                 "LEFT JOIN NhanVien nv ON sk.maNhanVienKiemTra = nv.maNhanVien " +
