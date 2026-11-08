@@ -48,4 +48,10 @@ public class DoiTraBus {
     public boolean luuPhieuDoiTra(PhieuDoiTra pdt) {
         return luuPhieuDoiTra(pdt, null, 0);
     }
+    /**
+     * Tra cứu danh sách các số lô đã xuất bán của sản phẩm trong hóa đơn gốc.
+     */
+    public java.util.List<String> layDanhSachSoLoXuat(String maHoaDon, String maSanPham) {
+        return hoaDonDAO.layDanhSachSoLoXuat(maHoaDon, maSanPham);
+    }
 }

@@ -79,6 +79,7 @@ public class TongQuanPanel extends JPanel {
     // KPI Chế độ Chiến Lược (Strategic)
     private JLabel lblStratDoanhThu;
     private JLabel lblStratLoiNhuan;
+    private JLabel lblBienLoiNhuan;
     private JLabel lblStratHangHoa;
     private JLabel lblStratDichVu;
     private DefaultTableModel modelTopSanPham;
@@ -365,6 +366,7 @@ public class TongQuanPanel extends JPanel {
             loiNhuan = 0L;
         }
         if (lblStratLoiNhuan != null) lblStratLoiNhuan.setText(dfMoney.format(loiNhuan));
+        if (lblBienLoiNhuan != null) { double bien = doanhThuHomNay > 0 ? (loiNhuan * 100.0 / doanhThuHomNay) : 0.0; lblBienLoiNhuan.setText(String.format("Biên lợi nhuận ~%.1f%%", bien)); }
         if (lblStratHangHoa != null) lblStratHangHoa.setText(dfMoney.format(dtHangHoa));
         if (lblStratDichVu != null) lblStratDichVu.setText(dfMoney.format(dtSpa));
 
@@ -659,7 +661,8 @@ public class TongQuanPanel extends JPanel {
                 }));
 
         lblStratLoiNhuan = new JLabel("0 đ");
-        pnlCards.add(taoTheKpiDong("LỢI NHUẬN GỘP ƯỚC TÍNH", lblStratLoiNhuan, new JLabel("Biên lợi nhuận ~42%"),
+        lblBienLoiNhuan = new JLabel("Biên lợi nhuận 0.0%");
+        pnlCards.add(taoTheKpiDong("LỢI NHUẬN GỘP ƯỚC TÍNH", lblStratLoiNhuan, lblBienLoiNhuan,
                 IconHelper.CHECK, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG,
                 () -> {
                     Frame topFrame = (Frame) SwingUtilities.getWindowAncestor(this);

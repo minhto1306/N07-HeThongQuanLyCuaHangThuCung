@@ -66,28 +66,11 @@ public class LoHangDAO {
                 "FROM LoHang l " +
                 "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
                 "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
-                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 " +
+                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 AND l.hanSuDung >= CAST(GETDATE() AS DATE) " +
                 "ORDER BY l.hanSuDung ASC";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, maSanPham);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return mapResultSetToLoHang(rs);
-                }
-            }
-        }
-
-        // Nếu hết hàng hoặc chưa có lô, thử lấy lô bất kỳ của sản phẩm
-        String sqlFallback = "SELECT TOP 1 l.*, s.tenSanPham, n.tenNhaCungCap " +
-                "FROM LoHang l " +
-                "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
-                "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
-                "WHERE l.maSanPham = ? " +
-                "ORDER BY l.hanSuDung DESC";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sqlFallback)) {
             ps.setString(1, maSanPham);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -154,6 +137,9 @@ public class LoHangDAO {
      * Trừ tồn kho của một lô hàng cụ thể
      */
     public boolean truTonKho(String soLo, int soLuongXuat) throws SQLException {
+        if (soLuongXuat <= 0) {
+            return false;
+        }
         String sql = "UPDATE LoHang SET soLuongTon = soLuongTon - ? WHERE soLo = ? AND soLuongTon >= ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -168,6 +154,9 @@ public class LoHangDAO {
      * Cộng hoàn trả tồn kho cho một lô hàng cụ thể (khi đổi trả hàng nguyên tem)
      */
     public boolean congTonKho(String soLo, int soLuongCong) throws SQLException {
+        if (soLuongCong <= 0) {
+            return false;
+        }
         String sql = "UPDATE LoHang SET soLuongTon = soLuongTon + ? WHERE soLo = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -181,10 +170,13 @@ public class LoHangDAO {
      * Cập nhật số lượng tồn kho thực tế sau kiểm kê
      */
     public boolean capNhatSoLuongTon(String soLo, int soLuongMoi) throws SQLException {
+        if (soLuongMoi < 0) {
+            return false;
+        }
         String sql = "UPDATE LoHang SET soLuongTon = ? WHERE soLo = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, Math.max(0, soLuongMoi));
+            ps.setInt(1, soLuongMoi);
             ps.setString(2, soLo);
             return ps.executeUpdate() > 0;
         }

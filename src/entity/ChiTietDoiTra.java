@@ -13,6 +13,7 @@ public class ChiTietDoiTra {
     private BigDecimal tienHoanLai;
     private String soLo;
     private int soLuongCoSoHoan;
+    private int soLuongCoSoTra;
 
     public ChiTietDoiTra() {
         this.soLuongDoiTra = 1;
@@ -69,6 +70,8 @@ public class ChiTietDoiTra {
 
     public String getSoLo() { return soLo; }
     public void setSoLo(String soLo) { this.soLo = soLo; }
+    public int getSoLuongCoSoTra() { return soLuongCoSoTra; }
+    public void setSoLuongCoSoTra(int value) { soLuongCoSoTra = value; }
     public int getSoLuongCoSoHoan() { return soLuongCoSoHoan; }
     public void setSoLuongCoSoHoan(int soLuongCoSoHoan) { this.soLuongCoSoHoan = soLuongCoSoHoan; }
 

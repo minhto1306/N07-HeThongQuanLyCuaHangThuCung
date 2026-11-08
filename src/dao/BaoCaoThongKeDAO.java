@@ -163,13 +163,18 @@ public class BaoCaoThongKeDAO {
 
     public List<TopBanChayRow> getTopBanChay(LocalDateTime tu, LocalDateTime den) throws SQLException {
         String sql =
-                "SELECT COALESCE(ct.maDichVu, ct.maSanPham) ma," +
+                "WITH XL AS (" +
+                " SELECT maChiTiet, SUM(soLuongXuatCoSo) tongXuatCoSo FROM ChiTietXuatLo GROUP BY maChiTiet" +
+                ")" +
+                " SELECT COALESCE(ct.maDichVu, ct.maSanPham) ma," +
                 " COALESCE(d.tenDichVu, sp.tenSanPham, N'Sản phẩm') ten," +
                 " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN N'Dịch vụ' ELSE N'Hàng hóa' END phanNhom," +
                 " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN N'Lượt' ELSE COALESCE(sp.donViCoSo, N'Đơn vị') END donViTinh," +
-                " SUM(ct.soLuong) soLuong, SUM(CAST(ct.thanhTien AS BIGINT)) doanhThu" +
+                " SUM(CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN ct.soLuong ELSE COALESCE(xl.tongXuatCoSo, ct.soLuong) END) soLuong," +
+                " SUM(CAST(ct.thanhTien AS BIGINT)) doanhThu" +
                 " FROM ChiTietHoaDon ct" +
                 " JOIN HoaDon h ON h.maHoaDon=ct.maHoaDon" +
+                " LEFT JOIN XL xl ON xl.maChiTiet=ct.maChiTiet" +
                 " LEFT JOIN SanPham sp ON sp.maSanPham=ct.maSanPham" +
                 " LEFT JOIN DichVu d ON d.maDichVu=ct.maDichVu" +
                 " WHERE h.trangThaiHoaDon=N'Đã thanh toán'" +
@@ -351,9 +356,9 @@ public class BaoCaoThongKeDAO {
                 " FROM ChiTietXuatLo x JOIN LoHang l ON l.soLo=x.soLo JOIN ChiTietHoaDon cthd ON cthd.maChiTiet=x.maChiTiet" +
                 " JOIN HoaDon h ON h.maHoaDon=cthd.maHoaDon WHERE h.trangThaiHoaDon=N'Đã thanh toán' GROUP BY l.maSanPham)," +
                 " R AS (SELECT ct.maSanPham," +
-                " SUM(CASE WHEN p.ngayDoiTra>=? AND p.ngayDoiTra<? THEN COALESCE(NULLIF(ct.soLuongCoSoHoan,0),ct.soLuongDoiTra) ELSE 0 END) traKy," +
-                " SUM(CASE WHEN p.ngayDoiTra>=? THEN COALESCE(NULLIF(ct.soLuongCoSoHoan,0),ct.soLuongDoiTra) ELSE 0 END) traSau," +
-                " SUM(CASE WHEN p.ngayDoiTra>=? THEN CAST(COALESCE(NULLIF(ct.soLuongCoSoHoan,0),ct.soLuongDoiTra) AS BIGINT)*CAST(COALESCE(l.donGiaNhapCoSo,0) AS BIGINT) ELSE 0 END) giaTriTraSau" +
+                " SUM(CASE WHEN p.ngayDoiTra>=? AND p.ngayDoiTra<? THEN COALESCE(ct.soLuongCoSoHoan,0) ELSE 0 END) traKy," +
+                " SUM(CASE WHEN p.ngayDoiTra>=? THEN COALESCE(ct.soLuongCoSoHoan,0) ELSE 0 END) traSau," +
+                " SUM(CASE WHEN p.ngayDoiTra>=? THEN CAST(COALESCE(ct.soLuongCoSoHoan,0) AS BIGINT)*CAST(COALESCE(l.donGiaNhapCoSo,0) AS BIGINT) ELSE 0 END) giaTriTraSau" +
                 " FROM ChiTietDoiTra ct JOIN PhieuDoiTra p ON p.maPhieuDoiTra=ct.maPhieuDoiTra LEFT JOIN LoHang l ON l.soLo=ct.soLo GROUP BY ct.maSanPham)" +
                 " SELECT sp.maSanPham,sp.tenSanPham,COALESCE(dvt.tenDonVi,N'Đơn vị') donViTinh," +
                 " (COALESCE(l.tonHienTai,0)-COALESCE(n.nhapSau,0)+COALESCE(x.xuatSau,0)-COALESCE(r.traSau,0)) tonCuoi," +

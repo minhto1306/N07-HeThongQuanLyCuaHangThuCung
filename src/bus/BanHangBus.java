@@ -306,7 +306,7 @@ public class BanHangBus {
         return kq;
     }
 
-    // Lưu mới hoặc cập nhật thông tin khách hàng và điểm tích lũy xuống SQL Server
+    // Lưu mới hoặc cập nhật thông tin khách hàng xuống SQL Server (hồ sơ giữ nguyên điểm tích lũy CSDL)
     public static KhachHang luuHoacCapNhatKhachHang(String soDienThoai, String hoTen, int diemMoi) {
         if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
             return null;
@@ -318,17 +318,22 @@ public class BanHangBus {
             sdt = sdt.substring(0, 15);
         }
 
-        // Trường hợp 1: Nếu khách đã tồn tại trong hệ thống -> Cập nhật tên và điểm tích lũy
+        // Trường hợp 1: Nếu khách đã tồn tại trong hệ thống -> Cập nhật tên, bỏ qua diemMoi và giữ nguyên điểm CSDL
         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
             if (kh.getSoDienThoai().equalsIgnoreCase(sdt)) {
-                if (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai")) {
-                    kh.setHoTen(hoTen.trim());
-                }
-                // Đảm bảo điểm tích lũy không bao giờ bị âm
-                kh.setDiemTichLuy(Math.max(0, diemMoi));
+                String tenCapNhat = (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai"))
+                        ? hoTen.trim() : kh.getHoTen();
+                KhachHang updateObj = new KhachHang(kh.getMaKhachHang(), tenCapNhat, sdt, kh.getDiemTichLuy(), kh.getEmail(), kh.getDiaChi());
                 try {
-                    STATIC_KH_DAO.update(kh);
-                    return kh;
+                    if (STATIC_KH_DAO.updateProfile(updateObj)) {
+                        kh.setHoTen(tenCapNhat);
+                        KhachHang persisted = STATIC_KH_DAO.findByMaKhachHang(kh.getMaKhachHang());
+                        if (persisted != null) {
+                            kh.setDiemTichLuy(persisted.getDiemTichLuy());
+                        }
+                        return kh;
+                    }
+                    return null;
                 } catch (SQLException e) {
                     System.err.println("[BanHangBus] Lỗi update KhachHang CSDL: " + e.getMessage());
                     return null;
@@ -336,16 +341,18 @@ public class BanHangBus {
             }
         }
 
-        // Trường hợp 2: Khách hàng mới toanh -> Tự động sinh mã KH mới và thêm vào CSDL
+        // Trường hợp 2: Khách hàng mới toanh -> Tự động sinh mã KH mới và bắt đầu với 0 điểm
         String tenMoi = (hoTen == null || hoTen.trim().isEmpty() || hoTen.trim().equalsIgnoreCase("Khách vãng lai"))
                 ? "Khách hàng mới"
                 : hoTen.trim();
         String maMoi = sinhMaKhachHangMoi();
-        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi));
+        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, 0);
         try {
-            STATIC_KH_DAO.insert(khMoi);
-            DANH_SACH_KHACH_HANG.add(khMoi);
-            return khMoi;
+            if (STATIC_KH_DAO.insert(khMoi)) {
+                DANH_SACH_KHACH_HANG.add(khMoi);
+                return khMoi;
+            }
+            return null;
         } catch (SQLException e) {
             System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
             return null;
@@ -362,19 +369,32 @@ public class BanHangBus {
         return capNhatThongTinKhachHang(maKH, hoTenMoi, sdtMoi, diemMoi, "", "");
     }
 
-    // overload cập nhật thông tin khách hàng có cả email và địa chỉ để gửi mail thông báo
+    // overload cập nhật thông tin khách hàng: chỉ quản lý mới được chỉnh sửa điểm, nhân viên chỉ sửa hồ sơ
     public static boolean capNhatThongTinKhachHang(String maKH, String hoTenMoi, String sdtMoi, int diemMoi, String emailMoi, String diaChiMoi) {
         dongBoKhachHangTuDatabase();
         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
             if (kh.getMaKhachHang().equalsIgnoreCase(maKH)) {
-                kh.setHoTen(hoTenMoi.trim());
-                kh.setSoDienThoai(sdtMoi.trim());
-                kh.setDiemTichLuy(Math.max(0, diemMoi));
-                kh.setEmail(emailMoi != null ? emailMoi.trim() : "");
-                kh.setDiaChi(diaChiMoi != null ? diaChiMoi.trim() : "");
+                boolean isManager = utils.UserSession.isQuanLy();
+                String ten = hoTenMoi != null ? hoTenMoi.trim() : kh.getHoTen();
+                String sdt = sdtMoi != null ? sdtMoi.trim() : kh.getSoDienThoai();
+                String email = emailMoi != null ? emailMoi.trim() : "";
+                String diaChi = diaChiMoi != null ? diaChiMoi.trim() : "";
+                int diem = isManager ? Math.max(0, diemMoi) : kh.getDiemTichLuy();
+                KhachHang updateObj = new KhachHang(kh.getMaKhachHang(), ten, sdt, diem, email, diaChi);
                 try {
-                    STATIC_KH_DAO.update(kh);
-                    return true;
+                    boolean ok = isManager ? STATIC_KH_DAO.update(updateObj) : STATIC_KH_DAO.updateProfile(updateObj);
+                    if (ok) {
+                        kh.setHoTen(ten);
+                        kh.setSoDienThoai(sdt);
+                        kh.setEmail(email);
+                        kh.setDiaChi(diaChi);
+                        KhachHang persisted = STATIC_KH_DAO.findByMaKhachHang(kh.getMaKhachHang());
+                        if (persisted != null) {
+                            kh.setDiemTichLuy(persisted.getDiemTichLuy());
+                        }
+                        return true;
+                    }
+                    return false;
                 } catch (SQLException e) {
                     System.err.println("[BanHangBus] Lỗi capNhatThongTinKhachHang CSDL: " + e.getMessage());
                     return false;
@@ -384,7 +404,7 @@ public class BanHangBus {
         return false;
     }
 
-    // thêm khách hàng mới hoặc cập nhật kèm cả email và địa chỉ nhà
+    // thêm khách hàng mới hoặc cập nhật kèm cả email và địa chỉ nhà (hồ sơ giữ nguyên điểm tích lũy CSDL)
     public static KhachHang luuHoacCapNhatKhachHang(String soDienThoai, String hoTen, int diemMoi, String email, String diaChi) {
         if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
             return null;
@@ -397,15 +417,23 @@ public class BanHangBus {
 
         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
             if (kh.getSoDienThoai().equalsIgnoreCase(sdt)) {
-                if (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai")) {
-                    kh.setHoTen(hoTen.trim());
-                }
-                kh.setDiemTichLuy(Math.max(0, diemMoi));
-                if (email != null && !email.trim().isEmpty()) kh.setEmail(email.trim());
-                if (diaChi != null && !diaChi.trim().isEmpty()) kh.setDiaChi(diaChi.trim());
+                String tenCapNhat = (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai"))
+                        ? hoTen.trim() : kh.getHoTen();
+                String emailCapNhat = (email != null && !email.trim().isEmpty()) ? email.trim() : kh.getEmail();
+                String diaChiCapNhat = (diaChi != null && !diaChi.trim().isEmpty()) ? diaChi.trim() : kh.getDiaChi();
+                KhachHang updateObj = new KhachHang(kh.getMaKhachHang(), tenCapNhat, sdt, kh.getDiemTichLuy(), emailCapNhat, diaChiCapNhat);
                 try {
-                    STATIC_KH_DAO.update(kh);
-                    return kh;
+                    if (STATIC_KH_DAO.updateProfile(updateObj)) {
+                        kh.setHoTen(tenCapNhat);
+                        kh.setEmail(emailCapNhat);
+                        kh.setDiaChi(diaChiCapNhat);
+                        KhachHang persisted = STATIC_KH_DAO.findByMaKhachHang(kh.getMaKhachHang());
+                        if (persisted != null) {
+                            kh.setDiemTichLuy(persisted.getDiemTichLuy());
+                        }
+                        return kh;
+                    }
+                    return null;
                 } catch (SQLException e) {
                     System.err.println("[BanHangBus] Lỗi update KhachHang CSDL: " + e.getMessage());
                     return null;
@@ -417,11 +445,13 @@ public class BanHangBus {
                 ? "Khách hàng mới"
                 : hoTen.trim();
         String maMoi = sinhMaKhachHangMoi();
-        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi), email, diaChi);
+        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, 0, email, diaChi);
         try {
-            STATIC_KH_DAO.insert(khMoi);
-            DANH_SACH_KHACH_HANG.add(khMoi);
-            return khMoi;
+            if (STATIC_KH_DAO.insert(khMoi)) {
+                DANH_SACH_KHACH_HANG.add(khMoi);
+                return khMoi;
+            }
+            return null;
         } catch (SQLException e) {
             System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
             return null;

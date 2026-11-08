@@ -1909,6 +1909,9 @@ public class BanHangPOSPanel extends JPanel {
             }
         });
         btnThanhToan.addActionListener(e -> thucHienThanhToan());
+        registerKeyboardAction(e -> {
+            if (isShowing() && btnThanhToan.isEnabled()) btnThanhToan.doClick();
+        }, KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F9, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
 
         pnlActionButtons.add(pnlSubActions, BorderLayout.WEST);
         pnlActionButtons.add(btnThanhToan, BorderLayout.CENTER);
@@ -2884,7 +2887,7 @@ public class BanHangPOSPanel extends JPanel {
         int diemDaDung = (spnDiemDung != null && diemHienCo > 0) ? ((Number) spnDiemDung.getValue()).intValue() : 0;
         if (diemDaDung < 0) diemDaDung = 0;
         if (diemDaDung > diemHienCo) diemDaDung = diemHienCo;
-        int diemThuongMoi = (int) (canTra / 100000L);
+        int diemThuongMoi = (sdt.isEmpty() && tenKhach.equalsIgnoreCase("Khách vãng lai")) ? 0 : (int) (canTra / 100000L);
         int diemKhauTruDT = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getDiemKhauTru() : 0;
         int tongDiemMoi = Math.max(0, diemHienCo - diemDaDung - diemKhauTruDT) + diemThuongMoi;
 
@@ -2896,6 +2899,10 @@ public class BanHangPOSPanel extends JPanel {
             if (khSaved != null) {
                 tenKhach = khSaved.getHoTen();
                 sdt = khSaved.getSoDienThoai();
+            } else {
+                JOptionPane.showMessageDialog(this, "Không lưu được hồ sơ khách hàng. Vui lòng kiểm tra kết nối và thử lại.",
+                        "Chưa thanh toán", JOptionPane.ERROR_MESSAGE);
+                return;
             }
         }
 
@@ -2959,6 +2966,7 @@ public class BanHangPOSPanel extends JPanel {
                     int tyLe = (qd != null && qd.getTyLeQuyDoi() > 0) ? qd.getTyLeQuyDoi() : 1;
                     int soLuongCoSoCanXuat = sl * tyLe;
                     int remainingCoSo = soLuongCoSoCanXuat;
+                    java.math.BigDecimal remainingLineMoney = dg.multiply(java.math.BigDecimal.valueOf(sl));
 
                     if (allLo != null) {
                         for (entity.LoHang candidate : allLo) {
@@ -2973,8 +2981,9 @@ public class BanHangPOSPanel extends JPanel {
                                 candidate.setSoLuongTon(candidate.getSoLuongTon() - take);
 
                                 java.math.BigDecimal itemTotal = dg.multiply(java.math.BigDecimal.valueOf(sl));
-                                java.math.BigDecimal ctTotal = (take == soLuongCoSoCanXuat) ? itemTotal
+                                java.math.BigDecimal ctTotal = (take == remainingCoSo) ? remainingLineMoney
                                         : itemTotal.multiply(java.math.BigDecimal.valueOf(take)).divide(java.math.BigDecimal.valueOf(soLuongCoSoCanXuat), 0, java.math.RoundingMode.HALF_UP);
+                                remainingLineMoney = remainingLineMoney.subtract(ctTotal);
 
                                 int slXuat;
                                 java.math.BigDecimal donGiaXuat = dg;
@@ -2986,7 +2995,7 @@ public class BanHangPOSPanel extends JPanel {
                                 } else if (tyLe > 1) {
                                     // Bán lẻ theo đơn vị cơ sở vì lô chia không tròn quy cách hộp/thùng
                                     slXuat = take;
-                                    donGiaXuat = dg.divide(java.math.BigDecimal.valueOf(tyLe), 0, java.math.RoundingMode.HALF_UP);
+                                    donGiaXuat = ctTotal.divide(java.math.BigDecimal.valueOf(take), 2, java.math.RoundingMode.HALF_UP);
                                     qdXuat = null;
                                 } else {
                                     slXuat = take;
@@ -3048,6 +3057,8 @@ public class BanHangPOSPanel extends JPanel {
                     entity.ChiTietDichVu ct = new entity.ChiTietDichVu(
                             maHD + "_CT" + (ctSeq++), hdReal, sl, dg, dv, null, ktvThucHien, hoaHong
                     );
+                    if (ma.startsWith("DV-HOTEL-")) ct.setMaPhongHotel(ma.substring("DV-HOTEL-".length()));
+                    ct.setSuDungSpaPass("DV_SPAPASS".equals(ma));
                     hdReal.addChiTiet(ct);
                 }
             }
@@ -3080,10 +3091,13 @@ public class BanHangPOSPanel extends JPanel {
                         );
                         ctDoiTra.setSoLo(mon.soLo);
                         ctDoiTra.setSoLuongCoSoHoan(mon.soLuongCoSoHoan);
+                        ctDoiTra.setSoLuongCoSoTra(mon.soLuongCoSoTra);
                         pdt.addChiTietDoiTra(ctDoiTra);
                     }
                 }
             }
+
+            if (pdt != null) pdt.setTongTienHoan(java.math.BigDecimal.valueOf(tienHoanThua));
 
             String maTheSuDung = null;
             entity.TheSpaPass theMoi = null;
@@ -3133,6 +3147,14 @@ public class BanHangPOSPanel extends JPanel {
                     diemDaDung, diemKhauTruDT);
             if (!okHD) {
                 throw new SQLException("Lưu hóa đơn và cập nhật kho không thành công trong CSDL SQL Server!");
+            }
+
+            if (hdReal.getKhachHang() == null) {
+                diemThuongMoi = 0;
+                tongDiemMoi = 0;
+            } else {
+                entity.KhachHang persisted = new bus.KhachHangBus().timKhachHangTheoSoDienThoai(sdt);
+                if (persisted != null) tongDiemMoi = persisted.getDiemTichLuy();
             }
 
             // Đồng bộ lại từ DB; không cộng RAM thủ công để tránh hoàn kho hai lần/sai lô.

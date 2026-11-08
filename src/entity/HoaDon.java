@@ -92,7 +92,7 @@ public class HoaDon {
     }
 
     public BigDecimal getThanhTien() {
-        if (this.thanhTien == null || this.thanhTien.compareTo(BigDecimal.ZERO) == 0) {
+        if (this.thanhTien == null) {
             capNhatTongTien();
         }
         return thanhTien;
