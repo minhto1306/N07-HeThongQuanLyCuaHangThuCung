@@ -133,18 +133,15 @@ public class DangNhapBus {
         if (soDienThoai == null || email == null) return null;
         String sdt = chuanHoaSoDienThoai(soDienThoai);
         String mail = email.trim();
+        if (sdt.isEmpty() || mail.isEmpty()) return null;
 
         try {
             TaiKhoan tk = taiKhoanDAO.findBySoDienThoaiVaEmail(sdt, mail);
-            if (tk == null) {
-                // Nếu SĐT hợp lệ và tài khoản đang hoạt động, cho phép gửi OTP đến email thực tế người dùng nhập
-                TaiKhoan tkSdt = taiKhoanDAO.findBySoDienThoai(sdt);
-                if (tkSdt != null && tkSdt.isTrangThaiHoatDong()) {
-                    tk = tkSdt;
-                }
-            }
             if (tk != null && tk.isTrangThaiHoatDong()) {
                 NhanVien nv = nhanVienDAO.findByMaNhanVien(tk.getMaTaiKhoan());
+                if (nv == null) {
+                    nv = nhanVienDAO.findBySoDienThoai(tk.getSoDienThoai());
+                }
                 if (nv != null) {
                     nv.setTaiKhoan(tk);
                     return nv;
@@ -168,7 +165,7 @@ public class DangNhapBus {
      * Đặt lại mật khẩu mới sau khi xác thực OTP thành công.
      */
     public boolean datLaiMatKhau(String soDienThoai, String matKhauMoi) {
-        if (soDienThoai == null || matKhauMoi == null || matKhauMoi.trim().length() < 4) {
+        if (soDienThoai == null || matKhauMoi == null || matKhauMoi.trim().length() < 6) {
             return false;
         }
         String sdt = chuanHoaSoDienThoai(soDienThoai);
@@ -186,7 +183,7 @@ public class DangNhapBus {
      */
     public boolean doiMatKhau(String maHoacSdt, String matKhauCu, String matKhauMoi) {
         if (maHoacSdt == null || matKhauCu == null || matKhauMoi == null) return false;
-        if (matKhauMoi.trim().length() < 4) return false;
+        if (matKhauMoi.trim().length() < 6) return false;
 
         String oldHash = PasswordHasher.hashSHA256(matKhauCu.trim());
         String newHash = PasswordHasher.hashSHA256(matKhauMoi.trim());

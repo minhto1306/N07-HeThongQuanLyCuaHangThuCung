@@ -727,7 +727,7 @@ public class MainDashboard extends JFrame {
         Object[] msg = {
                 "Tài khoản hiện tại: " + UserSession.getFullName() + " (" + UserSession.getRoleCode() + ")",
                 "Mật khẩu hiện tại:", txtOldPass,
-                "Mật khẩu mới (tối thiểu 4 ký tự):", txtNewPass,
+                "Mật khẩu mới (tối thiểu 6 ký tự):", txtNewPass,
                 "Xác nhận mật khẩu mới:", txtConfirmPass
         };
 
@@ -745,8 +745,8 @@ public class MainDashboard extends JFrame {
                 JOptionPane.showMessageDialog(this, "Xác nhận mật khẩu mới không khớp!", "Lỗi xác nhận", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            if (newP.length() < 4) {
-                JOptionPane.showMessageDialog(this, "Mật khẩu mới phải có ít nhất 4 ký tự!", "Cảnh báo bảo mật", JOptionPane.WARNING_MESSAGE);
+            if (newP.length() < 6) {
+                JOptionPane.showMessageDialog(this, "Mật khẩu mới phải có ít nhất 6 ký tự!", "Cảnh báo bảo mật", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
