@@ -34,6 +34,7 @@ import java.util.List;
 public class ThuCungDichVuPanel extends JPanel {
 
     private final ThuCungBus controller = new ThuCungBus();
+    private javax.swing.Timer timerDebounceSearch;
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
     private final DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -128,10 +129,13 @@ public class ThuCungDichVuPanel extends JPanel {
             txtSearch.setText("");
             napDuLieuHoSoThuCung("");
         });
+        this.timerDebounceSearch = new javax.swing.Timer(300, e -> napDuLieuHoSoThuCung(txtSearch.getText()));
+        this.timerDebounceSearch.setRepeats(false);
+        javax.swing.Timer timerDebounce = this.timerDebounceSearch;
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { napDuLieuHoSoThuCung(txtSearch.getText()); }
-            public void removeUpdate(DocumentEvent e) { napDuLieuHoSoThuCung(txtSearch.getText()); }
-            public void changedUpdate(DocumentEvent e) { napDuLieuHoSoThuCung(txtSearch.getText()); }
+            public void insertUpdate(DocumentEvent e) { timerDebounce.restart(); }
+            public void removeUpdate(DocumentEvent e) { timerDebounce.restart(); }
+            public void changedUpdate(DocumentEvent e) { timerDebounce.restart(); }
         });
 
         pnlToolbar.add(new JLabel("Từ khóa:"));
@@ -160,21 +164,13 @@ public class ThuCungDichVuPanel extends JPanel {
 
     private void napDuLieuHoSoThuCung(String tuKhoa) {
         modelHoSo.setRowCount(0);
-        String kw = tuKhoa == null ? "" : tuKhoa.trim().toLowerCase();
-        List<HoSoThuCung> list = controller.layDanhSachHoSoThuCung();
+        String kw = tuKhoa == null ? "" : tuKhoa.trim();
+        List<HoSoThuCung> list = kw.isEmpty() ? controller.layDanhSachHoSoThuCung(10) : controller.timKiemHoSoThuCung(kw);
         for (HoSoThuCung hs : list) {
             ThuCung tc = hs.getThuCung();
             String chu = hs.getKhachHang() != null ? hs.getKhachHang().getHoTen() : "Khách vãng lai";
             String sdt = hs.getKhachHang() != null ? hs.getKhachHang().getSoDienThoai() : "";
             String chip = hs.getSoMicrochip() != null ? hs.getSoMicrochip() : "";
-            if (!kw.isEmpty()) {
-                boolean match = tc.getTenThuCung().toLowerCase().contains(kw)
-                        || tc.getMaThuCung().toLowerCase().contains(kw)
-                        || chu.toLowerCase().contains(kw)
-                        || sdt.toLowerCase().contains(kw)
-                        || chip.toLowerCase().contains(kw);
-                if (!match) continue;
-            }
             modelHoSo.addRow(new Object[]{
                     tc.getMaThuCung(),
                     tc.getTenThuCung(),
@@ -387,9 +383,7 @@ public class ThuCungDichVuPanel extends JPanel {
         return tbl;
     }
 
-    // =========================================================================
     // TAB 4: QUẢN LÝ KHÁCH HÀNG THÀNH VIÊN & ĐIỂM VIP (TÌM KIẾM + THÊM / SỬA / XÓA)
-    // =========================================================================
     private JPanel taoTabQuanLyKhachHang() {
         JPanel pnl = new JPanel(new BorderLayout(10, 12));
         pnl.setBackground(ThemeColors.SURFACE);
@@ -617,9 +611,7 @@ public class ThuCungDichVuPanel extends JPanel {
         }
     }
 
-    // =========================================================================
     // TAB 5: QUẢN LÝ THẺ HỘI VIÊN & GÓI DỊCH VỤ SPA PASS (PUNCH CARD TRẢ TRƯỚC)
-    // =========================================================================
     private JPanel taoTabQuanLyTheHoiVien() {
         JPanel pnl = new JPanel(new BorderLayout(10, 12));
         pnl.setBackground(ThemeColors.SURFACE);
@@ -718,7 +710,7 @@ public class ThuCungDichVuPanel extends JPanel {
 
         List<TheSpaPass> dsThe = SpaPassBus.layTatCaThe();
         for (TheSpaPass the : dsThe) {
-            the.capNhatTrangThai();
+            SpaPassBus.capNhatTrangThai(the); // goi qua bus cap nhat trang thai the
             String st = the.getTrangThai();
 
             if (filterIdx == 1 && !"ĐANG HOẠT ĐỘNG".equalsIgnoreCase(st)) continue;
@@ -882,6 +874,15 @@ public class ThuCungDichVuPanel extends JPanel {
                 tenChu, tenBe, "Vaccine Phòng Dại & Mũi 7 Bệnh Tổng Hợp", hanTaiChung, "MIOHEALTH10");
 
         utils.EmailThongBaoHelper.moHopThoaiGuiEmail(SwingUtilities.getWindowAncestor(this), emailChu, tieuDe, html);
+    }
+
+
+    @Override
+    public void removeNotify() {
+        super.removeNotify();
+        if (timerDebounceSearch != null && timerDebounceSearch.isRunning()) {
+            timerDebounceSearch.stop();
+        }
     }
 
 }

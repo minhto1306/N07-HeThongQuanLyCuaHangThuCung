@@ -609,7 +609,13 @@ public class DatLichHenDialog extends JDialog {
         }
 
         String maLH = utils.MaTuSinhHelper.sinhMaLichHen();
-        KhachHang kh = new KhachHang(utils.MaTuSinhHelper.sinhMaKhachHang(), hoTen, sdt, 0);
+        KhachHang kh = null;
+        try {
+            kh = new dao.KhachHangDAO().findBySoDienThoai(sdt);
+        } catch (Exception ignored) {}
+        if (kh == null) {
+            kh = new KhachHang(utils.MaTuSinhHelper.sinhMaKhachHang(), hoTen, sdt, 0);
+        }
 
         String ktvSelected = (String) cboKtv.getSelectedItem();
         NhanVien ktv = null;
@@ -619,10 +625,8 @@ public class DatLichHenDialog extends JDialog {
             tenKtv = "Kỹ thuật viên";
             if (ktvSelected.contains("-") && ktvSelected.contains("(")) {
                 tenKtv = ktvSelected.substring(ktvSelected.indexOf("-") + 1, ktvSelected.indexOf("(")).trim();
-            } else if ("NV004".equals(maKtv)) {
-                tenKtv = "Võ Thị Hồng Ngọc";
-            } else if ("NV005".equals(maKtv)) {
-                tenKtv = "Trần Thị Thu Hà";
+            } else if (ktvSelected.contains("-")) {
+                tenKtv = ktvSelected.substring(ktvSelected.indexOf("-") + 1).trim();
             }
             ktv = new NhanVien(maKtv, tenKtv, "Kỹ thuật viên", "", null);
         }

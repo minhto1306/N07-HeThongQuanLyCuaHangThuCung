@@ -1,5 +1,7 @@
 package gui;
 
+import entity.PhongLuuTru;
+
 import utils.IconHelper;
 import utils.ThemeColors;
 import utils.UserSession;
@@ -32,42 +34,8 @@ public class PetHotelPanel extends JPanel {
     private final DateTimeFormatter dtfDisplay = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private final DateTimeFormatter dtfShort = DateTimeFormatter.ofPattern("HH:mm - dd/MM");
 
-    // ==========================================
     // DATA MODEL CHO PHÒNG LƯU TRÚ PET HOTEL
-    // ==========================================
-    public static class PhongLuuTru {
-        public String maPhong;
-        public String loaiPhong;       // "Phòng Tiêu chuẩn", "Phòng VIP Suite", "Condo cho Mèo"
-        public long donGiaNgay;
-        public String trangThai;       // "TRỐNG", "ĐANG CÓ KHÁCH", "ĐANG DỌN DẸP"
-        public String tenThuCung;
-        public String giongLoai;
-        public String tenChu;
-        public String sdtChu;
-        public LocalDateTime thoiGianCheckIn;
-        public LocalDateTime duKienCheckOut;
-        public String ghiChuChamSoc;
-        public boolean daChoAnSang;
-        public boolean daChoAnToi;
-        public boolean daDiDaoVeSinh;
-        public long phiDichVuPhatSinh;
-
-        public PhongLuuTru(String maPhong, String loaiPhong, long donGiaNgay, String trangThai) {
-            this.maPhong = maPhong;
-            this.loaiPhong = loaiPhong;
-            this.donGiaNgay = donGiaNgay;
-            this.trangThai = trangThai;
-            this.tenThuCung = "";
-            this.giongLoai = "";
-            this.tenChu = "";
-            this.sdtChu = "";
-            this.ghiChuChamSoc = "";
-            this.daChoAnSang = false;
-            this.daChoAnToi = false;
-            this.daDiDaoVeSinh = false;
-            this.phiDichVuPhatSinh = 0L;
-        }
-    }
+    // note lai: PhongLuuTru da duoc chuyen thanh Entity rieng trong package entity de khoi bi loi dao import nguoc gui
 
     private static final List<PhongLuuTru> DANH_SACH_PHONG = new ArrayList<>();
     private static final List<PetHotelPanel> INSTANCES = new ArrayList<>();
@@ -94,7 +62,7 @@ public class PetHotelPanel extends JPanel {
         for (PetHotelPanel panel : INSTANCES) {
             panel.phongDangChon = DANH_SACH_PHONG.stream()
                     .filter(p -> panel.phongDangChon != null
-                            && p.maPhong.equalsIgnoreCase(panel.phongDangChon.maPhong))
+                            && p.getMaPhong().equalsIgnoreCase(panel.phongDangChon.getMaPhong()))
                     .findFirst().orElse(DANH_SACH_PHONG.isEmpty() ? null : DANH_SACH_PHONG.get(0));
             panel.capNhatSoLieuKPI();
             panel.locVaHienThiGridPhong();
@@ -288,9 +256,9 @@ public class PetHotelPanel extends JPanel {
         int donDep = 0;
 
         for (PhongLuuTru p : DANH_SACH_PHONG) {
-            if ("ĐANG CÓ KHÁCH".equalsIgnoreCase(p.trangThai)) dangCoKhach++;
-            else if ("TRỐNG".equalsIgnoreCase(p.trangThai)) trong++;
-            else if ("ĐANG DỌN DẸP".equalsIgnoreCase(p.trangThai)) donDep++;
+            if ("ĐANG CÓ KHÁCH".equalsIgnoreCase(p.getTrangThai())) dangCoKhach++;
+            else if ("TRỐNG".equalsIgnoreCase(p.getTrangThai())) trong++;
+            else if ("ĐANG DỌN DẸP".equalsIgnoreCase(p.getTrangThai())) donDep++;
         }
 
         lblKpiTongPhong.setText(String.valueOf(tong));
@@ -303,8 +271,8 @@ public class PetHotelPanel extends JPanel {
         pnlGridMatrix.removeAll();
 
         for (PhongLuuTru p : DANH_SACH_PHONG) {
-            boolean matchLoai = "TẤT CẢ".equalsIgnoreCase(boLocLoaiPhong) || p.loaiPhong.equalsIgnoreCase(boLocLoaiPhong);
-            boolean matchTrangThai = "TẤT CẢ".equalsIgnoreCase(boLocTrangThai) || p.trangThai.equalsIgnoreCase(boLocTrangThai);
+            boolean matchLoai = "TẤT CẢ".equalsIgnoreCase(boLocLoaiPhong) || p.getLoaiPhong().equalsIgnoreCase(boLocLoaiPhong);
+            boolean matchTrangThai = "TẤT CẢ".equalsIgnoreCase(boLocTrangThai) || p.getTrangThai().equalsIgnoreCase(boLocTrangThai);
 
             if (matchLoai && matchTrangThai) {
                 pnlGridMatrix.add(taoThePhongCard(p));
@@ -320,9 +288,9 @@ public class PetHotelPanel extends JPanel {
         card.setPreferredSize(new Dimension(170, 112));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        boolean isOccupied = "ĐANG CÓ KHÁCH".equalsIgnoreCase(p.trangThai);
-        boolean isCleaning = "ĐANG DỌN DẸP".equalsIgnoreCase(p.trangThai);
-        boolean isSelected = (phongDangChon != null && phongDangChon.maPhong.equals(p.maPhong));
+        boolean isOccupied = "ĐANG CÓ KHÁCH".equalsIgnoreCase(p.getTrangThai());
+        boolean isCleaning = "ĐANG DỌN DẸP".equalsIgnoreCase(p.getTrangThai());
+        boolean isSelected = (phongDangChon != null && phongDangChon.getMaPhong().equals(p.getMaPhong()));
 
         Color cardBg = isOccupied ? new Color(0xFF, 0xF5, 0xF5) : (isCleaning ? new Color(0xFF, 0xFB, 0xEB) : ThemeColors.SURFACE);
         card.setBackground(cardBg);
@@ -336,7 +304,7 @@ public class PetHotelPanel extends JPanel {
         JPanel pnlHeader = new JPanel(new BorderLayout(4, 0));
         pnlHeader.setOpaque(false);
 
-        JLabel lblMaPhong = new JLabel(p.maPhong);
+        JLabel lblMaPhong = new JLabel(p.getMaPhong());
         lblMaPhong.setFont(new Font("Segoe UI", Font.BOLD, 13));
         lblMaPhong.setForeground(ThemeColors.TEXT_PRIMARY);
 
@@ -356,17 +324,17 @@ public class PetHotelPanel extends JPanel {
         JPanel pnlCenter = new JPanel(new GridLayout(isOccupied ? 3 : 2, 1, 0, 1));
         pnlCenter.setOpaque(false);
 
-        JLabel lblLoaiGia = new JLabel(p.loaiPhong + " · " + dfMoney.format(p.donGiaNgay) + "/ng");
+        JLabel lblLoaiGia = new JLabel(p.getLoaiPhong() + " · " + dfMoney.format(p.getDonGiaNgay()) + "/ng");
         lblLoaiGia.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         lblLoaiGia.setForeground(ThemeColors.TEXT_MUTED);
         pnlCenter.add(lblLoaiGia);
 
         if (isOccupied) {
-            JLabel lblBe = new JLabel("Bé: " + p.tenThuCung);
+            JLabel lblBe = new JLabel("Bé: " + p.getTenThuCung());
             lblBe.setFont(new Font("Segoe UI", Font.BOLD, 11));
             lblBe.setForeground(ThemeColors.TEXT_PRIMARY);
 
-            String timeStr = "Vào: " + (p.thoiGianCheckIn != null ? p.thoiGianCheckIn.format(dtfShort) : "—");
+            String timeStr = "Vào: " + (p.getThoiGianCheckIn() != null ? p.getThoiGianCheckIn().format(dtfShort) : "—");
             JLabel lblTime = new JLabel(timeStr);
             lblTime.setFont(new Font("Segoe UI", Font.PLAIN, 10));
             lblTime.setForeground(ThemeColors.TEXT_SECONDARY);
@@ -418,7 +386,7 @@ public class PetHotelPanel extends JPanel {
 
             @Override
             public void mouseExited(MouseEvent e) {
-                if (phongDangChon != null && phongDangChon.maPhong.equals(p.maPhong)) {
+                if (phongDangChon != null && phongDangChon.getMaPhong().equals(p.getMaPhong())) {
                     card.setBorder(new CompoundBorder(
                             new LineBorder(ThemeColors.PRIMARY, 2, true),
                             new EmptyBorder(6, 8, 6, 8)
@@ -459,14 +427,14 @@ public class PetHotelPanel extends JPanel {
         JPanel pnlHead = new JPanel(new BorderLayout(8, 0));
         pnlHead.setOpaque(false);
 
-        JLabel lblMa = new JLabel("PHÒNG " + p.maPhong + " · " + p.loaiPhong);
+        JLabel lblMa = new JLabel("PHÒNG " + p.getMaPhong() + " · " + p.getLoaiPhong());
         lblMa.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblMa.setForeground(ThemeColors.TEXT_PRIMARY);
 
         JLabel lblBadgeStatus;
-        if ("ĐANG CÓ KHÁCH".equalsIgnoreCase(p.trangThai)) {
+        if ("ĐANG CÓ KHÁCH".equalsIgnoreCase(p.getTrangThai())) {
             lblBadgeStatus = ThemeColors.createBadge("ĐANG LƯU TRÚ", new Color(0xFF, 0xC6, 0xC7), ThemeColors.TEXT_PRIMARY);
-        } else if ("ĐANG DỌN DẸP".equalsIgnoreCase(p.trangThai)) {
+        } else if ("ĐANG DỌN DẸP".equalsIgnoreCase(p.getTrangThai())) {
             lblBadgeStatus = ThemeColors.createBadge("ĐANG DỌN", new Color(0xFE, 0xF3, 0xC7), new Color(0x92, 0x40, 0x0E));
         } else {
             lblBadgeStatus = ThemeColors.createBadge("SẴN SÀNG", new Color(0xC3, 0xF0, 0xCA), new Color(0x23, 0x4E, 0x27));
@@ -479,7 +447,7 @@ public class PetHotelPanel extends JPanel {
         // Giá phòng
         gbc.gridy++;
         gbc.insets = new Insets(0, 0, 6, 0);
-        JLabel lblGia = new JLabel("Đơn giá lưu trú: " + dfMoney.format(p.donGiaNgay) + " / ngày (24 giờ)");
+        JLabel lblGia = new JLabel("Đơn giá lưu trú: " + dfMoney.format(p.getDonGiaNgay()) + " / ngày (24 giờ)");
         lblGia.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblGia.setForeground(ThemeColors.TEXT_SECONDARY);
         pnl.add(lblGia, gbc);
@@ -490,7 +458,7 @@ public class PetHotelPanel extends JPanel {
         sep1.setForeground(ThemeColors.BORDER);
         pnl.add(sep1, gbc);
 
-        if ("ĐANG CÓ KHÁCH".equalsIgnoreCase(p.trangThai)) {
+        if ("ĐANG CÓ KHÁCH".equalsIgnoreCase(p.getTrangThai())) {
             // Thông tin thú cưng & chủ nuôi (dùng taoRowThongTin căn lề trái x=0 chuẩn xác)
             gbc.gridy++;
             gbc.insets = new Insets(0, 0, 4, 0);
@@ -501,16 +469,16 @@ public class PetHotelPanel extends JPanel {
 
             gbc.insets = new Insets(1, 0, 1, 0);
             gbc.gridy++;
-            pnl.add(taoRowThongTin("Tên bé cưng:", p.tenThuCung + " (" + p.giongLoai + ")"), gbc);
+            pnl.add(taoRowThongTin("Tên bé cưng:", p.getTenThuCung() + " (" + p.getGiongLoai() + ")"), gbc);
             gbc.gridy++;
-            pnl.add(taoRowThongTin("Chủ sở hữu:", p.tenChu + " - " + p.sdtChu), gbc);
+            pnl.add(taoRowThongTin("Chủ sở hữu:", p.getTenChu() + " - " + p.getSdtChu()), gbc);
             gbc.gridy++;
-            pnl.add(taoRowThongTin("Thời gian gửi:", p.thoiGianCheckIn != null ? p.thoiGianCheckIn.format(dtfDisplay) : "—"), gbc);
+            pnl.add(taoRowThongTin("Thời gian gửi:", p.getThoiGianCheckIn() != null ? p.getThoiGianCheckIn().format(dtfDisplay) : "—"), gbc);
             gbc.gridy++;
-            pnl.add(taoRowThongTin("Dự kiến đón:", p.duKienCheckOut != null ? p.duKienCheckOut.format(dtfDisplay) : "—"), gbc);
+            pnl.add(taoRowThongTin("Dự kiến đón:", p.getDuKienCheckOut() != null ? p.getDuKienCheckOut().format(dtfDisplay) : "—"), gbc);
             gbc.gridy++;
             gbc.insets = new Insets(1, 0, 8, 0);
-            pnl.add(taoRowThongTin("Dặn dò đặc biệt:", p.ghiChuChamSoc != null && !p.ghiChuChamSoc.isEmpty() ? p.ghiChuChamSoc : "Không có"), gbc);
+            pnl.add(taoRowThongTin("Dặn dò đặc biệt:", p.getGhiChuChamSoc() != null && !p.getGhiChuChamSoc().isEmpty() ? p.getGhiChuChamSoc() : "Không có"), gbc);
 
             // Form chỉnh sửa trực tiếp ngay trên khung bên phải
             gbc.gridy++;
@@ -525,11 +493,11 @@ public class PetHotelPanel extends JPanel {
             ge.fill = GridBagConstraints.HORIZONTAL;
             ge.insets = new Insets(2, 2, 2, 2);
 
-            JTextField txtEditBe = new JTextField(p.tenThuCung);
-            JTextField txtEditChu = new JTextField(p.tenChu);
-            JTextField txtEditSdt = new JTextField(p.sdtChu);
-            JTextField txtEditNote = new JTextField(p.ghiChuChamSoc != null ? p.ghiChuChamSoc : "");
-            JTextField txtEditPhi = new JTextField(p.phiDichVuPhatSinh > 0 ? String.valueOf(p.phiDichVuPhatSinh) : "0");
+            JTextField txtEditBe = new JTextField(p.getTenThuCung());
+            JTextField txtEditChu = new JTextField(p.getTenChu());
+            JTextField txtEditSdt = new JTextField(p.getSdtChu());
+            JTextField txtEditNote = new JTextField(p.getGhiChuChamSoc() != null ? p.getGhiChuChamSoc() : "");
+            JTextField txtEditPhi = new JTextField(p.getPhiDichVuPhatSinh() > 0 ? String.valueOf(p.getPhiDichVuPhatSinh()) : "0");
 
             ge.gridx = 0; ge.gridy = 0; ge.weightx = 0;
             pnlQuickEdit.add(new JLabel("Bé cưng:"), ge);
@@ -565,23 +533,23 @@ public class PetHotelPanel extends JPanel {
             lblSecCare.setForeground(ThemeColors.PRIMARY_ACTIVE);
             pnl.add(lblSecCare, gbc);
 
-            JCheckBox chkAnSang = new JCheckBox("Đã cho ăn sáng & nước (07:30)", p.daChoAnSang);
+            JCheckBox chkAnSang = new JCheckBox("Đã cho ăn sáng & nước (07:30)", p.isDaChoAnSang());
             chkAnSang.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             chkAnSang.setOpaque(false);
             chkAnSang.setFocusPainted(false);
-            chkAnSang.addActionListener(e -> { p.daChoAnSang = chkAnSang.isSelected(); luuPhongXuongDB(p); });
+            chkAnSang.addActionListener(e -> { p.setDaChoAnSang(chkAnSang.isSelected()); luuPhongXuongDB(p); });
 
-            JCheckBox chkDiDao = new JCheckBox("Đã dắt đi dạo sân chơi (09:00)", p.daDiDaoVeSinh);
+            JCheckBox chkDiDao = new JCheckBox("Đã dắt đi dạo sân chơi (09:00)", p.isDaDiDaoVeSinh());
             chkDiDao.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             chkDiDao.setOpaque(false);
             chkDiDao.setFocusPainted(false);
-            chkDiDao.addActionListener(e -> { p.daDiDaoVeSinh = chkDiDao.isSelected(); luuPhongXuongDB(p); });
+            chkDiDao.addActionListener(e -> { p.setDaDiDaoVeSinh(chkDiDao.isSelected()); luuPhongXuongDB(p); });
 
-            JCheckBox chkAnToi = new JCheckBox("Đã cho ăn chiều & đệm ấm (17:30)", p.daChoAnToi);
+            JCheckBox chkAnToi = new JCheckBox("Đã cho ăn chiều & đệm ấm (17:30)", p.isDaChoAnToi());
             chkAnToi.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             chkAnToi.setOpaque(false);
             chkAnToi.setFocusPainted(false);
-            chkAnToi.addActionListener(e -> { p.daChoAnToi = chkAnToi.isSelected(); luuPhongXuongDB(p); });
+            chkAnToi.addActionListener(e -> { p.setDaChoAnToi(chkAnToi.isSelected()); luuPhongXuongDB(p); });
 
             gbc.insets = new Insets(1, 0, 1, 0);
             gbc.gridy++;
@@ -598,18 +566,18 @@ public class PetHotelPanel extends JPanel {
             JButton btnLuuCapNhat = ThemeColors.createSecondaryButton("Lưu cập nhật thông tin & Dặn dò", IconHelper.getIcon(IconHelper.EDIT, 14, ThemeColors.PRIMARY_ACTIVE));
             btnLuuCapNhat.setPreferredSize(new Dimension(0, 32));
             btnLuuCapNhat.addActionListener(e -> {
-                if (!txtEditBe.getText().trim().isEmpty()) p.tenThuCung = txtEditBe.getText().trim();
-                if (!txtEditChu.getText().trim().isEmpty()) p.tenChu = txtEditChu.getText().trim();
-                if (!txtEditSdt.getText().trim().isEmpty()) p.sdtChu = txtEditSdt.getText().trim();
-                p.ghiChuChamSoc = txtEditNote.getText().trim();
+                if (!txtEditBe.getText().trim().isEmpty()) p.setTenThuCung(txtEditBe.getText().trim());
+                if (!txtEditChu.getText().trim().isEmpty()) p.setTenChu(txtEditChu.getText().trim());
+                if (!txtEditSdt.getText().trim().isEmpty()) p.setSdtChu(txtEditSdt.getText().trim());
+                p.setGhiChuChamSoc(txtEditNote.getText().trim());
                 try {
                     String rawPhi = txtEditPhi.getText().trim().replaceAll("[^0-9]", "");
-                    p.phiDichVuPhatSinh = rawPhi.isEmpty() ? 0L : Long.parseLong(rawPhi);
+                    p.setPhiDichVuPhatSinh(rawPhi.isEmpty() ? 0L : Long.parseLong(rawPhi));
                 } catch (Exception ignored) {}
                 luuPhongXuongDB(p);
                 locVaHienThiGridPhong();
                 capNhatKhungChiTiet(p);
-                JOptionPane.showMessageDialog(this, "Đã lưu cập nhật thông tin lưu trú phòng " + p.maPhong + "!", "Đã lưu", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Đã lưu cập nhật thông tin lưu trú phòng " + p.getMaPhong() + "!", "Đã lưu", JOptionPane.INFORMATION_MESSAGE);
             });
             pnl.add(btnLuuCapNhat, gbc);
             // nút gửi email báo cáo chăm sóc & dinh dưỡng trong ngày cho chủ nuôi
@@ -620,7 +588,7 @@ public class PetHotelPanel extends JPanel {
             btnGuiBaoCao.addActionListener(e -> {
                 String emailChu = "";
                 try {
-                    entity.KhachHang kh = new bus.KhachHangBus().timKhachHangTheoSoDienThoai(p.sdtChu);
+                    entity.KhachHang kh = new bus.KhachHangBus().timKhachHangTheoSoDienThoai(p.getSdtChu());
                     if (kh != null && kh.getEmail() != null && !kh.getEmail().isEmpty()) {
                         emailChu = kh.getEmail();
                     } else {
@@ -629,9 +597,9 @@ public class PetHotelPanel extends JPanel {
                 } catch (Exception ignored) {
                     emailChu = "khachhang.an@gmail.com";
                 }
-                String tieuDe = "[Mio Pet Hotel] Nhật Ký Chăm Sóc Hàng Ngày Cho Bé " + (p.tenThuCung.isEmpty() ? "Cưng" : p.tenThuCung);
+                String tieuDe = "[Mio Pet Hotel] Nhật Ký Chăm Sóc Hàng Ngày Cho Bé " + (p.getTenThuCung().isEmpty() ? "Cưng" : p.getTenThuCung());
                 String html = utils.EmailThongBaoHelper.taoEmailBaoCaoDinhDuong(
-                        p.tenChu, p.maPhong, p.tenThuCung, p.daChoAnSang, p.daChoAnToi, p.daDiDaoVeSinh, p.phiDichVuPhatSinh, p.ghiChuChamSoc);
+                        p.getTenChu(), p.getMaPhong(), p.getTenThuCung(), p.isDaChoAnSang(), p.isDaChoAnToi(), p.isDaDiDaoVeSinh(), p.getPhiDichVuPhatSinh(), p.getGhiChuChamSoc());
                 utils.EmailThongBaoHelper.moHopThoaiGuiEmail(SwingUtilities.getWindowAncestor(this), emailChu, tieuDe, html);
             });
             pnl.add(btnGuiBaoCao, gbc);
@@ -643,7 +611,7 @@ public class PetHotelPanel extends JPanel {
             btnCheckOut.addActionListener(e -> thucHienCheckOut(p));
             pnl.add(btnCheckOut, gbc);
 
-        } else if ("ĐANG DỌN DẸP".equalsIgnoreCase(p.trangThai)) {
+        } else if ("ĐANG DỌN DẸP".equalsIgnoreCase(p.getTrangThai())) {
             gbc.gridy++;
             gbc.insets = new Insets(0, 0, 14, 0);
             JLabel lblDonDep = new JLabel("Phòng đang trong quy trình khử trùng tiêu chuẩn");
@@ -655,20 +623,20 @@ public class PetHotelPanel extends JPanel {
             JButton btnHoanTatDon = ThemeColors.createPrimaryButton("Đánh dấu Đã Dọn Xong & Sẵn Sàng", IconHelper.getIcon(IconHelper.CHECK, 15, ThemeColors.TEXT_PRIMARY));
             btnHoanTatDon.setPreferredSize(new Dimension(0, 38));
             btnHoanTatDon.addActionListener(e -> {
-                p.trangThai = "TRỐNG";
-                p.tenThuCung = "";
-                p.tenChu = "";
-                p.sdtChu = "";
-                p.giongLoai = "";
-                p.thoiGianCheckIn = null;
-                p.duKienCheckOut = null;
-                p.ghiChuChamSoc = "";
-                p.phiDichVuPhatSinh = 0L;
+                p.setTrangThai("TRỐNG");
+                p.setTenThuCung("");
+                p.setTenChu("");
+                p.setSdtChu("");
+                p.setGiongLoai("");
+                p.setThoiGianCheckIn(null);
+                p.setDuKienCheckOut(null);
+                p.setGhiChuChamSoc("");
+                p.setPhiDichVuPhatSinh(0L);
                 luuPhongXuongDB(p);
                 capNhatSoLieuKPI();
                 locVaHienThiGridPhong();
                 capNhatKhungChiTiet(p);
-                JOptionPane.showMessageDialog(this, "Phòng " + p.maPhong + " đã sẵn sàng tiếp nhận bé cưng mới!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Phòng " + p.getMaPhong() + " đã sẵn sàng tiếp nhận bé cưng mới!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
             });
             pnl.add(btnHoanTatDon, gbc);
 
@@ -676,7 +644,7 @@ public class PetHotelPanel extends JPanel {
             // Phòng TRỐNG -> Hiển thị luôn Form Nhập Thông Tin Check-in trực tiếp bên phải
             gbc.gridy++;
             gbc.insets = new Insets(0, 0, 6, 0);
-            JLabel lblTrong = new JLabel("NHẬP THÔNG TIN TIẾP NHẬN BÉ CƯNG VÀO PHÒNG " + p.maPhong);
+            JLabel lblTrong = new JLabel("NHẬP THÔNG TIN TIẾP NHẬN BÉ CƯNG VÀO PHÒNG " + p.getMaPhong());
             lblTrong.setFont(new Font("Segoe UI", Font.BOLD, 12));
             lblTrong.setForeground(new Color(0x23, 0x4E, 0x27));
             pnl.add(lblTrong, gbc);
@@ -734,7 +702,7 @@ public class PetHotelPanel extends JPanel {
 
             gbc.gridy++;
             gbc.insets = new Insets(0, 0, 6, 0);
-            JButton btnCheckInPhong = ThemeColors.createPrimaryButton("+ Xác nhận Check-in ngay vào phòng " + p.maPhong, IconHelper.getIcon(IconHelper.CHECK, 15, ThemeColors.TEXT_PRIMARY));
+            JButton btnCheckInPhong = ThemeColors.createPrimaryButton("+ Xác nhận Check-in ngay vào phòng " + p.getMaPhong(), IconHelper.getIcon(IconHelper.CHECK, 15, ThemeColors.TEXT_PRIMARY));
             btnCheckInPhong.setPreferredSize(new Dimension(0, 36));
             btnCheckInPhong.addActionListener(e -> {
                 String tenBe = txtBeIn.getText().trim();
@@ -745,23 +713,23 @@ public class PetHotelPanel extends JPanel {
                     return;
                 }
                 int soNgay = (Integer) spnSoNgay.getValue();
-                p.trangThai = "ĐANG CÓ KHÁCH";
-                p.tenThuCung = tenBe;
-                p.giongLoai = txtGiongIn.getText().trim();
-                p.tenChu = tenChu;
-                p.sdtChu = sdt;
-                p.thoiGianCheckIn = LocalDateTime.now();
-                p.duKienCheckOut = LocalDateTime.now().plusDays(soNgay);
-                p.ghiChuChamSoc = txtDanDoIn.getText().trim();
-                p.daChoAnSang = false;
-                p.daChoAnToi = false;
-                p.daDiDaoVeSinh = false;
-                p.phiDichVuPhatSinh = 0L;
+                p.setTrangThai("ĐANG CÓ KHÁCH");
+                p.setTenThuCung(tenBe);
+                p.setGiongLoai(txtGiongIn.getText().trim());
+                p.setTenChu(tenChu);
+                p.setSdtChu(sdt);
+                p.setThoiGianCheckIn(LocalDateTime.now());
+                p.setDuKienCheckOut(LocalDateTime.now().plusDays(soNgay));
+                p.setGhiChuChamSoc(txtDanDoIn.getText().trim());
+                p.setDaChoAnSang(false);
+                p.setDaChoAnToi(false);
+                p.setDaDiDaoVeSinh(false);
+                p.setPhiDichVuPhatSinh(0L);
                 luuPhongXuongDB(p);
                 capNhatSoLieuKPI();
                 locVaHienThiGridPhong();
                 capNhatKhungChiTiet(p);
-                JOptionPane.showMessageDialog(this, "Đã Check-in bé [" + tenBe + "] vào phòng " + p.maPhong + " thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Đã Check-in bé [" + tenBe + "] vào phòng " + p.getMaPhong() + " thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
             });
             pnl.add(btnCheckInPhong, gbc);
 
@@ -769,15 +737,15 @@ public class PetHotelPanel extends JPanel {
             JButton btnChuyenDonDep = ThemeColors.createSecondaryButton("Đổi sang trạng thái Dọn dẹp", IconHelper.getIcon(IconHelper.REFRESH, 14, ThemeColors.TEXT_SECONDARY));
             btnChuyenDonDep.setPreferredSize(new Dimension(0, 32));
             btnChuyenDonDep.addActionListener(e -> {
-                p.trangThai = "ĐANG DỌN DẸP";
-                p.tenThuCung = "";
-                p.tenChu = "";
-                p.sdtChu = "";
-                p.giongLoai = "";
-                p.thoiGianCheckIn = null;
-                p.duKienCheckOut = null;
-                p.ghiChuChamSoc = "";
-                p.phiDichVuPhatSinh = 0L;
+                p.setTrangThai("ĐANG DỌN DẸP");
+                p.setTenThuCung("");
+                p.setTenChu("");
+                p.setSdtChu("");
+                p.setGiongLoai("");
+                p.setThoiGianCheckIn(null);
+                p.setDuKienCheckOut(null);
+                p.setGhiChuChamSoc("");
+                p.setPhiDichVuPhatSinh(0L);
                 luuPhongXuongDB(p);
                 capNhatSoLieuKPI();
                 locVaHienThiGridPhong();
@@ -852,15 +820,15 @@ public class PetHotelPanel extends JPanel {
         // Nạp danh sách phòng trống vào combobox
         List<PhongLuuTru> dsTrong = new ArrayList<>();
         for (PhongLuuTru p : DANH_SACH_PHONG) {
-            if ("TRỐNG".equalsIgnoreCase(p.trangThai) || (phongChiDinh != null && phongChiDinh.maPhong.equals(p.maPhong))) {
+            if ("TRỐNG".equalsIgnoreCase(p.getTrangThai()) || (phongChiDinh != null && phongChiDinh.getMaPhong().equals(p.getMaPhong()))) {
                 dsTrong.add(p);
-                cboPhong.addItem(p.maPhong + " - " + p.loaiPhong + " (" + dfMoney.format(p.donGiaNgay) + "/ngày)");
+                cboPhong.addItem(p.getMaPhong() + " - " + p.getLoaiPhong() + " (" + dfMoney.format(p.getDonGiaNgay()) + "/ngày)");
             }
         }
 
         if (phongChiDinh != null) {
             for (int i = 0; i < dsTrong.size(); i++) {
-                if (dsTrong.get(i).maPhong.equals(phongChiDinh.maPhong)) {
+                if (dsTrong.get(i).getMaPhong().equals(phongChiDinh.getMaPhong())) {
                     cboPhong.setSelectedIndex(i);
                     break;
                 }
@@ -921,19 +889,19 @@ public class PetHotelPanel extends JPanel {
             }
 
             PhongLuuTru pChon = dsTrong.get(selIdx);
-            pChon.trangThai = "ĐANG CÓ KHÁCH";
-            pChon.tenThuCung = tenBe;
-            pChon.giongLoai = txtGiongLoai.getText().trim().isEmpty() ? "Thú cưng" : txtGiongLoai.getText().trim();
-            pChon.tenChu = tenChu;
-            pChon.sdtChu = sdt;
-            pChon.thoiGianCheckIn = LocalDateTime.now();
+            pChon.setTrangThai("ĐANG CÓ KHÁCH");
+            pChon.setTenThuCung(tenBe);
+            pChon.setGiongLoai(txtGiongLoai.getText().trim().isEmpty() ? "Thú cưng" : txtGiongLoai.getText().trim());
+            pChon.setTenChu(tenChu);
+            pChon.setSdtChu(sdt);
+            pChon.setThoiGianCheckIn(LocalDateTime.now());
             int soNgay = (Integer) spnSoNgay.getValue();
-            pChon.duKienCheckOut = LocalDateTime.now().plusDays(soNgay);
-            pChon.ghiChuChamSoc = txtGhiChu.getText().trim();
-            pChon.daChoAnSang = false;
-            pChon.daChoAnToi = false;
-            pChon.daDiDaoVeSinh = false;
-            pChon.phiDichVuPhatSinh = 0L;
+            pChon.setDuKienCheckOut(LocalDateTime.now().plusDays(soNgay));
+            pChon.setGhiChuChamSoc(txtGhiChu.getText().trim());
+            pChon.setDaChoAnSang(false);
+            pChon.setDaChoAnToi(false);
+            pChon.setDaDiDaoVeSinh(false);
+            pChon.setPhiDichVuPhatSinh(0L);
             luuPhongXuongDB(pChon);
 
             capNhatSoLieuKPI();
@@ -943,9 +911,9 @@ public class PetHotelPanel extends JPanel {
 
             JOptionPane.showMessageDialog(this,
                     "CHECK-IN THÀNH CÔNG CHO BÉ " + tenBe.toUpperCase() + "!\n" +
-                            "• Phòng: " + pChon.maPhong + " (" + pChon.loaiPhong + ")\n" +
-                            "• Dự kiến đón: " + pChon.duKienCheckOut.format(dtfDisplay) + " (" + soNgay + " ngày)\n" +
-                            "• Đơn giá: " + dfMoney.format(pChon.donGiaNgay) + "/ngày",
+                            "• Phòng: " + pChon.getMaPhong() + " (" + pChon.getLoaiPhong() + ")\n" +
+                            "• Dự kiến đón: " + pChon.getDuKienCheckOut().format(dtfDisplay) + " (" + soNgay + " ngày)\n" +
+                            "• Đơn giá: " + dfMoney.format(pChon.getDonGiaNgay()) + "/ngày",
                     "Check-in thành công", JOptionPane.INFORMATION_MESSAGE);
             // hỏi nhân viên có muốn gửi email xác nhận check-in lưu trú cho chủ nuôi không
             int hoiGui = JOptionPane.showConfirmDialog(this,
@@ -954,7 +922,7 @@ public class PetHotelPanel extends JPanel {
             if (hoiGui == JOptionPane.YES_OPTION) {
                 String emailChu = "";
                 try {
-                    entity.KhachHang kh = new bus.KhachHangBus().timKhachHangTheoSoDienThoai(pChon.sdtChu);
+                    entity.KhachHang kh = new bus.KhachHangBus().timKhachHangTheoSoDienThoai(pChon.getSdtChu());
                     if (kh != null && kh.getEmail() != null && !kh.getEmail().isEmpty()) {
                         emailChu = kh.getEmail();
                     } else {
@@ -964,11 +932,11 @@ public class PetHotelPanel extends JPanel {
                     emailChu = "khachhang.an@gmail.com";
                 }
                 String html = utils.EmailThongBaoHelper.taoEmailCheckInHotel(
-                        pChon.tenChu, pChon.sdtChu, pChon.maPhong, pChon.loaiPhong, pChon.donGiaNgay,
-                        pChon.tenThuCung, pChon.giongLoai, pChon.thoiGianCheckIn.format(dtfDisplay),
-                        pChon.duKienCheckOut.format(dtfDisplay), pChon.ghiChuChamSoc);
+                        pChon.getTenChu(), pChon.getSdtChu(), pChon.getMaPhong(), pChon.getLoaiPhong(), pChon.getDonGiaNgay(),
+                        pChon.getTenThuCung(), pChon.getGiongLoai(), pChon.getThoiGianCheckIn().format(dtfDisplay),
+                        pChon.getDuKienCheckOut().format(dtfDisplay), pChon.getGhiChuChamSoc());
                 utils.EmailThongBaoHelper.moHopThoaiGuiEmail(SwingUtilities.getWindowAncestor(this),
-                        emailChu, "[Mio Pet Hotel] Xác Nhận Tiếp Nhận Bé " + pChon.tenThuCung + " Lưu Trú", html);
+                        emailChu, "[Mio Pet Hotel] Xác Nhận Tiếp Nhận Bé " + pChon.getTenThuCung() + " Lưu Trú", html);
             }
         });
 
@@ -1001,17 +969,17 @@ public class PetHotelPanel extends JPanel {
     }
 
     private void thucHienCheckOut(PhongLuuTru p) {
-        if (p == null || !"ĐANG CÓ KHÁCH".equalsIgnoreCase(p.trangThai)) return;
+        if (p == null || !"ĐANG CÓ KHÁCH".equalsIgnoreCase(p.getTrangThai())) return;
 
         // Tính số ngày lưu trú thực tế (tối thiểu 1 ngày)
         long days = 1;
-        if (p.thoiGianCheckIn != null) {
-            days = ChronoUnit.DAYS.between(p.thoiGianCheckIn.toLocalDate(), LocalDateTime.now().toLocalDate());
+        if (p.getThoiGianCheckIn() != null) {
+            days = ChronoUnit.DAYS.between(p.getThoiGianCheckIn().toLocalDate(), LocalDateTime.now().toLocalDate());
             if (days <= 0) days = 1;
         }
 
-        long tienPhong = days * p.donGiaNgay;
-        long tongTien = tienPhong + p.phiDichVuPhatSinh;
+        long tienPhong = days * p.getDonGiaNgay();
+        long tongTien = tienPhong + p.getPhiDichVuPhatSinh();
 
         String msg = String.format("XÁC NHẬN CHECK-OUT PET HOTEL:\n" +
                         "• Phòng: %s (%s)\n" +
@@ -1022,23 +990,23 @@ public class PetHotelPanel extends JPanel {
                         "------------------------------------\n" +
                         "TỔNG THANH TOÁN: %s\n\n" +
                         "Bạn có muốn đẩy dữ liệu này sang Hóa đơn POS để thanh toán ngay?",
-                p.maPhong, p.loaiPhong, p.tenThuCung, p.tenChu, p.sdtChu,
-                days, (p.thoiGianCheckIn != null ? p.thoiGianCheckIn.format(dtfShort) : "—"),
-                dfMoney.format(tienPhong), dfMoney.format(p.phiDichVuPhatSinh),
+                p.getMaPhong(), p.getLoaiPhong(), p.getTenThuCung(), p.getTenChu(), p.getSdtChu(),
+                days, (p.getThoiGianCheckIn() != null ? p.getThoiGianCheckIn().format(dtfShort) : "—"),
+                dfMoney.format(tienPhong), dfMoney.format(p.getPhiDichVuPhatSinh()),
                 dfMoney.format(tongTien));
 
         int opt = JOptionPane.showConfirmDialog(this, msg, "Xác nhận Check-out", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (opt == JOptionPane.YES_OPTION) {
-            String tenBe = p.tenThuCung;
-            String tenChu = p.tenChu;
-            String sdt = p.sdtChu;
-            String maPhong = p.maPhong;
-            String loaiPhong = p.loaiPhong;
+            String tenBe = p.getTenThuCung();
+            String tenChu = p.getTenChu();
+            String sdt = p.getSdtChu();
+            String maPhong = p.getMaPhong();
+            String loaiPhong = p.getLoaiPhong();
 
             entity.HotelCheckoutSnapshot snapshot = new entity.HotelCheckoutSnapshot(
                     maPhong, loaiPhong, tenBe, tenChu, sdt,
-                    p.thoiGianCheckIn, LocalDateTime.now(),
-                    (int) days, p.donGiaNgay, p.phiDichVuPhatSinh, tongTien, p.ghiChuChamSoc
+                    p.getThoiGianCheckIn(), LocalDateTime.now(),
+                    (int) days, p.getDonGiaNgay(), p.getPhiDichVuPhatSinh(), tongTien, p.getGhiChuChamSoc()
             );
 
             // Đẩy sang Hóa đơn POS qua MainDashboard
@@ -1057,14 +1025,14 @@ public class PetHotelPanel extends JPanel {
     /** Chỉ giải phóng phòng sau khi hóa đơn POS đã commit thành công. */
     public static boolean hoanTatCheckOutSauThanhToan(String maPhong, String maHoaDon) {
         PhongLuuTru phong = DANH_SACH_PHONG.stream()
-                .filter(p -> p.maPhong.equalsIgnoreCase(maPhong)).findFirst().orElse(null);
-        if (phong == null || !"ĐANG CÓ KHÁCH".equalsIgnoreCase(phong.trangThai)) return false;
-        long days = phong.thoiGianCheckIn == null ? 1
-                : Math.max(1, ChronoUnit.DAYS.between(phong.thoiGianCheckIn.toLocalDate(),
+                .filter(p -> p.getMaPhong().equalsIgnoreCase(maPhong)).findFirst().orElse(null);
+        if (phong == null || !"ĐANG CÓ KHÁCH".equalsIgnoreCase(phong.getTrangThai())) return false;
+        long days = phong.getThoiGianCheckIn() == null ? 1
+                : Math.max(1, ChronoUnit.DAYS.between(phong.getThoiGianCheckIn().toLocalDate(),
                         LocalDateTime.now().toLocalDate()));
-        long tongTien = days * phong.donGiaNgay + phong.phiDichVuPhatSinh;
+        long tongTien = days * phong.getDonGiaNgay() + phong.getPhiDichVuPhatSinh();
         if (!new bus.PetHotelBus().hoanTatCheckOutDaThanhToan(phong, days, tongTien, maHoaDon)) return false;
-        phong.trangThai = "ĐANG DỌN DẸP";
+        phong.setTrangThai("ĐANG DỌN DẸP");
         for (PetHotelPanel panel : INSTANCES) {
             panel.capNhatSoLieuKPI();
             panel.locVaHienThiGridPhong();
