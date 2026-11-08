@@ -27,6 +27,7 @@ public class DoiTraTransferData implements Serializable {
         public boolean nguyenTem;
         public String soLo;
         public int soLuongCoSoHoan;
+        public int soLuongCoSoTra;
 
         public MonTraLai() {}
 
@@ -46,8 +47,9 @@ public class DoiTraTransferData implements Serializable {
             this.thanhTien = thanhTien;
             this.lyDo = lyDo;
             this.nguyenTem = nguyenTem;
-            this.soLo = soLo;
-            this.soLuongCoSoHoan = soLuongCoSoHoan;
+            this.soLuongCoSoTra = soLuongCoSoHoan;
+            this.soLo = nguyenTem ? soLo : null;
+            this.soLuongCoSoHoan = nguyenTem ? soLuongCoSoHoan : 0;
         }
 
         public String getMaSP() { return maSP; }
@@ -77,6 +79,8 @@ public class DoiTraTransferData implements Serializable {
         public String getSoLo() { return soLo; }
         public void setSoLo(String soLo) { this.soLo = soLo; }
 
+        public int getSoLuongCoSoTra() { return soLuongCoSoTra; }
+        public void setSoLuongCoSoTra(int value) { soLuongCoSoTra = value; }
         public int getSoLuongCoSoHoan() { return soLuongCoSoHoan; }
         public void setSoLuongCoSoHoan(int soLuongCoSoHoan) { this.soLuongCoSoHoan = soLuongCoSoHoan; }
     }
