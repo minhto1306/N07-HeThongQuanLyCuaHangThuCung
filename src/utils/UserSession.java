@@ -30,17 +30,33 @@ public final class UserSession {
 
         // đổi từ chữ vai trò trong db sang enum
         public static Role fromString(String roleStr) {
-            if (roleStr == null) return null;
+            if (roleStr == null || roleStr.trim().isEmpty()) return null;
             String normalized = roleStr.trim().toUpperCase();
 
-            if (normalized.contains("QL") || normalized.contains("ADMIN") || normalized.contains("QUANLY") || normalized.contains("KHO")) {
+            // 1. Khớp chính xác mã vai trò chuẩn RBAC
+            if (normalized.equals("NVQL")) return NVQL;
+            if (normalized.equals("NVTN")) return NVTN;
+            if (normalized.equals("NVBH")) return NVBH;
+            if (normalized.equals("NVCS")) return NVCS;
+
+            // 2. Khớp chuỗi chức vụ trong bảng NhanVien
+            if (normalized.equals("QUANLY") || normalized.equals("ADMIN")
+                    || normalized.contains("QUẢN LÝ") || normalized.contains("QUAN LY")) {
                 return NVQL;
-            } else if (normalized.contains("BH") || normalized.contains("BANHANG")) {
-                return NVBH;
-            } else if (normalized.contains("CS") || normalized.contains("KTV") || normalized.contains("KYTHUAT") || normalized.contains("CHAMSOC")) {
-                return NVCS;
-            } else if (normalized.contains("TN") || normalized.contains("THUNGAN")) {
+            }
+            if (normalized.equals("THUNGAN")
+                    || normalized.contains("THU NGÂN") || normalized.contains("THU NGAN")) {
                 return NVTN;
+            }
+            if (normalized.equals("BANHANG")
+                    || normalized.contains("BÁN HÀNG") || normalized.contains("BAN HANG")) {
+                return NVBH;
+            }
+            if (normalized.equals("CHAMSOC") || normalized.equals("KTV")
+                    || normalized.contains("CHĂM SÓC") || normalized.contains("CHAM SOC")
+                    || normalized.contains("KỸ THUẬT") || normalized.contains("KY THUAT")
+                    || normalized.contains("SPA")) {
+                return NVCS;
             }
             return null;
         }

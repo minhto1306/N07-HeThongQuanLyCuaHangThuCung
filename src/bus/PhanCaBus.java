@@ -271,6 +271,9 @@ public class PhanCaBus {
     }
 
     public boolean xoaPhanCong(String maPC) {
+        if (!UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền xóa phân công ca làm việc!");
+        }
         BangPhanCong pc = timPhanCongTheoMa(maPC);
         if (pc != null) {
             try {
@@ -288,6 +291,9 @@ public class PhanCaBus {
     }
 
     public boolean doiCaPhanCong(String maPC, CaLamViec caMoi) {
+        if (!UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền đổi ca làm việc!");
+        }
         BangPhanCong pc = timPhanCongTheoMa(maPC);
         if (pc != null && caMoi != null) {
             List<BangPhanCong> cacCaTrongNgay = layPhanCongTheoNhanVienVaNgay(
@@ -313,6 +319,9 @@ public class PhanCaBus {
     }
 
     public boolean capNhatGhiChuPhanCong(String maPC, String ghiChu) {
+        if (!UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền cập nhật ghi chú phân ca!");
+        }
         BangPhanCong pc = timPhanCongTheoMa(maPC);
         if (pc != null) {
             String noteMoi = ghiChu != null ? ghiChu : "";

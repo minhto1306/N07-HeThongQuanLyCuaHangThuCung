@@ -188,16 +188,37 @@ public class BanHangBus {
 
     public boolean luuGiaoDichPosDayDu(HoaDon hd, PhieuDoiTra pdt,
                                       String maTheSuDung, entity.TheSpaPass theMoi,
-                                      List<String> dsMaPhongHotel, int diemSuDung,
-                                      int diemThuHoiDoTraHang) {
+                                      List<String> dsMaPhongHotel,
+                                      List<entity.HotelCheckoutSnapshot> dsSnapshotsHotel,
+                                      int diemSuDung, int diemThuHoiDoTraHang) {
+        if (diemSuDung < 0) {
+            throw new IllegalArgumentException("Điểm sử dụng không được là số âm: " + diemSuDung);
+        }
+        if (diemThuHoiDoTraHang < 0) {
+            throw new IllegalArgumentException("Điểm thu hồi do trả hàng không được là số âm: " + diemThuHoiDoTraHang);
+        }
+        if (hd != null && hd.getKhachHang() != null && diemSuDung > 0) {
+            KhachHang kh = timKhachHang(hd.getKhachHang().getMaKhachHang());
+            if (kh == null) kh = timKhachHang(hd.getKhachHang().getSoDienThoai());
+            if (kh != null && diemSuDung > kh.getDiemTichLuy()) {
+                throw new IllegalArgumentException("Điểm sử dụng (" + diemSuDung + ") vượt quá điểm tích lũy hiện có (" + kh.getDiemTichLuy() + ")");
+            }
+        }
         try {
             return hoaDonDAO.thanhToanHoaDonDayDu(
-                    hd, pdt, maTheSuDung, theMoi, dsMaPhongHotel,
+                    hd, pdt, maTheSuDung, theMoi, dsMaPhongHotel, dsSnapshotsHotel,
                     diemSuDung, diemThuHoiDoTraHang);
         } catch (SQLException | RuntimeException e) {
             System.err.println("[BanHangBus] Lỗi luuGiaoDichPosDayDu: " + e.getMessage());
             return false;
         }
+    }
+
+    public boolean luuGiaoDichPosDayDu(HoaDon hd, PhieuDoiTra pdt,
+                                      String maTheSuDung, entity.TheSpaPass theMoi,
+                                      List<String> dsMaPhongHotel, int diemSuDung,
+                                      int diemThuHoiDoTraHang) {
+        return luuGiaoDichPosDayDu(hd, pdt, maTheSuDung, theMoi, dsMaPhongHotel, Collections.emptyList(), diemSuDung, diemThuHoiDoTraHang);
     }
 
     /**

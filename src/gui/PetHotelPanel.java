@@ -1035,6 +1035,12 @@ public class PetHotelPanel extends JPanel {
             String maPhong = p.maPhong;
             String loaiPhong = p.loaiPhong;
 
+            entity.HotelCheckoutSnapshot snapshot = new entity.HotelCheckoutSnapshot(
+                    maPhong, loaiPhong, tenBe, tenChu, sdt,
+                    p.thoiGianCheckIn, LocalDateTime.now(),
+                    (int) days, p.donGiaNgay, p.phiDichVuPhatSinh, tongTien, p.ghiChuChamSoc
+            );
+
             // Đẩy sang Hóa đơn POS qua MainDashboard
             Container top = getTopLevelAncestor();
             if (top instanceof MainDashboard) {
@@ -1042,7 +1048,7 @@ public class PetHotelPanel extends JPanel {
                 md.dieuHuongSangChucNang(MainDashboard.CARD_POS);
                 BanHangPOSPanel pos = md.getBanHangPOSPanel();
                 if (pos != null) {
-                    pos.tiepNhanDichVuPetHotel(maPhong, loaiPhong, tenBe, tenChu, sdt, (int) days, p.donGiaNgay, tongTien);
+                    pos.tiepNhanDichVuPetHotel(snapshot);
                 }
             }
         }

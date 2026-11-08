@@ -140,6 +140,9 @@ public class GiaoCaBus {
      * Duyệt ca bàn giao két tiền mặt kèm mốc thời gian duyệt.
      */
     public boolean duyetGiaoCa(String maGC, String maQuanLy, LocalDateTime thoiGianDuyet) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền duyệt bàn giao ca!");
+        }
         return bangGiaoCaDAO.duyetGiaoCa(maGC, maQuanLy, thoiGianDuyet);
     }
 
@@ -154,6 +157,9 @@ public class GiaoCaBus {
      * Bắt đầu một ca làm việc mới: Nhập số tiền mặt đầu ca
      */
     public boolean moCa(String maGiaoCa, NhanVien nv, CaLamViec ca, BigDecimal tienDauCa) throws SQLException {
+        if (!utils.UserSession.canAccessNhom1GiaoCa()) {
+            throw new SecurityException("Người dùng hiện tại không có quyền thực hiện mở ca làm việc!");
+        }
         if (tienDauCa == null || tienDauCa.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Số tiền đầu ca không được âm!");
         }
@@ -177,6 +183,9 @@ public class GiaoCaBus {
      * Chốt ca làm việc cuối ngày: Đối soát tiền mặt lý thuyết vs thực tế
      */
     public boolean chotCa(BigDecimal tienHeThong, BigDecimal tienThucTe, String lyDoChenhLech) throws SQLException {
+        if (!utils.UserSession.canAccessNhom1GiaoCa()) {
+            throw new SecurityException("Người dùng hiện tại không có quyền thực hiện chốt ca làm việc!");
+        }
         if (caHienTai == null) {
             throw new IllegalStateException("Chưa có ca làm việc nào đang mở!");
         }

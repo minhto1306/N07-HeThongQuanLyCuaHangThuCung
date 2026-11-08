@@ -492,7 +492,26 @@ public class DoiTraHangPanel extends JPanel {
 
     public void lamMoiGiaoDien() {
         txtTraCuu.setText("");
-        napHoaDonMacDinh();
+        currentHoaDon = null;
+        currentKhachHang = null;
+        lblInfoMaHD.setText("• Mã HĐ: --");
+        lblInfoKhach.setText("• Khách hàng: --");
+        lblInfoThuNgan.setText("• Thu ngân: --");
+        lblInfoThoiGian.setText("• Thời gian mua: --");
+        lblInfoTongTien.setText("• Tổng thanh toán: --");
+        modelSanPham.setRowCount(0);
+        radKichBanA.setSelected(true);
+        chuyenDoiKichBan(true);
+        lblKetQuaHoanTien.setText("Tiền hàng đổi/trả: 0 đ");
+        lblKetQuaDiemVIP.setText("Khấu trừ điểm VIP: 0 điểm");
+        lblKetQuaKho.setText("Tồn kho hoàn lại: 0 món nguyên tem");
+        lblKetQuaChenhLech.setText("Kịch bản A: Hoàn 100% tiền hàng đã chọn.");
+        if (cboSanPhamMoi != null && cboSanPhamMoi.getItemCount() > 0) {
+            cboSanPhamMoi.setSelectedIndex(0);
+        }
+        if (spnSoLuongMoi != null) {
+            spnSoLuongMoi.setValue(1);
+        }
     }
 
     private void hienThiDialogChonHoaDonLichSu() {
@@ -702,6 +721,20 @@ public class DoiTraHangPanel extends JPanel {
     // XÁC NHẬN & IN PHIẾU ĐỔI TRẢ
     // ==========================================
     public void thucHienXacNhanDoiTra() {
+        if (btnXacNhanInPhieu != null) {
+            if (!btnXacNhanInPhieu.isEnabled()) return;
+            btnXacNhanInPhieu.setEnabled(false);
+        }
+        try {
+            thucHienXacNhanDoiTraInternal();
+        } finally {
+            if (btnXacNhanInPhieu != null) {
+                btnXacNhanInPhieu.setEnabled(true);
+            }
+        }
+    }
+
+    private void thucHienXacNhanDoiTraInternal() {
         if (currentHoaDon == null) {
             JOptionPane.showMessageDialog(this, "Chưa có hóa đơn nào được chọn để xử lý đổi trả!", "Lỗi", JOptionPane.WARNING_MESSAGE);
             return;
@@ -829,31 +862,11 @@ public class DoiTraHangPanel extends JPanel {
             return;
         }
 
-        // Nếu Kịch bản B: trừ kho món mới
-        if (!laKichBanA && spMoi != null) {
-            KhoLoHangPanel.truTonKhoTheoFEFO(spMoi.maSP, slMoi);
-            BanHangPOSPanel.truTonKhoCatalog(spMoi.maSP, slMoi);
-        }
-
-        // Đồng bộ toàn diện tồn kho xuống database và giao diện
-        KhoLoHangPanel.dongBoLoHangTuDatabase();
-        BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
-
-        // 3. Khấu trừ / Cập nhật điểm VIP (Chuẩn hệ thống: 100.000 đ = 1 điểm)
+        // 3. Khấu trừ điểm VIP (Chuẩn hệ thống: 100.000 đ = 1 điểm)
         int diemCu = currentKhachHang != null ? currentKhachHang.getDiemTichLuy() : 0;
         int diemKhauTru = (int) (tongTienTra / 100000L);
-        int diemMoi = Math.max(0, diemCu - diemKhauTru);
 
-        if (!laKichBanA && chenhLech > 0) {
-            int diemCongThem = (int) (chenhLech / 100000L);
-            diemMoi += diemCongThem;
-        }
-
-        if (currentHoaDon.sdt != null && !currentHoaDon.sdt.trim().isEmpty()) {
-            BanHangBus.luuHoacCapNhatKhachHang(currentHoaDon.sdt, currentHoaDon.tenKhach, diemMoi);
-        }
-
-        // Lưu Phiếu Đổi Trả vào SQL Server
+        // Lưu Phiếu Đổi Trả vào SQL Server (Transaction nguyên tử gộp cả phiếu, chi tiết, lô hàng và khấu trừ điểm)
         String maPhieu = utils.MaTuSinhHelper.sinhMaPhieuDoiTra();
         try {
             entity.PhieuDoiTra pdt = new entity.PhieuDoiTra();
@@ -888,8 +901,8 @@ public class DoiTraHangPanel extends JPanel {
                 }
                 pdt.addChiTietDoiTra(chiTiet);
             }
-            if (!doiTraBus.luuPhieuDoiTra(pdt)) {
-                throw new IllegalStateException("Không lưu được phiếu đổi trả; tồn kho chưa được hoàn");
+            if (!doiTraBus.luuPhieuDoiTra(pdt, currentHoaDon.sdt, diemKhauTru)) {
+                throw new IllegalStateException("Không lưu được phiếu đổi trả; giao dịch đã được rollback an toàn");
             }
         } catch (Exception ex) {
             System.err.println("[DoiTraHangPanel] Lỗi lưu phiếu đổi trả CSDL: " + ex.getMessage());
@@ -898,6 +911,12 @@ public class DoiTraHangPanel extends JPanel {
                     "Lỗi lưu đổi trả", JOptionPane.ERROR_MESSAGE);
             return;
         }
+
+        // Cập nhật lại đối tượng khách hàng từ database sau khi transaction commit thành công
+        if (currentHoaDon.sdt != null && !currentHoaDon.sdt.trim().isEmpty()) {
+            this.currentKhachHang = new BanHangBus().timKhachHang(currentHoaDon.sdt);
+        }
+        int diemMoi = currentKhachHang != null ? currentKhachHang.getDiemTichLuy() : Math.max(0, diemCu - diemKhauTru);
 
         KhoLoHangPanel.dongBoLoHangTuDatabase();
         BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();

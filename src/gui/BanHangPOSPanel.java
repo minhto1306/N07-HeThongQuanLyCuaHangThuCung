@@ -459,6 +459,7 @@ public class BanHangPOSPanel extends JPanel {
 
     // Luồng Đổi trả chuyển sang POS thanh toán (Milestone 2)
     private DoiTraTransferData thongTinDoiTraHienTai = null;
+    private final java.util.Map<String, entity.HotelCheckoutSnapshot> mapHotelSnapshots = new java.util.HashMap<>();
     private JPanel pnlThongBaoDoiTra;
     private JLabel lblThongBaoDoiTra;
     private JButton btnHuyDoiTra;
@@ -619,6 +620,34 @@ public class BanHangPOSPanel extends JPanel {
         dongBoLichSuHoaDonNeuCan();
     }
 
+    private void ganBoLocSoNguyenChoSpinner(JSpinner spinner) {
+        if (spinner == null) return;
+        JComponent editor = spinner.getEditor();
+        if (editor instanceof JSpinner.DefaultEditor) {
+            JFormattedTextField tf = ((JSpinner.DefaultEditor) editor).getTextField();
+            javax.swing.text.Document doc = tf.getDocument();
+            if (doc instanceof javax.swing.text.AbstractDocument) {
+                ((javax.swing.text.AbstractDocument) doc).setDocumentFilter(new javax.swing.text.DocumentFilter() {
+                    @Override
+                    public void insertString(FilterBypass fb, int offset, String string, javax.swing.text.AttributeSet attr)
+                            throws javax.swing.text.BadLocationException {
+                        if (string != null && string.matches("\\d+")) {
+                            super.insertString(fb, offset, string, attr);
+                        }
+                    }
+
+                    @Override
+                    public void replace(FilterBypass fb, int offset, int length, String text, javax.swing.text.AttributeSet attrs)
+                            throws javax.swing.text.BadLocationException {
+                        if (text != null && text.matches("\\d*")) {
+                            super.replace(fb, offset, length, text, attrs);
+                        }
+                    }
+                });
+            }
+        }
+    }
+
     private void capNhatTienDoiDiemTuSpinner() {
         if (spnDiemDung == null) return;
         try {
@@ -646,11 +675,14 @@ public class BanHangPOSPanel extends JPanel {
             int maxDiem = Math.min(diemHienCo, maxDiemTheoDon);
             int curVal = ((Number) spnDiemDung.getValue()).intValue();
             if (curVal > maxDiem) curVal = maxDiem;
+            if (curVal < 0) curVal = 0;
             spnDiemDung.setModel(new SpinnerNumberModel(curVal, 0, Math.max(0, maxDiem), 1));
+            ganBoLocSoNguyenChoSpinner(spnDiemDung);
             spnDiemDung.setEnabled(maxDiem > 0);
             capNhatTienDoiDiemTuSpinner();
         } else {
             spnDiemDung.setModel(new SpinnerNumberModel(0, 0, 0, 1));
+            ganBoLocSoNguyenChoSpinner(spnDiemDung);
             spnDiemDung.setEnabled(false);
             tienDoiDiem = 0;
             if (lblTienDoiDiemInfo != null) {
@@ -1477,6 +1509,7 @@ public class BanHangPOSPanel extends JPanel {
         lblDungTitle.setForeground(ThemeColors.TEXT_SECONDARY);
 
         spnDiemDung = new JSpinner(new SpinnerNumberModel(0, 0, 0, 1));
+        ganBoLocSoNguyenChoSpinner(spnDiemDung);
         spnDiemDung.setPreferredSize(new Dimension(65, 24));
         spnDiemDung.setFont(new Font("Segoe UI", Font.BOLD, 11));
         spnDiemDung.setEnabled(false);
@@ -2400,6 +2433,7 @@ public class BanHangPOSPanel extends JPanel {
 
     private void lamSachKhungHoaDon() {
         thongTinDoiTraHienTai = null;
+        mapHotelSnapshots.clear();
         if (pnlThongBaoDoiTra != null) {
             pnlThongBaoDoiTra.setVisible(false);
         }
@@ -2539,7 +2573,22 @@ public class BanHangPOSPanel extends JPanel {
         lamSachKhungHoaDon();
     }
 
+    public void tiepNhanDichVuPetHotel(entity.HotelCheckoutSnapshot snapshot) {
+        if (snapshot == null) return;
+        mapHotelSnapshots.put(snapshot.getMaPhong().trim().toUpperCase(), snapshot);
+        tiepNhanDichVuPetHotel(snapshot.getMaPhong(), snapshot.getLoaiPhong(),
+                snapshot.getTenThuCung(), snapshot.getTenChu(), snapshot.getSdtChu(),
+                snapshot.getSoNgayLuuTru(), snapshot.getDonGiaNgay(), snapshot.getTongTien());
+    }
+
     public void tiepNhanDichVuPetHotel(String maPhong, String loaiPhong, String tenBe, String tenChu, String sdt, int soNgay, long donGiaNgay, long tongTien) {
+        if (maPhong != null && !mapHotelSnapshots.containsKey(maPhong.trim().toUpperCase())) {
+            mapHotelSnapshots.put(maPhong.trim().toUpperCase(), new entity.HotelCheckoutSnapshot(
+                    maPhong, loaiPhong, tenBe, tenChu, sdt,
+                    LocalDateTime.now().minusDays(Math.max(1, soNgay)), LocalDateTime.now(),
+                    soNgay, donGiaNgay, 0L, tongTien, ""
+            ));
+        }
         chonTabPOS();
         dangCapNhatKhach = true;
         try {
@@ -3039,11 +3088,17 @@ public class BanHangPOSPanel extends JPanel {
             String maTheSuDung = null;
             entity.TheSpaPass theMoi = null;
             List<String> dsMaPhongHotel = new ArrayList<>();
+            List<entity.HotelCheckoutSnapshot> dsSnapshotsHotel = new ArrayList<>();
             for (int i = 0; i < modelGioHang.getRowCount(); i++) {
                 String ma = String.valueOf(modelGioHang.getValueAt(i, 1));
                 String ten = String.valueOf(modelGioHang.getValueAt(i, 2));
                 if (ma.startsWith("DV-HOTEL-")) {
-                    dsMaPhongHotel.add(ma.substring("DV-HOTEL-".length()));
+                    String mp = ma.substring("DV-HOTEL-".length());
+                    dsMaPhongHotel.add(mp);
+                    entity.HotelCheckoutSnapshot snap = mapHotelSnapshots.get(mp.toUpperCase());
+                    if (snap != null) {
+                        dsSnapshotsHotel.add(snap);
+                    }
                 }
                 if ("DV_SPAPASS".equals(ma)) {
                     if (theSpaPassHienTai == null || !theSpaPassHienTai.isKhaDung()) {
@@ -3074,7 +3129,7 @@ public class BanHangPOSPanel extends JPanel {
 
             // 3. Hóa đơn, đổi trả, kho và Spa Pass cùng commit/rollback.
             boolean okHD = busThanhToan.luuGiaoDichPosDayDu(
-                    hdReal, pdt, maTheSuDung, theMoi, dsMaPhongHotel,
+                    hdReal, pdt, maTheSuDung, theMoi, dsMaPhongHotel, dsSnapshotsHotel,
                     diemDaDung, diemKhauTruDT);
             if (!okHD) {
                 throw new SQLException("Lưu hóa đơn và cập nhật kho không thành công trong CSDL SQL Server!");
