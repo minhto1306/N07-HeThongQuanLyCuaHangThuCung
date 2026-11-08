@@ -32,13 +32,20 @@ public class DoiTraBus {
     /**
      * Lưu phiếu đổi trả hàng và chi tiết các mặt hàng hoàn trả vào CSDL.
      */
-    public boolean luuPhieuDoiTra(PhieuDoiTra pdt) {
+    public boolean luuPhieuDoiTra(PhieuDoiTra pdt, String sdtKhachHang, int diemKhauTru) {
+        if (!utils.UserSession.canAccessDoiTraHang()) {
+            throw new SecurityException("Người dùng hiện tại không có quyền thực hiện đổi trả hàng!");
+        }
         if (pdt == null) return false;
         try {
-            return hoaDonDAO.luuPhieuDoiTra(pdt);
+            return hoaDonDAO.luuPhieuDoiTra(pdt, sdtKhachHang, diemKhauTru);
         } catch (SQLException e) {
             System.err.println("[DoiTraBus] Lỗi luuPhieuDoiTra: " + e.getMessage());
             return false;
         }
+    }
+
+    public boolean luuPhieuDoiTra(PhieuDoiTra pdt) {
+        return luuPhieuDoiTra(pdt, null, 0);
     }
 }

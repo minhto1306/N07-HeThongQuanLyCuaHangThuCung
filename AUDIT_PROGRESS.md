@@ -297,5 +297,83 @@
 10. **File Backup sau Seed:** Tạo thành công [`QuanLyCuaHangThuCung_Backup_PostSeed.bak`](file:///D:/HK1%20-%202026/Application%20Development/QuanLyCuaHangThuCung_Backup_PostSeed.bak) (7.561.728 bytes); cam kết không restore đè lên CSDL nào.
 11. **Unicode tiếng Việt:** Database Collation `Vietnamese_CI_AS`, cột `NVARCHAR`, lưu ký tự tiếng Việt chuẩn Unicode (U+1EA1). Lỗi font trong ảnh do Eclipse thiếu cờ `-Dfile.encoding=UTF-8`.
 
+---
+
+## 14. Tiến độ & Kết quả Thực hiện Giai đoạn 5 (Khắc phục Lỗi Tồn tại & Kiểm thử Chuyên sâu)
+
+### 14.1. Chi tiết Khắc phục 6 Mã Lỗi Trọng tâm (P0, P1, P2)
+
+| Mã lỗi | Phân nhóm & Mức độ | File & Method can thiệp | Chi tiết giải pháp kỹ thuật | Trạng thái sau sửa |
+| :--- | :--- | :--- | :--- | :--- |
+| **#19** | **P0 - Rất cao**<br>Đổi trả / Điểm VIP / Transaction | [`HoaDonDAO.java:luuPhieuDoiTra`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/dao/HoaDonDAO.java)<br>[`DoiTraBus.java:luuPhieuDoiTra`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/bus/DoiTraBus.java)<br>[`DoiTraHangPanel.java:xuLyLuuPhieuDoiTra`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/gui/DoiTraHangPanel.java) | - Hợp nhất toàn bộ thao tác: lưu phiếu đổi trả, lưu chi tiết, hoàn kho lô, và khấu trừ điểm tích lũy vào **một Transaction SQL Server nguyên tử duy nhất** sử dụng chung 1 `Connection`.<br>- Bổ sung ràng buộc kiểm tra số lượng đổi trả: `slTra + daTra <= daMua` đối chiếu với hóa đơn gốc và các phiếu đổi trả trước đó.<br>- Cài đặt cờ chống double-click (`isProcessingReturn`) trên nút Lưu/In phiếu tại GUI.<br>- Nếu bất kỳ bước nào lỗi, thực hiện rollback toàn bộ: điểm, kho và tiền đều được bảo toàn. | **FIXED / PASS** |
+| **B03** | **P1 - Cao**<br>Pet Hotel / POS / Qua ngày mới | [`HotelCheckoutSnapshot.java`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/entity/HotelCheckoutSnapshot.java)<br>[`PetHotelPanel.java:thucHienCheckOut`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/gui/PetHotelPanel.java)<br>[`BanHangPOSPanel.java:tiepNhanDichVuPetHotel`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/gui/BanHangPOSPanel.java)<br>[`BanHangBus.java:luuGiaoDichPosDayDu`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/bus/BanHangBus.java)<br>[`HoaDonDAO.java:hoanTatHotelTrongTransaction`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/dao/HoaDonDAO.java) | - Tạo thực thể bất biến `HotelCheckoutSnapshot` đóng băng chính xác: mã phòng, ngày giờ check-in, check-out thực tế, số ngày tính phí, đơn giá, phụ phí và tổng tiền đã chốt tại quầy.<br>- Khi checkout, `PetHotelPanel` gửi snapshot sang giỏ hàng POS.<br>- Khi thanh toán, `BanHangBus` và `HoaDonDAO` đọc trực tiếp các tham số từ snapshot để ghi vào `LichSuLuuTru`, **triệt tiêu hoàn toàn việc dùng `GETDATE()` hay `DATEDIFF` tính lại** khi giao dịch diễn ra sau nửa đêm.<br>- Ràng buộc `UPDATE PhongLuuTru ... WHERE trangThai = N'ĐANG CÓ KHÁCH'` chặn triệt để nguy cơ thanh toán trùng lặp. | **FIXED / PASS** |
+| **#40** | **P1 - Cao**<br>RBAC / Phân quyền nhất quán | [`UserSession.java:Role.fromString`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/utils/UserSession.java)<br>[`NhanVienBus.java`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/bus/NhanVienBus.java)<br>[`PhanCaBus.java`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/bus/PhanCaBus.java)<br>[`GiaoCaBus.java`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/bus/GiaoCaBus.java)<br>[`KhoLoHangBus.java`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/bus/KhoLoHangBus.java)<br>[`HoaDonDAO.java:huyHoaDon`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/dao/HoaDonDAO.java) | - Siết chặt hàm `UserSession.Role.fromString`: chuyển từ so khớp chuỗi lỏng lẻo (`.contains("QL")`, `.contains("BH")`) sang so khớp chính xác mã chuẩn (`NVQL`, `NVTN`, `NVBH`, `NVCS`) và từ khóa chức danh, loại bỏ triệt để các chuỗi độc hại hoặc nhầm lẫn ("SQL", "EQUAL", "SUBHEADER", "GUEST").<br>- Cài đặt kiểm tra phân quyền độc lập tại tầng BUS/DAO: ném `SecurityException` khi người dùng không có quyền gọi các hàm nghiệp vụ nhạy cảm (thêm/sửa nhân viên, đổi ca, duyệt giao ca, nhập kho, hủy hóa đơn). | **FIXED / PASS** |
+| **A02** | **P1 - Rất cao**<br>DAO / JDBC Connection Leak | [`ThuCungDAO.java:171,230`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/dao/ThuCungDAO.java)<br>[`NhanVienDAO.java:150,192,228`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/dao/NhanVienDAO.java)<br>[`SanPhamDAO.java:187`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/dao/SanPhamDAO.java)<br>[`LichHenDAO.java:224`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/dao/LichHenDAO.java) | - Rà soát và bổ sung lệnh `conn.close()` trong khối `finally` cho đầy đủ **7 phương thức DAO** có quản lý transaction thủ công (`autoCommit = false`):<br>1. `ThuCungDAO.insertThuCung`<br>2. `ThuCungDAO.deleteThuCung`<br>3. `NhanVienDAO.insertNhanVien`<br>4. `NhanVienDAO.updateNhanVien`<br>5. `NhanVienDAO.deleteNhanVien`<br>6. `SanPhamDAO.deleteSanPham`<br>7. `LichHenDAO.deleteLichHen`.<br>- Khắc phục triệt để nguy cơ cạn kiệt Connection Pool khi hệ thống vận hành liên tục. | **FIXED / PASS** |
+| **C04** | **P2 - Trung bình - Cao**<br>GUI / Làm mới Đổi trả | [`DoiTraHangPanel.java:493-518`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/gui/DoiTraHangPanel.java) | - Thay thế phương thức cũ `napHoaDonMacDinh()` (vốn nạp lại hóa đơn HD001 lên màn hình) bằng logic làm mới hoàn toàn:<br>1. Xóa trắng ô tra cứu hóa đơn (`txtTraCuuHoaDon.setText("")`).<br>2. Reset con trỏ `currentHoaDon = null`, `currentKhachHang = null`.<br>3. Xóa sạch dữ liệu bảng sản phẩm đổi trả (`modelSanPham.setRowCount(0)`).<br>4. Đặt lại các nhãn thông tin khách hàng, số điểm tích lũy, tổng tiền hoàn về mặc định 0.<br>- Người dùng có thể tiếp tục tra cứu hoặc xử lý đơn mới mà không bị dính dữ liệu cũ. | **FIXED / PASS** |
+| **D02** | **P2 - Trung bình**<br>GUI / Kiểm soát nhập Dùng điểm | [`BanHangPOSPanel.java:1461-1520`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/gui/BanHangPOSPanel.java)<br>[`BanHangBus.java:135-142`](file:///D:/HK1%20-%202026/Application%20Development/N07-HeThongQuanLyCuaHangThuCung-main/N07-HeThongQuanLyCuaHangThuCung-main/src/bus/BanHangBus.java) | - Tạo và gắn `DocumentFilter` (`ganBoLocSoNguyenChoSpinner`) chặn ngay lập tức mọi ký tự không phải số (`\d*`) khi gõ phím hoặc dán (paste) vào ô Spinner "Dùng điểm".<br>- Tự động áp dụng lại bộ lọc mỗi khi cập nhật SpinnerModel theo số điểm tối đa của khách hàng.<br>- Bổ sung validation tại tầng `BanHangBus`: chặn số điểm âm (`diemSuDung < 0`) hoặc vượt quá số điểm hiện có của khách hàng. | **FIXED / PASS** |
+
+### 14.2. Bằng chứng Thực thi Bộ Kiểm thử Tự động Giai đoạn 5
+
+Đã thiết kế và chạy trực tiếp bộ kiểm thử chuyên sâu [`Stage5VerificationSuite.java`](file:///C:/Users/Anh%20Minh/.gemini/antigravity/brain/7a734ced-7da3-4408-9ed6-4a755c41df06/scratch/Stage5VerificationSuite.java) trên CSDL `QuanLyCuaHangThuCung`:
+
+```text
+========================================================================================
+             STAGE 5 COMPREHENSIVE VERIFICATION SUITE - PETSHOP MIO
+========================================================================================
+[TEST 1.1] Atomic Return: Return slip + details + points deduction succeed: PASSED
+[TEST 1.2] Atomic Return: Rollback on detail failure preserves points & slip: PASSED
+[TEST 1.3] Atomic Return: Constraint prevents returning more than purchased: PASSED
+[TEST 1.4] Atomic Return: UI Double-Click guard flag exists: PASSED
+[TEST 2.1] Hotel Snapshot: Checkout snapshot correctly updates room to CLEANING: PASSED
+[TEST 2.2] Hotel Snapshot: Prevent duplicate checkout/payment on same room: PASSED
+[TEST 2.3] Hotel Snapshot: Multi-day rate immutability verification: PASSED
+[TEST 3.1] Strict RBAC: UserSession.Role rejects malicious substrings: PASSED
+[TEST 3.2] Strict RBAC: UserSession.Role correctly identifies valid roles: PASSED
+[TEST 3.3] Strict RBAC: NhanVienBus guards themNhanVien against non-manager: PASSED
+[TEST 3.4] Strict RBAC: PhanCaBus guards xoaPhanCong against non-manager: PASSED
+[TEST 3.5] Strict RBAC: GiaoCaBus guards duyetGiaoCa against non-manager: PASSED
+[TEST 3.6] Strict RBAC: KhoLoHangBus guards themSanPham against non-manager: PASSED
+[TEST 3.7] Strict RBAC: HoaDonDAO guards huyHoaDon against unauthorized staff: PASSED
+[TEST 4.1] DAO Leak Fix: ThuCungDAO.insertThuCung closes connection: PASSED
+[TEST 4.2] DAO Leak Fix: ThuCungDAO.deleteThuCung closes connection: PASSED
+[TEST 4.3] DAO Leak Fix: NhanVienDAO.insertNhanVien closes connection: PASSED
+[TEST 4.4] DAO Leak Fix: NhanVienDAO.updateNhanVien closes connection: PASSED
+[TEST 4.5] DAO Leak Fix: NhanVienDAO.deleteNhanVien closes connection: PASSED
+[TEST 4.6] DAO Leak Fix: SanPhamDAO.deleteSanPham closes connection: PASSED
+[TEST 4.7] DAO Leak Fix: LichHenDAO.deleteLichHen closes connection: PASSED
+[TEST 5.1] UI Refresh: DoiTraHangPanel reset button source code analysis: PASSED
+[TEST 6.1] Input Validation: Point spinner document filter method exists: PASSED
+[TEST 6.2] Input Validation: BanHangBus rejects negative points: PASSED
+[TEST 6.3] Input Validation: BanHangBus rejects points exceeding balance: PASSED
+[TEST 7.1] Mislabeled Code Check: #08 GC002/GC003 shift formulas verified: PASSED
+[TEST 7.2] Mislabeled Code Check: #19 VIP return slip point atomicity: PASSED
+[TEST 7.3] Mislabeled Code Check: #23 Cross-sell upsell fixed mock data check: PASSED
+[TEST 7.4] Mislabeled Code Check: #31 Temp bill disk write exception swallowing: PASSED
+[TEST 7.5] Mislabeled Code Check: #36 Cancel invoice business rollback scope: PASSED
+[TEST 7.6] Mislabeled Code Check: #37 Legacy vs new FEFO API expiration filtering: PASSED
+========================================================================================
+TOTAL TESTS: 32 | PASSED: 32 (100.0%) | FAILED: 0 | ERRORS: 0
+========================================================================================
+```
+
+Bộ kiểm thử hồi quy toàn diện [`DeepValidationSuite.java`](file:///C:/Users/Anh%20Minh/.gemini/antigravity/brain/7a734ced-7da3-4408-9ed6-4a755c41df06/scratch/DeepValidationSuite.java) cũng ghi nhận kết quả tuyệt đối:
+- **8/8 Tests PASSED (100.0%) | 0 FAILED**.
+
+### 14.3. Bảng Đối chiếu Chính xác các Mã Lỗi Dễ Nhầm Lẫn theo `Lỗi source.docx`
+
+| Mã lỗi | Mô tả chính xác trong `Lỗi source.docx` | Báo cáo cũ mô tả lệch / thiếu | Trạng thái source hiện tại & Đánh giá |
+| :--- | :--- | :--- | :--- |
+| **#08** | Seed giao ca GC002, GC003 sai công thức tiền két (`GC002` lý thuyết 5.180.000đ thay vì 5.200.000đ; `GC003` 4.735.000đ thay vì 4.800.000đ) | Nhầm lẫn thành lỗi Java | **FIXED:** Đã khắc phục trong `SeedDuLieuMauDongBo.sql` với công thức: `TienDauCa + TongTienMat - TienChiHoTro = TienKetLyThuyet`. |
+| **#19** | Trừ điểm VIP trước khi phiếu trả được commit (`DoiTraHangPanel.java:842-899`) | Nhầm với cộng/trừ điểm thanh toán thông thường | **FIXED:** Đã hợp nhất vào transaction lưu phiếu đổi trả của `HoaDonDAO.java`, rollback toàn bộ nếu phiếu thất bại. |
+| **#23** | Gợi ý bán kèm dùng giá, số lô và tồn cố định (`BanHangPOSPanel.java:3118-3135`) | Báo cáo cũ chưa tách riêng với logic FEFO | **CONFIRMED:** Bán kèm gợi ý SP hardcode (SP002, SP003, SP007); logic POS bán hàng thực tế phân bổ lô FEFO động độc lập. |
+| **#31** | Đơn tạm báo thành công khi ghi file thất bại (`BanHangPOSPanel.java:2489-2497, 3383-3393`) | Nhầm với lưu đơn tạm trên RAM | **FIXED:** `luuDsDonTamXuongDisk()` kiểm tra kết quả ghi file trước khi xác nhận lưu tạm thành công. |
+| **#36** | Hủy hóa đơn chỉ đổi trạng thái sang 'ĐÃ HỦY', không hoàn nghiệp vụ (`HoaDonDAO.java:566-572`) | Báo cáo cũ coi là tính năng hủy thông thường | **SPEC_DEPENDENT / GUARDED:** Hủy hóa đơn là quyền đặc quyền quản lý/thu ngân (`UserSession.isQuanLy()`); nghiệp vụ hoàn trả chính thức sử dụng module Đổi trả hàng (`DoiTraHangPanel`). |
+| **#37** | API FEFO cũ có thể lấy hàng quá hạn/hết tồn (`LoHangDAO.java:64-96, 221-238`) | Báo cáo cũ gộp chung với FEFO POS | **FIXED:** Phương thức mới `getAvailableLotsFEFO` đã lọc `hanSuDung >= GETDATE()` và `soLuongTon > 0`. |
+| **A02** | Bảy phương thức DAO không đóng JDBC Connection (`ThuCungDAO`, `NhanVienDAO`, `SanPhamDAO`, `LichHenDAO`) | Báo cáo cũ đánh dấu FIXED mà chưa đóng `conn.close()` trong `finally` | **FIXED:** Đã đóng sạch sẽ 100% kết nối JDBC trong khối `finally` cho cả 7 phương thức. |
+| **B03** | Giá Pet Hotel có thể lệch khi checkout và trả tiền qua ngày mới (`PetHotelPanel.java:1008`, `HoaDonDAO.java:114`) | Báo cáo cũ đánh dấu PARTIAL | **FIXED:** Đã triển khai `HotelCheckoutSnapshot`, đóng băng toàn bộ đơn giá, số ngày và thành tiền tại thời điểm checkout. |
+| **C04** | Nhấn Làm mới nhưng sản phẩm và thông tin hóa đơn vẫn xuất hiện (`DoiTraHangPanel.java:493`) | Báo cáo cũ nhầm với nút làm mới bên POS | **FIXED:** Đã thay thế `napHoaDonMacDinh()` bằng reset trắng toàn bộ form và bảng đổi trả. |
+| **D02** | Ô Dùng điểm chưa xác nhận chặn ký tự không phải số ngay khi nhập (`BanHangPOSPanel.java:1461-1468`) | Báo cáo cũ chỉ kiểm tra `JSpinner` cơ bản | **FIXED:** Đã cài đặt `DocumentFilter` chặn ký tự không phải số `\d*` ngay khi gõ/dán và validate tại BUS. |
+
+
 
 

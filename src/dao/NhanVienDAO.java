@@ -148,6 +148,7 @@ public class NhanVienDAO {
         } finally {
             if (conn != null) {
                 try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
+                try { conn.close(); } catch (SQLException ignored) {}
             }
         }
     }
@@ -190,6 +191,7 @@ public class NhanVienDAO {
         } finally {
             if (conn != null) {
                 try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
+                try { conn.close(); } catch (SQLException ignored) {}
             }
         }
     }
@@ -226,6 +228,7 @@ public class NhanVienDAO {
         } finally {
             if (conn != null) {
                 try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
+                try { conn.close(); } catch (SQLException ignored) {}
             }
         }
     }

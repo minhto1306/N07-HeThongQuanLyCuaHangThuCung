@@ -98,6 +98,9 @@ public class KhoLoHangBus {
      * Thêm sản phẩm mới kèm đơn vị quy đổi cơ sở.
      */
     public boolean themSanPham(SanPham sp) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền thêm sản phẩm mới!");
+        }
         try {
             return sanPhamDAO.insertSanPham(sp);
         } catch (SQLException e) {
@@ -110,6 +113,9 @@ public class KhoLoHangBus {
      * Thêm đơn vị tính mới vào CSDL.
      */
     public boolean themDonViTinh(entity.DonViTinh dvt) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền thêm đơn vị tính!");
+        }
         try {
             return sanPhamDAO.insertDonViTinh(dvt);
         } catch (SQLException e) {
@@ -122,6 +128,9 @@ public class KhoLoHangBus {
      * Thêm đơn vị quy đổi mới cho sản phẩm.
      */
     public boolean themQuyDoi(QuyDoiDonVi qd) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền thêm quy đổi đơn vị!");
+        }
         try {
             return sanPhamDAO.insertQuyDoi(qd);
         } catch (SQLException e) {
@@ -134,6 +143,9 @@ public class KhoLoHangBus {
      * Xóa đơn vị quy đổi theo mã.
      */
     public boolean xoaQuyDoi(String maQuyDoi) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền xóa quy đổi đơn vị!");
+        }
         try {
             return sanPhamDAO.deleteQuyDoi(maQuyDoi);
         } catch (SQLException e) {
@@ -182,6 +194,9 @@ public class KhoLoHangBus {
      * Nhập lô hàng mới vào kho.
      */
     public boolean nhapLoHang(LoHang lh) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền nhập lô hàng mới!");
+        }
         try {
             return loHangDAO.insertLoHang(lh);
         } catch (SQLException e) {
@@ -191,6 +206,9 @@ public class KhoLoHangBus {
     }
 
     public boolean nhapSanPhamVaLoHang(SanPham sp, QuyDoiDonVi qd, LoHang lo) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền thực hiện nghiệp vụ nhập kho!");
+        }
         try {
             return new dao.NhapKhoDAO().nhapSanPhamVaLoHang(sp, qd, lo);
         } catch (SQLException e) {
@@ -203,6 +221,9 @@ public class KhoLoHangBus {
      * Cập nhật số lượng tồn kho thực tế khi kiểm kê.
      */
     public boolean capNhatSoLuongTon(String soLo, int soLuongMoi) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền điều chỉnh số lượng tồn kiểm kê!");
+        }
         try {
             return loHangDAO.capNhatSoLuongTon(soLo, soLuongMoi);
         } catch (SQLException e) {

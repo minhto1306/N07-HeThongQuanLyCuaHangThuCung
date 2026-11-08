@@ -40,6 +40,9 @@ public class NhanVienBus {
      */
     public boolean themNhanVien(String hoTen, String chucVu, String soDienThoai, String email,
                                 String matKhau, String vaiTro) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền thêm nhân viên mới!");
+        }
         String maNV = MaTuSinhHelper.sinhMaNhanVien();
         String passHash = PasswordHasher.hashSHA256((matKhau != null && !matKhau.trim().isEmpty()) ? matKhau.trim() : "123456");
         String role = (vaiTro != null && !vaiTro.trim().isEmpty()) ? vaiTro.trim() : "NVTN";
@@ -62,6 +65,9 @@ public class NhanVienBus {
      * Đổi vai trò tài khoản nhân viên.
      */
     public boolean doiVaiTro(String maNVHoacSdt, String vaiTroMoi) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền thay đổi vai trò tài khoản!");
+        }
         try {
             return nhanVienDAO.updateVaiTro(maNVHoacSdt, vaiTroMoi);
         } catch (SQLException e) {
@@ -74,6 +80,9 @@ public class NhanVienBus {
      * Cấp lại mật khẩu (mật khẩu mới được tự động băm SHA-256 trước khi lưu).
      */
     public boolean resetMatKhau(String maNVHoacSdt, String matKhauMoi) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền cấp lại mật khẩu tài khoản!");
+        }
         String rawPass = (matKhauMoi != null && !matKhauMoi.trim().isEmpty()) ? matKhauMoi.trim() : "123456";
         String hash = PasswordHasher.hashSHA256(rawPass);
         try {
@@ -88,6 +97,9 @@ public class NhanVienBus {
      * Bật/tắt trạng thái hoạt động (Khóa hoặc Kích hoạt).
      */
     public boolean toggleTrangThai(String maNVHoacSdt) {
+        if (!utils.UserSession.isQuanLy()) {
+            throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền khóa/kích hoạt tài khoản!");
+        }
         for (NhanVien nv : layDanhSachNhanVien()) {
             boolean match = nv.getMaNhanVien().equalsIgnoreCase(maNVHoacSdt) ||
                             nv.getSoDienThoai().equalsIgnoreCase(maNVHoacSdt) ||
