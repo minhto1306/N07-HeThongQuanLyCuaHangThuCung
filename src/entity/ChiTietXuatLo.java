@@ -26,7 +26,6 @@ public class ChiTietXuatLo extends ChiTietHoaDon {
         } else if (loHang != null && loHang.getSanPham() != null) {
             this.sanPham = loHang.getSanPham();
         }
-        tinhSoLuongXuatCoSo();
     }
 
     public LoHang getLoHang() {
@@ -49,27 +48,13 @@ public class ChiTietXuatLo extends ChiTietHoaDon {
         if (quyDoiDonVi != null && quyDoiDonVi.getSanPham() != null) {
             this.sanPham = quyDoiDonVi.getSanPham();
         }
-        if (this.donGiaLucBan == null || this.donGiaLucBan.compareTo(BigDecimal.ZERO) <= 0) {
-            apDungGiaNiemYet();
-        }
-        tinhSoLuongXuatCoSo();
     }
 
     @Override
     public void setSoLuong(int soLuong) {
         super.setSoLuong(soLuong);
-        tinhSoLuongXuatCoSo();
     }
 
-    @Override
-    public void apDungGiaNiemYet() {
-        if (quyDoiDonVi != null && quyDoiDonVi.getGiaBan() != null && quyDoiDonVi.getGiaBan().compareTo(BigDecimal.ZERO) > 0) {
-            this.donGiaLucBan = quyDoiDonVi.getGiaBan();
-            this.thanhTien = tinhThanhTien();
-        } else {
-            super.apDungGiaNiemYet();
-        }
-    }
 
     public int getSoLuongXuatCoSo() {
         return soLuongXuatCoSo;
@@ -82,18 +67,8 @@ public class ChiTietXuatLo extends ChiTietHoaDon {
     /**
      * Tự động tính số lượng đơn vị cơ sở cần trừ trong kho lô hàng
      */
-    public void tinhSoLuongXuatCoSo() {
-        int tyLe = (quyDoiDonVi != null) ? quyDoiDonVi.getTyLeQuyDoi() : 1;
-        this.soLuongXuatCoSo = this.soLuong * tyLe;
-    }
+    // note lai: tinhSoLuongXuatCoSo da chuyen sang BanHangBus/KhoLoHangBus
 
-    @Override
-    public BigDecimal tinhThanhTien() {
-        if (this.donGiaLucBan == null) {
-            return BigDecimal.ZERO;
-        }
-        return this.donGiaLucBan.multiply(BigDecimal.valueOf(this.soLuong));
-    }
 
     @Override
     public String getTenKhoanMuc() {

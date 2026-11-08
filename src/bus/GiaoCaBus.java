@@ -203,7 +203,11 @@ public class GiaoCaBus {
 
         caHienTai.setTienCuoiCaHeThong(tienHeThong);
         caHienTai.setTienCuoiCaThucTe(tienThucTe);
-        caHienTai.capNhatTienChenhLech();
+        // note lai: tinh toan tien chenh lech chuyen ve dung tang BUS (null-safe)
+        BigDecimal chenhLech = (tienThucTe != null && tienHeThong != null)
+                ? tienThucTe.subtract(tienHeThong)
+                : BigDecimal.ZERO;
+        caHienTai.setTienChenhLech(chenhLech);
         caHienTai.setGioKetThucThucTe(LocalDateTime.now());
         caHienTai.setTrangThai("CHO_DUYET");
 

@@ -1,0 +1,25 @@
+{
+  "output": {
+    "blockers": [],
+    "files": [
+      {
+        "content": "# Worker smoke\n\nMIO_WORKER_SMOKE_OK\n",
+        "delete": false,
+        "path": "docs/ai-context/worker-smoke.md"
+      }
+    ],
+    "observations": [
+      "Created docs/ai-context/worker-smoke.md with required marker text MIO_WORKER_SMOKE_OK",
+      "Application code remains completely untouched"
+    ],
+    "summary": "Create documentation marker file for worker smoke test"
+  },
+  "conversationId": "cdf0ce4a-2ff2-4c45-a536-7aaf13ebbf6c",
+  "usage": {
+    "input_tokens": 34484,
+    "output_tokens": 3179,
+    "thinking_tokens": 2936,
+    "cache_read_tokens": 27729,
+    "total_tokens": 37663
+  }
+}

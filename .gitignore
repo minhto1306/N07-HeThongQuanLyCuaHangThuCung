@@ -20,8 +20,7 @@ obj/
 *.suo
 *.user
 config/*.dat
-config/*.local.properties
-config/*.properties.local
+config/database.test.properties
 
 phan_chia_code_4_thanh_vien/
 *.ps1

@@ -20,24 +20,35 @@ public class ThuCungBus {
 
     private final ThuCungDAO thuCungDAO;
     private final LichHenDAO lichHenDAO;
-    private String lastErrorMessage = "";
 
     public ThuCungBus() {
         this.thuCungDAO = new ThuCungDAO();
         this.lichHenDAO = new LichHenDAO();
     }
 
-    public String getLastErrorMessage() {
-        return lastErrorMessage;
-    }
-
     // Nạp toàn bộ hồ sơ thú cưng từ CSDL lên, nếu lỗi thì trả về danh sách rỗng để UI không bị NullPointerException
     public List<HoSoThuCung> layDanhSachHoSoThuCung() {
+        return layDanhSachHoSoThuCung(10);
+    }
+
+    public List<HoSoThuCung> layDanhSachHoSoThuCung(int limit) {
         try {
-            List<HoSoThuCung> dbList = thuCungDAO.getAllHoSoThuCung();
+            List<HoSoThuCung> dbList = thuCungDAO.getAllHoSoThuCung(limit);
             return dbList != null ? dbList : Collections.emptyList();
         } catch (SQLException e) {
             System.err.println("[ThuCungBus] Lỗi lấy HoSoThuCung từ CSDL: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public List<HoSoThuCung> timKiemHoSoThuCung(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return layDanhSachHoSoThuCung(10);
+        }
+        try {
+            return thuCungDAO.timKiemHoSoThuCung(keyword.trim(), 20);
+        } catch (SQLException e) {
+            System.err.println("[ThuCungBus] Lỗi tìm kiếm HoSoThuCung: " + e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -74,19 +85,19 @@ public class ThuCungBus {
         }
     }
 
-    // Tiếp nhận thú cưng mới kèm tra cứu/tạo khách hàng tự động theo SĐT & tên chủ nuôi (DV03, DV04)
+    // Tiếp nhận thú cưng mới kèm tra cứu/tạo khách hàng tự động theo SĐT & tên chủ nuôi
     public boolean themThuCungTheoSdtChu(ThuCung tc, String tenChu, String sdtChu, String soMicrochip) {
-        if (sdtChu == null || sdtChu.trim().isEmpty() || !sdtChu.trim().matches("^0\\d{9}$")) {
-            System.err.println("[ThuCungBus] Lỗi: Số điện thoại chủ nuôi không hợp lệ: " + sdtChu);
-            return false;
-        }
         try {
             dao.KhachHangDAO khDao = new dao.KhachHangDAO();
-            KhachHang kh = khDao.findBySoDienThoai(sdtChu.trim());
+            KhachHang kh = null;
+            if (sdtChu != null && !sdtChu.trim().isEmpty()) {
+                kh = khDao.findBySoDienThoai(sdtChu.trim());
+            }
             if (kh == null) {
                 String maKhMoi = utils.MaTuSinhHelper.sinhMaKhachHang();
                 String hoTen = (tenChu != null && !tenChu.trim().isEmpty()) ? tenChu.trim() : ("Khách hàng " + maKhMoi);
-                kh = new KhachHang(maKhMoi, hoTen, sdtChu.trim(), 0);
+                String sdt = (sdtChu != null && !sdtChu.trim().isEmpty()) ? sdtChu.trim() : ("0900000" + maKhMoi.replaceAll("\\D+", ""));
+                kh = new KhachHang(maKhMoi, hoTen, sdt, 0);
                 khDao.insert(kh);
             }
             return thuCungDAO.insertThuCung(tc, kh.getMaKhachHang(), soMicrochip);
@@ -98,8 +109,12 @@ public class ThuCungBus {
 
     // Lấy lịch sử khám, tiêm chủng và theo dõi thể trạng định kỳ của các bé cưng
     public List<HoSoSucKhoe> layDanhSachHoSoSucKhoe() {
+        return layDanhSachHoSoSucKhoe(10);
+    }
+
+    public List<HoSoSucKhoe> layDanhSachHoSoSucKhoe(int limit) {
         try {
-            List<HoSoSucKhoe> dbList = thuCungDAO.getAllHoSoSucKhoe();
+            List<HoSoSucKhoe> dbList = thuCungDAO.getAllHoSoSucKhoe(limit);
             return dbList != null ? dbList : Collections.emptyList();
         } catch (SQLException e) {
             System.err.println("[ThuCungBus] Lỗi lấy HoSoSucKhoe từ CSDL: " + e.getMessage());
@@ -134,7 +149,6 @@ public class ThuCungBus {
 
     // Đặt lịch hẹn mới: kiểm tra số điện thoại của chủ, nếu số đã có trong hệ thống thì liên kết ngay để tích điểm
     public boolean datLichHenMoi(LichHen lh) {
-        lastErrorMessage = "";
         try {
             dao.KhachHangDAO khDao = new dao.KhachHangDAO();
             KhachHang kh = lh.getKhachHang();
@@ -157,20 +171,10 @@ public class ThuCungBus {
                 for (ChiTietLichHen ct : lh.getDsChiTiet()) {
                     ThuCung tc = ct.getThuCung();
                     if (tc == null) continue;
-                    // Ưu tiên khớp chính xác theo mã thú cưng trước (DV07)
-                    ThuCung daCo = null;
-                    if (tc.getMaThuCung() != null && !tc.getMaThuCung().isBlank()) {
-                        daCo = thuCungCuaKhach.stream()
-                                .filter(x -> tc.getMaThuCung().equalsIgnoreCase(x.getMaThuCung()))
-                                .findFirst().orElse(null);
-                    }
-                    if (daCo == null && tc.getTenThuCung() != null) {
-                        daCo = thuCungCuaKhach.stream()
-                                .filter(x -> x.getTenThuCung() != null
-                                        && x.getTenThuCung().trim().equalsIgnoreCase(tc.getTenThuCung().trim())
-                                        && (tc.getGiongLoai() == null || tc.getGiongLoai().trim().equalsIgnoreCase(String.valueOf(x.getGiongLoai()).trim())))
-                                .findFirst().orElse(null);
-                    }
+                    ThuCung daCo = thuCungCuaKhach.stream()
+                            .filter(x -> x.getTenThuCung() != null
+                                    && x.getTenThuCung().trim().equalsIgnoreCase(tc.getTenThuCung().trim()))
+                            .findFirst().orElse(null);
                     if (daCo != null) {
                         // Dùng lại đúng mã hồ sơ để giữ bệnh án, dị ứng và lịch sử tiêm.
                         ct.setThuCung(daCo);
@@ -183,11 +187,7 @@ public class ThuCungBus {
             }
             return lichHenDAO.insertLichHen(lh);
         } catch (SQLException e) {
-            lastErrorMessage = e.getMessage();
             System.err.println("[ThuCungBus] Lỗi đặt lịch hẹn CSDL: " + e.getMessage());
-            return false;
-        } catch (Exception e) {
-            lastErrorMessage = e.getMessage();
             return false;
         }
     }

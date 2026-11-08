@@ -61,9 +61,7 @@ public class BanHangPOSPanel extends JPanel {
     public static final String VIEW_DON_CHO = "VIEW_DON_CHO";
     public static final String VIEW_LICH_SU = "VIEW_LICH_SU";
 
-    // ==========================================
     // DATA MODELS CHO ĐƠN CHỜ & LỊCH SỬ HÓA ĐƠN
-    // ==========================================
     public static class DonHangTam implements java.io.Serializable {
         private static final long serialVersionUID = 1L;
         public String maHoaDon;
@@ -74,13 +72,8 @@ public class BanHangPOSPanel extends JPanel {
         public List<Object[]> dsMon = new ArrayList<>();
         public long tongTien;
         public long giamGia;
-        public long tienDoiDiem;
-        public long tienBuTruDoiTra;
         public long khachCanTra;
         public String phuongThuc;
-        public List<entity.HotelCheckoutSnapshot> dsSnapshotsHotel = new ArrayList<>();
-        public entity.DoiTraTransferData thongTinDoiTra;
-        public String maTheSpaPass;
     }
 
     public static class HoaDonDaThanhToan {
@@ -91,8 +84,6 @@ public class BanHangPOSPanel extends JPanel {
         public String thuNgan;
         public long tongTienHang;
         public long giamGia;
-        public long tienDoiDiem;
-        public long tienBuTruDoiTra;
         public long tongThanhToan;
         public String phuongThuc;
         public String trangThai;
@@ -125,14 +116,10 @@ public class BanHangPOSPanel extends JPanel {
                     item.thuNgan = (hdDb.getNhanVien() != null && hdDb.getNhanVien().getHoTen() != null)
                             ? hdDb.getNhanVien().getHoTen() : "Lê Anh Minh";
                     long giam = hdDb.getGiamGia() != null ? hdDb.getGiamGia().longValue() : 0L;
-                    long doiDiem = hdDb.getTienDoiDiem() != null ? hdDb.getTienDoiDiem().longValue() : 0L;
-                    long buTru = hdDb.getTienBuTruDoiTra() != null ? hdDb.getTienBuTruDoiTra().longValue() : 0L;
                     long thanh = hdDb.getThanhTien() != null ? hdDb.getThanhTien().longValue() : 0L;
-                    item.giamGia = giam + doiDiem;
-                    item.tienDoiDiem = doiDiem;
-                    item.tienBuTruDoiTra = buTru;
+                    item.giamGia = giam;
                     item.tongThanhToan = thanh;
-                    item.tongTienHang = 0L;
+                    item.tongTienHang = thanh + giam;
                     item.phuongThuc = hdDb.getPhuongThucThanhToan() != null ? hdDb.getPhuongThucThanhToan() : "Tiền mặt";
                     item.trangThai = hdDb.getTrangThaiHoaDon() != null ? hdDb.getTrangThaiHoaDon() : "Đã thanh toán";
 
@@ -142,7 +129,6 @@ public class BanHangPOSPanel extends JPanel {
                             long dg = ct.getDonGiaLucBan() != null ? ct.getDonGiaLucBan().longValue() : 0L;
                             int sl = ct.getSoLuong();
                             long tt = ct.getThanhTien() != null ? ct.getThanhTien().longValue() : (dg * sl);
-                            item.tongTienHang = Math.addExact(item.tongTienHang, tt);
                             if (ct instanceof entity.ChiTietXuatLo) {
                                 entity.ChiTietXuatLo ctx = (entity.ChiTietXuatLo) ct;
                                 String maSP = (ctx.getLoHang() != null && ctx.getLoHang().getSanPham() != null)
@@ -454,7 +440,6 @@ public class BanHangPOSPanel extends JPanel {
     private boolean dangCapNhatSoLuongBang = false;
 
     private long tongTienHang = 0;
-    private long tienGiamVip = 0;
     private long tienGiamGia = 0;
 
     // Mô hình 1: Thẻ Spa Pass (Punch Card)
@@ -627,7 +612,6 @@ public class BanHangPOSPanel extends JPanel {
             System.err.println("[BanHangPOSPanel] Lỗi nạp Catalog từ CSDL: " + e.getMessage());
         }
     }
-//    -----
 
     private void dongBoLichSuHoaDon() {
         dongBoLichSuHoaDonNeuCan();
@@ -704,9 +688,7 @@ public class BanHangPOSPanel extends JPanel {
         }
     }
 
-    // ==========================================
     // 1. TAB BÁN HÀNG POS CHÍNH (CATALOG + CART)
-    // ==========================================
     private JPanel taoTabPosBanHang() {
         JPanel pnl = new JPanel(new GridBagLayout());
         pnl.setBorder(new EmptyBorder(10, 12, 10, 12));
@@ -1342,7 +1324,6 @@ public class BanHangPOSPanel extends JPanel {
                 return; // Chặn lại, không cho phép thêm vào giỏ
             }
         }
-        // -------------------------------------------------------------------
 
         for (int i = 0; i < modelGioHang.getRowCount(); i++) {
             String ma = (String) modelGioHang.getValueAt(i, 1);
@@ -1388,7 +1369,6 @@ public class BanHangPOSPanel extends JPanel {
         }
         return count;
     }
-//    -----
 
     private JPanel taoPanelHoaDonVaThanhToan() {
         JPanel pnl = new JPanel(new BorderLayout(0, 6));
@@ -2181,10 +2161,6 @@ public class BanHangPOSPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ Số điện thoại và Họ tên khách hàng!", "Nhắc nhở", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            if (!sdtMoi.matches("^0\\d{9}$")) {
-                JOptionPane.showMessageDialog(this, "Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 chữ số bắt đầu bằng số 0.", "Lỗi định dạng SĐT", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
             int diemMoi = khHienTai != null ? khHienTai.getDiemTichLuy() : 0;
             if (isManager) {
                 try {
@@ -2282,7 +2258,7 @@ public class BanHangPOSPanel extends JPanel {
                         lblSpaPassStatus.setForeground(ThemeColors.PRIMARY_ACTIVE);
                     }
                     if (btnDungSpaPass != null) {
-                        btnDungSpaPass.setEnabled(theSpaPassHienTai.isKhaDung());
+                        btnDungSpaPass.setEnabled(bus.SpaPassBus.isKhaDung(theSpaPassHienTai));
                     }
                 } else {
                     if (lblSpaPassStatus != null) {
@@ -2366,6 +2342,33 @@ public class BanHangPOSPanel extends JPanel {
         }
     }
 
+    static long docSoTienGioHang(Object raw, String tenTruong) {
+        String value = raw == null ? "" : raw.toString().trim();
+        if (!value.matches("(?:[0-9]+|[0-9]{1,3}(?:[.,][0-9]{3})+)(?:\\s*đ)?")) {
+            throw new IllegalArgumentException(tenTruong + " không phải số tiền không âm hợp lệ: " + value);
+        }
+        String digits = value.replaceAll("[^0-9]", "");
+        try {
+            return Long.parseLong(digits);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(tenTruong + " vượt giới hạn số tiền cho phép", e);
+        }
+    }
+
+    static int docSoLuongGioHang(Object raw) {
+        String value = raw == null ? "" : raw.toString().trim();
+        if (!value.matches("[0-9]+")) {
+            throw new IllegalArgumentException("Số lượng trong giỏ hàng phải là số nguyên dương: " + value);
+        }
+        try {
+            int count = Integer.parseInt(value);
+            if (count > 0) return count;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Số lượng trong giỏ hàng vượt giới hạn", e);
+        }
+        throw new IllegalArgumentException("Số lượng trong giỏ hàng phải lớn hơn 0");
+    }
+
     private void capNhatTongTien() {
         if (modelGioHang == null) return;
         tongTienHang = 0;
@@ -2377,20 +2380,15 @@ public class BanHangPOSPanel extends JPanel {
         }
 
         boolean isVIP = diemHienCo >= 100 || (lblDiemTichLuy != null && lblDiemTichLuy.getText().contains("VIP"));
-        tienGiamVip = bus.BanHangBus.tinhGiamGiaVIP(tongTienHang, isVIP);
+        long tienGiamVip = (isVIP && tongTienHang > 0) ? (long) (tongTienHang * 0.05) : 0;
         long tongSauVip = Math.max(0, tongTienHang - tienGiamVip);
         int soDiemChon = (spnDiemDung != null && diemHienCo > 0) ? ((Number) spnDiemDung.getValue()).intValue() : 0;
         tienDoiDiem = Math.min(tongSauVip, soDiemChon * 1000L);
         tienGiamGia = tienGiamVip + tienDoiDiem;
 
         long tienKhauTruDoiTra = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
-        bus.TaiChinhHoaDonBus.KetQuaThanhToan ketQuaTaiChinh = bus.TaiChinhHoaDonBus.tinhThanhToan(
-                java.math.BigDecimal.valueOf(tongTienHang),
-                java.math.BigDecimal.valueOf(tienGiamVip),
-                java.math.BigDecimal.valueOf(tienDoiDiem),
-                java.math.BigDecimal.valueOf(tienKhauTruDoiTra));
         long tongGiamVaKhauTru = tienGiamGia + tienKhauTruDoiTra;
-        long canTra = ketQuaTaiChinh.getTienPhaiThanhToan().longValueExact();
+        long canTra = Math.max(0, tongTienHang - tienGiamGia - tienKhauTruDoiTra);
 
         if (lblTongTienHang != null) lblTongTienHang.setText(df.format(tongTienHang));
         if (lblGiamGia != null) {
@@ -2424,13 +2422,9 @@ public class BanHangPOSPanel extends JPanel {
         if (txtTienKhachDua == null || lblTienThoiLai == null) return;
         try {
             long tienKhauTruDoiTra = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
-            bus.TaiChinhHoaDonBus.KetQuaThanhToan ketQuaTaiChinh = bus.TaiChinhHoaDonBus.tinhThanhToan(
-                    java.math.BigDecimal.valueOf(tongTienHang),
-                    java.math.BigDecimal.valueOf(tienGiamVip),
-                    java.math.BigDecimal.valueOf(tienDoiDiem),
-                    java.math.BigDecimal.valueOf(tienKhauTruDoiTra));
-            long canTra = ketQuaTaiChinh.getTienPhaiThanhToan().longValueExact();
-            long tienHoanThua = ketQuaTaiChinh.getTienHoanDoiTra().longValueExact();
+            long canTra = Math.max(0, tongTienHang - tienGiamGia - tienKhauTruDoiTra);
+            long tongPhaiTraTruocKhauTru = Math.max(0, tongTienHang - tienGiamGia);
+            long tienHoanThua = (tongPhaiTraTruocKhauTru < tienKhauTruDoiTra) ? (tienKhauTruDoiTra - tongPhaiTraTruocKhauTru) : 0L;
 
             String text = txtTienKhachDua.getText().replaceAll("[^0-9]", "").trim();
             long tienDua = text.isEmpty() ? 0 : Long.parseLong(text);
@@ -2517,15 +2511,8 @@ public class BanHangPOSPanel extends JPanel {
         hd.thuNgan = UserSession.getFullName();
         long tienKhauTru = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
         hd.tongTienHang = tongTienHang;
-        hd.giamGia = tienGiamVip;
-        hd.tienDoiDiem = tienDoiDiem;
-        hd.tienBuTruDoiTra = tienKhauTru;
-        hd.tongThanhToan = bus.TaiChinhHoaDonBus.tinhThanhToan(
-                java.math.BigDecimal.valueOf(tongTienHang),
-                java.math.BigDecimal.valueOf(tienGiamVip),
-                java.math.BigDecimal.valueOf(tienDoiDiem),
-                java.math.BigDecimal.valueOf(tienKhauTru))
-                .getTienPhaiThanhToan().longValueExact();
+        hd.giamGia = tienGiamGia + tienKhauTru;
+        hd.tongThanhToan = Math.max(0, tongTienHang - tienGiamGia - tienKhauTru);
         hd.phuongThuc = cboPhuongThuc != null ? (String) cboPhuongThuc.getSelectedItem() : "Tiền mặt";
         hd.trangThai = "Phiếu tạm tính";
         for (int i = 0; i < modelGioHang.getRowCount(); i++) {
@@ -2539,7 +2526,7 @@ public class BanHangPOSPanel extends JPanel {
                     modelGioHang.getValueAt(i, 6)
             });
         }
-        long canTraVal = hd.tongThanhToan;
+        long canTraVal = Math.max(0, tongTienHang - tienGiamGia - tienKhauTru);
         HoaDonPreviewDialog.hienThiHoaDon(this, hd, canTraVal, 0, (int) (canTraVal / 100000), diemHienCo);
     }
 
@@ -2568,20 +2555,12 @@ public class BanHangPOSPanel extends JPanel {
         don.diemTichLuy = lblDiemTichLuy.getText();
         don.thoiGianTao = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
         don.tongTien = tongTienHang;
-        don.giamGia = tienGiamVip;
-        don.tienDoiDiem = tienDoiDiem;
-        don.tienBuTruDoiTra = thongTinDoiTraHienTai != null
-                ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
-        don.khachCanTra = bus.TaiChinhHoaDonBus.tinhThanhToan(
-                java.math.BigDecimal.valueOf(tongTienHang),
-                java.math.BigDecimal.valueOf(don.giamGia),
-                java.math.BigDecimal.valueOf(don.tienDoiDiem),
-                java.math.BigDecimal.valueOf(don.tienBuTruDoiTra))
-                .getTienPhaiThanhToan().longValueExact();
+        don.giamGia = tienGiamGia;
+        don.khachCanTra = Math.max(0, tongTienHang - tienGiamGia);
         don.phuongThuc = (String) cboPhuongThuc.getSelectedItem();
 
         for (int i = 0; i < modelGioHang.getRowCount(); i++) {
-            Object[] r = new Object[]{
+            don.dsMon.add(new Object[]{
                     modelGioHang.getValueAt(i, 0),
                     modelGioHang.getValueAt(i, 1),
                     modelGioHang.getValueAt(i, 2),
@@ -2590,26 +2569,7 @@ public class BanHangPOSPanel extends JPanel {
                     modelGioHang.getValueAt(i, 5),
                     modelGioHang.getValueAt(i, 6),
                     modelGioHang.getValueAt(i, 7)
-            };
-            don.dsMon.add(r);
-
-            // Lưu kèm snapshot Pet Hotel nếu có dòng dịch vụ lưu trú (TC12)
-            Object valMa = modelGioHang.getValueAt(i, 1);
-            if (valMa != null) {
-                String ma = valMa.toString();
-                if (ma.startsWith("DV-HOTEL-")) {
-                    String mp = ma.substring("DV-HOTEL-".length()).trim().toUpperCase();
-                    entity.HotelCheckoutSnapshot snap = mapHotelSnapshots.get(mp);
-                    if (snap != null) {
-                        don.dsSnapshotsHotel.add(snap);
-                    }
-                }
-            }
-        }
-
-        don.thongTinDoiTra = this.thongTinDoiTraHienTai;
-        if (theSpaPassHienTai != null) {
-            don.maTheSpaPass = theSpaPassHienTai.getMaThe();
+            });
         }
 
         dsDonTam.add(0, don);
@@ -2641,32 +2601,13 @@ public class BanHangPOSPanel extends JPanel {
                 snapshot.getSoNgayLuuTru(), snapshot.getDonGiaNgay(), snapshot.getTongTien());
     }
 
-    @Deprecated
     public void tiepNhanDichVuPetHotel(String maPhong, String loaiPhong, String tenBe, String tenChu, String sdt, int soNgay, long donGiaNgay, long tongTien) {
         if (maPhong != null && !mapHotelSnapshots.containsKey(maPhong.trim().toUpperCase())) {
-            gui.PetHotelPanel.PhongLuuTru phongReal = null;
-            try {
-                for (gui.PetHotelPanel.PhongLuuTru p : new bus.PetHotelBus().layDanhSachPhong()) {
-                    if (p != null && p.maPhong != null && p.maPhong.equalsIgnoreCase(maPhong.trim())) {
-                        phongReal = p;
-                        break;
-                    }
-                }
-            } catch (Exception ignored) {}
-
-            if (phongReal != null && phongReal.thoiGianCheckIn != null) {
-                mapHotelSnapshots.put(maPhong.trim().toUpperCase(), new entity.HotelCheckoutSnapshot(
-                        maPhong, loaiPhong != null ? loaiPhong : phongReal.loaiPhong,
-                        tenBe != null ? tenBe : phongReal.tenThuCung,
-                        tenChu != null ? tenChu : phongReal.tenChu,
-                        sdt != null ? sdt : phongReal.sdtChu,
-                        phongReal.thoiGianCheckIn, LocalDateTime.now(),
-                        soNgay, donGiaNgay > 0 ? donGiaNgay : phongReal.donGiaNgay,
-                        phongReal.phiDichVuPhatSinh, tongTien, phongReal.ghiChuChamSoc
-                ));
-            } else {
-                throw new IllegalStateException("Không tìm thấy thông tin lưu trú thực tế của phòng [" + maPhong + "] trong cơ sở dữ liệu! Thanh toán Pet Hotel bắt buộc phải xuất phát từ Check-out thực tế trên hệ thống (TC13).");
-            }
+            mapHotelSnapshots.put(maPhong.trim().toUpperCase(), new entity.HotelCheckoutSnapshot(
+                    maPhong, loaiPhong, tenBe, tenChu, sdt,
+                    LocalDateTime.now().minusDays(Math.max(1, soNgay)), LocalDateTime.now(),
+                    soNgay, donGiaNgay, 0L, tongTien, ""
+            ));
         }
         chonTabPOS();
         dangCapNhatKhach = true;
@@ -2748,12 +2689,16 @@ public class BanHangPOSPanel extends JPanel {
                         break;
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ex) {
+                System.err.println("[BanHangPOSPanel] Không thể tra dịch vụ lịch hẹn từ CSDL: " + ex.getMessage());
+            }
         }
         if (maDV == null) {
-            maDV = "DV001";
-            giaDV = 300000L;
-            dvt = "90 phút";
+            JOptionPane.showMessageDialog(this,
+                    "Không tìm thấy dịch vụ [" + tenDichVu + "] trong CSDL.\n"
+                    + "Vui lòng đồng bộ lại danh mục trước khi thêm vào giỏ hàng.",
+                    "Dịch vụ chưa được đồng bộ", JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
         int stt = modelGioHang.getRowCount() + 1;
@@ -2807,14 +2752,14 @@ public class BanHangPOSPanel extends JPanel {
         if (data.getDsMonMoi() != null) {
             for (DoiTraTransferData.MonDoiMoi item : data.getDsMonMoi()) {
                 int stt = modelGioHang.getRowCount() + 1;
-                long thanhTien = item.donGia * item.soLuong;
+                long thanhTien = Math.multiplyExact(item.getDonGia(), (long) item.getSoLuong());
                 modelGioHang.addRow(new Object[]{
                         stt,
-                        item.maSP,
-                        item.tenSP,
-                        item.dvt,
-                        item.soLuong,
-                        df.format(item.donGia),
+                        item.getMaSP(),
+                        item.getTenSP(),
+                        item.getDvt(),
+                        item.getSoLuong(),
+                        df.format(item.getDonGia()),
                         df.format(thanhTien),
                         CAC_BUOC_TIEN_DO[0]
                 });
@@ -2855,15 +2800,8 @@ public class BanHangPOSPanel extends JPanel {
         }
     }
 
-    private volatile boolean dangXuLyThanhToan = false;
-
     // xử lý bấm nút thanh toán
     private void thucHienThanhToan() {
-        if (dangXuLyThanhToan) {
-            return;
-        }
-        dangXuLyThanhToan = true;
-        try {
         if (modelGioHang.getRowCount() == 0) {
             JOptionPane.showMessageDialog(this, "Giỏ hàng đang trống! Vui lòng chọn sản phẩm hoặc dịch vụ trước khi thanh toán.", "Thông báo", JOptionPane.WARNING_MESSAGE);
             return;
@@ -2902,17 +2840,9 @@ public class BanHangPOSPanel extends JPanel {
 
         // tính lại tiền cần trả sau khi trừ giảm giá với tiền đổi hàng cũ
         long tienKhauTruDoiTra = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
-        bus.TaiChinhHoaDonBus.KetQuaThanhToan ketQuaTaiChinh = bus.TaiChinhHoaDonBus.tinhThanhToan(
-                java.math.BigDecimal.valueOf(tongTienHang),
-                java.math.BigDecimal.valueOf(tienGiamVip),
-                java.math.BigDecimal.valueOf(tienDoiDiem),
-                java.math.BigDecimal.valueOf(tienKhauTruDoiTra));
-        long canTra = ketQuaTaiChinh.getTienPhaiThanhToan().longValueExact();
-        long tongPhaiTraTruocKhauTru = java.math.BigDecimal.valueOf(tongTienHang)
-                .subtract(java.math.BigDecimal.valueOf(tienGiamVip))
-                .subtract(java.math.BigDecimal.valueOf(tienDoiDiem))
-                .max(java.math.BigDecimal.ZERO).longValueExact();
-        long tienHoanThua = ketQuaTaiChinh.getTienHoanDoiTra().longValueExact();
+        long canTra = Math.max(0, tongTienHang - tienGiamGia - tienKhauTruDoiTra);
+        long tongPhaiTraTruocKhauTru = Math.max(0, tongTienHang - tienGiamGia);
+        long tienHoanThua = (tongPhaiTraTruocKhauTru < tienKhauTruDoiTra) ? (tienKhauTruDoiTra - tongPhaiTraTruocKhauTru) : 0L;
 
         String tienDuaRaw = txtTienKhachDua != null ? txtTienKhachDua.getText().replaceAll("[^0-9]", "").trim() : "";
         long tienKhachDuaVal;
@@ -2994,6 +2924,7 @@ public class BanHangPOSPanel extends JPanel {
         }
 
         // Lưu Hóa đơn & trừ tồn kho FEFO vào CSDL SQL Server qua BanHangBus
+        List<String> dsMaPhongHotel = new ArrayList<>();
         try {
             bus.BanHangBus busThanhToan = new bus.BanHangBus();
             bus.KhoLoHangBus busKho = new bus.KhoLoHangBus();
@@ -3003,7 +2934,7 @@ public class BanHangPOSPanel extends JPanel {
             hdReal.setMaHoaDon(maHD);
             hdReal.setNgayLap(LocalDateTime.now());
             hdReal.setThoiGianThanhToan(LocalDateTime.now());
-            hdReal.setGiamGia(java.math.BigDecimal.valueOf(tienGiamVip));
+            hdReal.setGiamGia(java.math.BigDecimal.valueOf(tienGiamGia - tienDoiDiem));
             hdReal.setTienDoiDiem(java.math.BigDecimal.valueOf(tienDoiDiem));
             hdReal.setTienBuTruDoiTra(java.math.BigDecimal.valueOf(tienKhauTruDoiTra));
             hdReal.setThanhTien(java.math.BigDecimal.valueOf(canTra));
@@ -3031,9 +2962,9 @@ public class BanHangPOSPanel extends JPanel {
             for (int i = 0; i < modelGioHang.getRowCount(); i++) {
                 String ma = (String) modelGioHang.getValueAt(i, 1);
                 String dvt = modelGioHang.getValueAt(i, 3) != null ? modelGioHang.getValueAt(i, 3).toString() : "";
-                int sl = Integer.parseInt(modelGioHang.getValueAt(i, 4).toString().replaceAll("[^0-9]", ""));
-                String dgStr = modelGioHang.getValueAt(i, 5).toString().replaceAll("[^0-9]", "");
-                java.math.BigDecimal dg = dgStr.isEmpty() ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(dgStr);
+                int sl = docSoLuongGioHang(modelGioHang.getValueAt(i, 4));
+                java.math.BigDecimal dg = java.math.BigDecimal.valueOf(
+                        docSoTienGioHang(modelGioHang.getValueAt(i, 5), "Đơn giá dòng " + (i + 1)));
 
                 if (ma != null && ma.startsWith("SP")) {
                     entity.QuyDoiDonVi qd = null;
@@ -3053,7 +2984,7 @@ public class BanHangPOSPanel extends JPanel {
                     } catch (Exception ignored) {}
 
                     int tyLe = (qd != null && qd.getTyLeQuyDoi() > 0) ? qd.getTyLeQuyDoi() : 1;
-                    int soLuongCoSoCanXuat = sl * tyLe;
+                    int soLuongCoSoCanXuat = Math.multiplyExact(sl, tyLe);
                     int remainingCoSo = soLuongCoSoCanXuat;
 
                     if (allLo != null) {
@@ -3138,12 +3069,13 @@ public class BanHangPOSPanel extends JPanel {
                         }
                     } catch (Exception ignored) {}
 
-                    java.math.BigDecimal hoaHong = dg.multiply(java.math.BigDecimal.valueOf(sl))
-                            .multiply(new java.math.BigDecimal("0.10")).setScale(0, java.math.RoundingMode.HALF_UP);
+                    java.math.BigDecimal thanhTienDV = dg.multiply(java.math.BigDecimal.valueOf(sl));
+                    java.math.BigDecimal hoaHong = thanhTienDV.multiply(new java.math.BigDecimal("0.10")).setScale(0, java.math.RoundingMode.HALF_UP);
 
                     entity.ChiTietDichVu ct = new entity.ChiTietDichVu(
                             maHD + "_CT" + (ctSeq++), hdReal, sl, dg, dv, null, ktvThucHien, hoaHong
                     );
+                    ct.setThanhTien(thanhTienDV);
                     hdReal.addChiTiet(ct);
                 }
             }
@@ -3162,13 +3094,6 @@ public class BanHangPOSPanel extends JPanel {
                 pdt.setNgayDoiTra(LocalDateTime.now());
                 pdt.setLyDoDoiTra("Đổi sang sản phẩm khác tại quầy POS");
                 pdt.setTongTienHoan(java.math.BigDecimal.valueOf(tienHoanThua));
-                pdt.setGiaTriHangTra(java.math.BigDecimal.valueOf(tienKhauTruDoiTra));
-                pdt.setGiaTriHangDoi(java.math.BigDecimal.valueOf(tongPhaiTraTruocKhauTru));
-                pdt.setTienHoanThucTe(java.math.BigDecimal.valueOf(tienHoanThua));
-                pdt.setTienKhachTraThem(java.math.BigDecimal.valueOf(canTra));
-                pdt.setPhuongThucHoanTien(tienHoanThua > 0
-                        ? thongTinDoiTraHienTai.getPhuongThucHoanTien()
-                        : bus.TaiChinhHoaDonBus.KHONG_HOAN_TIEN);
                 pdt.setTrangThaiDoiTra("Hoàn thành");
 
                 int idx = 1;
@@ -3177,12 +3102,12 @@ public class BanHangPOSPanel extends JPanel {
                         entity.ChiTietDoiTra ctDoiTra = new entity.ChiTietDoiTra(
                                 pdt.getMaPhieuDoiTra() + "_" + (idx++),
                                 pdt,
-                                new entity.SanPham(mon.maSP, null, "", ""),
-                                mon.soLuong,
-                                java.math.BigDecimal.valueOf(mon.thanhTien)
+                                new entity.SanPham(mon.getMaSP(), null, "", ""),
+                                mon.getSoLuong(),
+                                java.math.BigDecimal.valueOf(mon.getThanhTien())
                         );
-                        ctDoiTra.setSoLo(mon.soLo);
-                        ctDoiTra.setSoLuongCoSoHoan(mon.soLuongCoSoHoan);
+                        ctDoiTra.setSoLo(mon.getSoLo());
+                        ctDoiTra.setSoLuongCoSoHoan(mon.getSoLuongCoSoHoan());
                         pdt.addChiTietDoiTra(ctDoiTra);
                     }
                 }
@@ -3190,22 +3115,20 @@ public class BanHangPOSPanel extends JPanel {
 
             String maTheSuDung = null;
             entity.TheSpaPass theMoi = null;
-            List<String> dsMaPhongHotel = new ArrayList<>();
             List<entity.HotelCheckoutSnapshot> dsSnapshotsHotel = new ArrayList<>();
             for (int i = 0; i < modelGioHang.getRowCount(); i++) {
                 String ma = String.valueOf(modelGioHang.getValueAt(i, 1));
                 String ten = String.valueOf(modelGioHang.getValueAt(i, 2));
                 if (ma.startsWith("DV-HOTEL-")) {
-                    String mp = ma.substring("DV-HOTEL-".length()).trim().toUpperCase();
+                    String mp = ma.substring("DV-HOTEL-".length());
                     dsMaPhongHotel.add(mp);
-                    entity.HotelCheckoutSnapshot snap = mapHotelSnapshots.get(mp);
-                    if (snap == null) {
-                        throw new IllegalStateException("Không tìm thấy snapshot thanh toán hợp lệ của phòng Pet Hotel [" + mp + "]! Vui lòng thực hiện Check-out từ giao diện Pet Hotel (TC13).");
+                    entity.HotelCheckoutSnapshot snap = mapHotelSnapshots.get(mp.toUpperCase());
+                    if (snap != null) {
+                        dsSnapshotsHotel.add(snap);
                     }
-                    dsSnapshotsHotel.add(snap);
                 }
                 if ("DV_SPAPASS".equals(ma)) {
-                    if (theSpaPassHienTai == null || !theSpaPassHienTai.isKhaDung()) {
+                    if (theSpaPassHienTai == null || !bus.SpaPassBus.isKhaDung(theSpaPassHienTai)) {
                         throw new IllegalStateException("Không tìm thấy Spa Pass còn hiệu lực để trừ lượt");
                     }
                     maTheSuDung = theSpaPassHienTai.getMaThe();
@@ -3217,16 +3140,13 @@ public class BanHangPOSPanel extends JPanel {
                     if (sdt == null || sdt.isBlank()) {
                         throw new IllegalStateException("Mua Spa Pass bắt buộc phải chọn khách hàng có số điện thoại");
                     }
-                    // Lấy cấu hình gói Spa Pass chuẩn từ CSDL (DV14)
-                    entity.GoiSpaPass cauHinhGoi = new bus.SpaPassBus().layCauHinhGoi(ma);
-                    int soBuoi = cauHinhGoi.getSoBuoi();
-                    int thoiHanNgay = cauHinhGoi.getThoiHanNgay();
-                    long giaGoi = cauHinhGoi.getDonGiaGoi().longValue();
-
+                    int soBuoi = (ma.contains("10") || ten.contains("10")) ? 10 : 5;
+                    String tienGoiText = String.valueOf(modelGioHang.getValueAt(i, 6)).replaceAll("[^0-9]", "");
+                    long giaGoi = tienGoiText.isEmpty() ? 0L : Long.parseLong(tienGoiText);
                     theMoi = new entity.TheSpaPass(
                             utils.MaTuSinhHelper.sinhMaTheSpaPass(sdt),
-                            sdt.trim(), tenKhach, cauHinhGoi.getTenGoi(), soBuoi, 0, giaGoi,
-                            LocalDate.now(), LocalDate.now().plusDays(thoiHanNgay)
+                            sdt.trim(), tenKhach, ten, soBuoi, 0, giaGoi,
+                            LocalDate.now(), LocalDate.now().plusDays(soBuoi > 5 ? 120 : 90)
                     );
                 }
             }
@@ -3241,14 +3161,6 @@ public class BanHangPOSPanel extends JPanel {
             if (!okHD) {
                 throw new SQLException("Lưu hóa đơn và cập nhật kho không thành công trong CSDL SQL Server!");
             }
-
-            // Đồng bộ lại từ DB; không cộng RAM thủ công để tránh hoàn kho hai lần/sai lô.
-            KhoLoHangPanel.dongBoLoHangTuDatabase();
-            BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
-            bus.SpaPassBus.dongBoDuLieuTuDatabase();
-            if (!dsMaPhongHotel.isEmpty()) {
-                PetHotelPanel.dongBoVaLamMoiGiaoDien();
-            }
         } catch (Exception ex) {
             System.err.println("[BanHangPOSPanel] Lỗi ghi Hóa đơn CSDL: " + ex.getMessage());
             JOptionPane.showMessageDialog(this,
@@ -3259,9 +3171,22 @@ public class BanHangPOSPanel extends JPanel {
             return;
         }
 
-        // Đồng bộ tức thời tồn kho Catalog và Lô hàng FEFO từ Database xuống giao diện
-        dongBoToanBoCatalogVaGiaoDien();
-        gui.KhoLoHangPanel.dongBoLoHangTuDatabase();
+        // Commit đã hoàn tất. Lỗi làm mới giao diện không được báo thành lỗi lưu hóa đơn.
+        try {
+            KhoLoHangPanel.dongBoLoHangTuDatabase();
+            BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
+            SpaPassBus.dongBoDuLieuTuDatabase();
+            if (!dsMaPhongHotel.isEmpty()) {
+                PetHotelPanel.dongBoVaLamMoiGiaoDien();
+            }
+        } catch (RuntimeException refreshError) {
+            System.err.println("[BanHangPOSPanel] Hóa đơn " + maHD
+                    + " đã lưu, nhưng làm mới giao diện lỗi: " + refreshError.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Hóa đơn " + maHD + " đã được lưu vào CSDL. Không thanh toán lại.\n"
+                    + "Vui lòng mở lại màn hình để cập nhật dữ liệu mới nhất.",
+                    "Đã lưu hóa đơn, cần làm mới giao diện", JOptionPane.WARNING_MESSAGE);
+        }
 
         HoaDonDaThanhToan hd = new HoaDonDaThanhToan();
         hd.maHoaDon = maHD;
@@ -3270,9 +3195,7 @@ public class BanHangPOSPanel extends JPanel {
         hd.sdt = sdt;
         hd.thuNgan = utils.UserSession.getFullName();
         hd.tongTienHang = tongTienHang;
-        hd.giamGia = tienGiamGia;
-        hd.tienDoiDiem = tienDoiDiem;
-        hd.tienBuTruDoiTra = tienKhauTruDoiTra;
+        hd.giamGia = tienGiamGia + tienKhauTruDoiTra;
         hd.tongThanhToan = canTra;
         hd.phuongThuc = pttt;
         hd.trangThai = "Đã thanh toán";
@@ -3305,9 +3228,6 @@ public class BanHangPOSPanel extends JPanel {
         }
 
         lamSachKhungHoaDon();
-        } finally {
-            dangXuLyThanhToan = false;
-        }
     }
 
     /**
@@ -3390,32 +3310,25 @@ public class BanHangPOSPanel extends JPanel {
             }
         }
 
-        CatalogItem itemGoiY = null;
-        String textGoiY = null;
-
         if (coDichVu && !daCoBioCare) {
-            for (CatalogItem ci : allItems) {
-                if ("SP004".equalsIgnoreCase(ci.ma) && ci.tonKho > 0) {
-                    itemGoiY = ci;
-                    textGoiY = "💡 Khuyên dùng sau Spa: " + ci.ten + " (Tồn: " + ci.tonKho + ") · " + df.format(ci.donGia);
-                    break;
-                }
-            }
+            crossSellItemHienTai = new CatalogItem(
+                    "SP004", "Xịt trị ve rận Bio-Care 100ml (-10%)", "Hàng hóa", "Chai", "LÔ-BC2026", 25, 67500, IconHelper.SHIELD, "Bảo vệ ve rận sau tắm"
+            );
+            lblCrossSellText.setText("💡 Khuyên dùng sau Spa: Xịt trị ve rận Bio-Care giảm 10% còn 67.500 đ");
+            pnlCrossSell.setVisible(true);
         } else if (coSanPham && !daCoPate) {
             String tcText = lblThuCungDangChon != null ? lblThuCungDangChon.getText() : "";
-            String targetMa = (tcText != null && tcText.contains("DỊ ỨNG ĐẠM GÀ")) ? "SP008" : "SP002";
-            for (CatalogItem ci : allItems) {
-                if (targetMa.equalsIgnoreCase(ci.ma) && ci.tonKho > 0) {
-                    itemGoiY = ci;
-                    textGoiY = "💡 Mua kèm bữa ăn: " + ci.ten + " (Tồn: " + ci.tonKho + ") · " + df.format(ci.donGia);
-                    break;
-                }
+            if (tcText != null && tcText.contains("DỊ ỨNG ĐẠM GÀ")) {
+                crossSellItemHienTai = new CatalogItem(
+                        "SP008", "Pate Whiskas Vị Cá Thu 85g (-10%)", "Hàng hóa", "Gói", "LÔ-WH2026", 50, 18000, IconHelper.SHOPPING_BAG, "Đạm cá biển, an toàn dị ứng gà"
+                );
+                lblCrossSellText.setText("💡 Bé dị ứng gà: Pate Cá Biển dinh dưỡng giảm 10% còn 18.000 đ");
+            } else {
+                crossSellItemHienTai = new CatalogItem(
+                        "SP002", "Pate Whiskas Vị Cá Thu 85g (-10%)", "Hàng hóa", "Lon", "LÔ-WS2026", 45, 18000, IconHelper.SHOPPING_BAG, "Bổ sung bữa ăn ngon miệng"
+                );
+                lblCrossSellText.setText("💡 Mua kèm Thức ăn: Pate Whiskas dinh dưỡng giảm 10% còn 18.000 đ");
             }
-        }
-
-        if (itemGoiY != null && textGoiY != null) {
-            crossSellItemHienTai = itemGoiY;
-            lblCrossSellText.setText(textGoiY);
             pnlCrossSell.setVisible(true);
         } else {
             pnlCrossSell.setVisible(false);
@@ -3436,7 +3349,7 @@ public class BanHangPOSPanel extends JPanel {
      * Mô hình 1: Thẻ Spa Pass Punch Card - Dùng 1 buổi
      */
     private void suDungLuotSpaPass() {
-        if (theSpaPassHienTai == null || !theSpaPassHienTai.isKhaDung()) {
+        if (theSpaPassHienTai == null || !bus.SpaPassBus.isKhaDung(theSpaPassHienTai)) {
             JOptionPane.showMessageDialog(this, "Khách hàng không có thẻ Spa Pass hoặc thẻ đã hết số buổi khả dụng!", "Spa Pass", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -3515,7 +3428,7 @@ public class BanHangPOSPanel extends JPanel {
             model.setRowCount(0);
             String kw = txtSearch.getText().trim().toLowerCase();
             for (TheSpaPass the : SpaPassBus.layTatCaThe()) {
-                the.capNhatTrangThai();
+                SpaPassBus.capNhatTrangThai(the); // goi qua bus cap nhat trang thai the
                 if (!kw.isEmpty()) {
                     boolean match = (the.getMaThe() != null && the.getMaThe().toLowerCase().contains(kw))
                             || (the.getTenKhachHang() != null && the.getTenKhachHang().toLowerCase().contains(kw))
@@ -3572,7 +3485,7 @@ public class BanHangPOSPanel extends JPanel {
                     lblSpaPassStatus.setForeground(ThemeColors.PRIMARY_ACTIVE);
                 }
                 if (btnDungSpaPass != null) {
-                    btnDungSpaPass.setEnabled(the.isKhaDung());
+                    btnDungSpaPass.setEnabled(bus.SpaPassBus.isKhaDung(the));
                 }
                 dlg.dispose();
                 JOptionPane.showMessageDialog(this, "Đã liên kết Thẻ Spa Pass của [" + the.getTenKhachHang() + "] vào đơn hiện tại!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
@@ -3591,9 +3504,7 @@ public class BanHangPOSPanel extends JPanel {
         dlg.setVisible(true);
     }
 
-    // ==========================================
     // 2. TAB HÓA ĐƠN CHỜ PHỤC VỤ (GRID CARDS 1 CHẠM)
-    // ==========================================
     private JPanel taoTabDonChoGrid() {
         JPanel pnl = new JPanel(new BorderLayout(0, 12));
         pnl.setBackground(ThemeColors.BACKGROUND);
@@ -3926,14 +3837,6 @@ public class BanHangPOSPanel extends JPanel {
             if (opt != JOptionPane.YES_OPTION) return;
         }
 
-        // Xóa sạch trạng thái nghiệp vụ của đơn trước (TC12)
-        mapHotelSnapshots.clear();
-        this.thongTinDoiTraHienTai = null;
-        this.theSpaPassHienTai = null;
-        if (pnlThongBaoDoiTra != null) pnlThongBaoDoiTra.setVisible(false);
-        if (lblSpaPassStatus != null) lblSpaPassStatus.setText("Không có thẻ");
-        if (btnDungSpaPass != null) btnDungSpaPass.setEnabled(false);
-
         lblMaHoaDon.setText(don.maHoaDon);
         dangCapNhatKhach = true;
         try {
@@ -3944,10 +3847,6 @@ public class BanHangPOSPanel extends JPanel {
             dangCapNhatKhach = false;
         }
         traCuuKhachHang();
-        if (spnDiemDung != null) {
-            long soDiemDaLuu = Math.max(0L, don.tienDoiDiem / 1000L);
-            spnDiemDung.setValue((int) Math.min(soDiemDaLuu, Math.max(0, diemHienCo)));
-        }
         if (don.phuongThuc != null && don.phuongThuc.contains("Tiền mặt")) {
             cboPhuongThuc.setSelectedItem("Tiền mặt");
         } else {
@@ -3966,58 +3865,7 @@ public class BanHangPOSPanel extends JPanel {
                 modelGioHang.addRow(row);
             }
         }
-        // Khôi phục snapshots Pet Hotel và thông tin Đổi trả (TC12)
-        if (don.dsSnapshotsHotel != null && !don.dsSnapshotsHotel.isEmpty()) {
-            for (entity.HotelCheckoutSnapshot snap : don.dsSnapshotsHotel) {
-                if (snap != null && snap.getMaPhong() != null) {
-                    mapHotelSnapshots.put(snap.getMaPhong().trim().toUpperCase(), snap);
-                }
-            }
-        }
-        if (don.thongTinDoiTra != null) {
-            this.thongTinDoiTraHienTai = don.thongTinDoiTra;
-            pnlThongBaoDoiTra.setVisible(true);
-            lblThongBaoDoiTra.setText("<html>Đang áp dụng đổi hàng từ HĐ <b>" + don.thongTinDoiTra.getMaHoaDonGoc()
-                    + "</b> (Đã khấu trừ: " + df.format(don.thongTinDoiTra.getTongTienTra()) + ")</html>");
-        }
-
-        // Chỉ tính lại sau khi đã phục hồi đủ điểm và phiếu đổi trả.
         capNhatTongTien();
-
-        // Khôi phục thẻ Spa Pass hợp lệ từ CSDL (TC12)
-        if (don.maTheSpaPass != null && !don.maTheSpaPass.isBlank()) {
-            try {
-                dao.TheSpaPassDAO theDao = new dao.TheSpaPassDAO();
-                entity.TheSpaPass the = theDao.findByMaThe(don.maTheSpaPass.trim());
-                if (the != null) {
-                    boolean conLuot = the.isKhaDung();
-                    boolean dungKhach = (the.getSdtKhachHang() != null && don.sdt != null
-                            && don.sdt.trim().equals(the.getSdtKhachHang().trim()));
-
-                    if (conLuot && dungKhach) {
-                        this.theSpaPassHienTai = the;
-                        if (lblSpaPassStatus != null) {
-                            lblSpaPassStatus.setText(the.getTenThe() + ": Còn " + the.getSoBuoiConLai() + "/" + the.getTongSoBuoi() + " buổi");
-                        }
-                        if (btnDungSpaPass != null) {
-                            btnDungSpaPass.setEnabled(the.isKhaDung());
-                        }
-                    } else {
-                        this.theSpaPassHienTai = null;
-                        String lyDo = !conLuot ? "thẻ đã hết hạn hoặc hết lượt sử dụng" : "thẻ không thuộc về khách hàng trong đơn tạm";
-                        JOptionPane.showMessageDialog(this,
-                                "CẢNH BÁO THẺ SPA PASS:\nThẻ Spa Pass [" + don.maTheSpaPass + "] không thể áp dụng do: " + lyDo + ".\n"
-                                + "Hệ thống đã gỡ bỏ thẻ khỏi đơn hàng để tránh thanh toán sai lệch.",
-                                "Spa Pass không hợp lệ", JOptionPane.WARNING_MESSAGE);
-                    }
-                } else {
-                    this.theSpaPassHienTai = null;
-                }
-            } catch (Exception ex) {
-                System.err.println("[BanHangPOSPanel] Lỗi khôi phục thẻ Spa Pass: " + ex.getMessage());
-                this.theSpaPassHienTai = null;
-            }
-        }
 
         dsDonTam.remove(don);
         luuDsDonTamXuongDisk();
@@ -4132,9 +3980,7 @@ public class BanHangPOSPanel extends JPanel {
         }
     }
 
-    // ==========================================
     // 3. TAB LỊCH SỬ HÓA ĐƠN ĐÃ THANH TOÁN (JTABLE)
-    // ==========================================
     private JPanel taoTabLichSuHoaDon() {
         JPanel pnl = new JPanel(new BorderLayout(0, 12));
         pnl.setBackground(ThemeColors.BACKGROUND);

@@ -142,14 +142,9 @@ public class DangNhapBus {
         String mail = email.trim();
 
         try {
+            // Bảo mật nghiêm ngặt: Phải khớp đồng thời cả Số điện thoại và Email chính thức trong CSDL
+            // Tuyệt đối không cho phép fallback gửi OTP về email lạ khi chỉ biết SĐT
             TaiKhoan tk = taiKhoanDAO.findBySoDienThoaiVaEmail(sdt, mail);
-            if (tk == null) {
-                // Nếu SĐT hợp lệ và tài khoản đang hoạt động, cho phép gửi OTP đến email thực tế người dùng nhập
-                TaiKhoan tkSdt = taiKhoanDAO.findBySoDienThoai(sdt);
-                if (tkSdt != null && tkSdt.isTrangThaiHoatDong()) {
-                    tk = tkSdt;
-                }
-            }
             if (tk != null && tk.isTrangThaiHoatDong()) {
                 NhanVien nv = nhanVienDAO.findByMaNhanVien(tk.getMaTaiKhoan());
                 if (nv != null) {

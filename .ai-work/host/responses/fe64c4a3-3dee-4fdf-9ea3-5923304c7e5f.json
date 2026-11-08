@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "result": {
+    "id": "agy-fix-auth-20261108",
+    "planId": "repair-20261108-simple-v2",
+    "planDigest": "e80e291419afba4693070f70b14afd5b394b40f171ad55cb03cf48d0bd85dedc",
+    "attempt": 1,
+    "repairs": 0,
+    "createdAt": "2026-11-08T05:20:24.426Z",
+    "status": "running",
+    "ownerPid": 33248,
+    "startedAt": "2026-11-08T05:20:24.427Z",
+    "model": "gemini-3.8-flash-medium",
+    "error": null,
+    "updatedAt": "2026-11-08T05:20:24.746Z"
+  }
+}

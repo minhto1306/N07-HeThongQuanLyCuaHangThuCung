@@ -153,7 +153,7 @@ public class LoginForm extends JFrame {
         pnlFields.add(lblPhone, gbc);
 
         gbc.gridy = 1;
-        txtPhone = new JTextField();
+        txtPhone = new JTextField("0901234567");
         txtPhone.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         txtPhone.setPreferredSize(new Dimension(360, 40));
         txtPhone.putClientProperty("JTextField.placeholderText", "Nhập SĐT nhân viên (VD: 0901234567)...");
@@ -175,7 +175,7 @@ public class LoginForm extends JFrame {
 
         gbc.gridy = 3;
         gbc.insets = new Insets(4, 0, 4, 0);
-        txtPassword = new JPasswordField();
+        txtPassword = new JPasswordField("123456");
         txtPassword.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         txtPassword.setPreferredSize(new Dimension(360, 40));
         txtPassword.putClientProperty("JTextField.placeholderText", "Nhập mật khẩu...");

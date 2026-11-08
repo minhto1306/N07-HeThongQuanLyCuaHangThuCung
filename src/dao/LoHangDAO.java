@@ -19,12 +19,44 @@ public class LoHangDAO {
      * Lấy toàn bộ danh sách lô hàng trong kho
      */
     public List<LoHang> getAllLoHang() throws SQLException {
+        return getAllLoHang(0);
+    }
+
+    /**
+     * Lấy danh sách các lô hàng còn tồn khả dụng của một sản phẩm, sắp xếp theo hạn sử dụng tăng dần (FEFO).
+     */
+    public List<LoHang> layDanhSachLoKhaDungTheoSanPham(String maSanPham) throws SQLException {
         List<LoHang> list = new ArrayList<>();
+        if (maSanPham == null || maSanPham.trim().isEmpty()) return list;
         String sql = "SELECT l.*, s.tenSanPham, n.tenNhaCungCap " +
                 "FROM LoHang l " +
                 "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
                 "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
-                "ORDER BY l.hanSuDung ASC";
+                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 AND l.hanSuDung >= CAST(GETDATE() AS DATE) " +
+                "ORDER BY l.hanSuDung ASC, l.soLuongTon DESC";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maSanPham.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapResultSetToLoHang(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+    public List<LoHang> getAllLoHang(int limit) throws SQLException {
+        List<LoHang> list = new ArrayList<>();
+        int safeLimit = Math.max(0, Math.min(limit, 1000));
+        String topClause = safeLimit > 0 ? "TOP (" + safeLimit + ") " : "";
+        String sql = "SELECT " + topClause + "l.soLo, l.maSanPham, l.maNhaCungCap, l.ngaySanXuat, l.hanSuDung, l.donGiaNhapCoSo, l.soLuongNhap, l.soLuongTon, " +
+                "s.tenSanPham, n.tenNhaCungCap " +
+                "FROM LoHang l " +
+                "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
+                "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
+                "ORDER BY l.hanSuDung ASC, l.soLuongTon DESC";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -59,16 +91,14 @@ public class LoHangDAO {
     }
 
     /**
-     * Lấy lô hàng khả dụng theo quy tắc FEFO (Hạn sử dụng gần nhất, còn tồn kho, chưa hết hạn).
-     * @deprecated Ưu tiên sử dụng getAvailableLotsFEFO(maSanPham) để hỗ trợ phân bổ đa lô đầy đủ.
+     * Lấy lô hàng khả dụng theo quy tắc FEFO (Hạn sử dụng gần nhất, còn tồn kho)
      */
-    @Deprecated
     public LoHang getLoHangFEFOBySanPham(String maSanPham) throws SQLException {
         String sql = "SELECT TOP 1 l.*, s.tenSanPham, n.tenNhaCungCap " +
                 "FROM LoHang l " +
                 "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
                 "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
-                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 AND l.hanSuDung >= CAST(GETDATE() AS DATE) " +
+                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 " +
                 "ORDER BY l.hanSuDung ASC";
 
         try (Connection conn = DBConnection.getConnection();

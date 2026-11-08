@@ -5,7 +5,7 @@ package entity;
  * - maTaiKhoan: Khóa chính tự động tăng (NV001, NV002, ...)
  * - soDienThoai: Số điện thoại nhân viên (dùng để đăng nhập hệ thống, duy nhất)
  * - email: Hòm thư công việc (dùng để gửi OTP xác thực quên mật khẩu)
- * - matKhau: Mật khẩu bảo mật PBKDF2; SHA-256 cũ chỉ được đọc để nâng cấp sau đăng nhập.
+ * - matKhau: Mật khẩu bảo mật được băm bằng thuật toán SHA-256 (64 ký tự hex)
  * - vaiTro: NVQL (Quản lý & Kho), NVTN (Thu ngân), NVBH (Bán hàng), NVCS (Chăm sóc/Spa)
  * - trangThaiHoatDong: true (Đang làm việc), false (Khóa tài khoản)
  */

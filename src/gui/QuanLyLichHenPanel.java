@@ -180,7 +180,7 @@ public class QuanLyLichHenPanel extends JPanel {
         pnlLeft.add(cboLocKTV);
         pnlLeft.add(chkChiHomNay);
 
-        String[] statuses = {"TẤT CẢ", "Đã đặt", "Đang phục vụ", "Hoàn thành", "⚠️ Quá giờ", "Hủy"};
+        String[] statuses = {"TẤT CẢ", "Chờ tiếp nhận", "Đang phục vụ", "Hoàn thành", "Quá giờ", "Hủy"};
         for (String st : statuses) {
             JButton btnFilter = taoFilterChip(st);
             statusFilterButtons.add(btnFilter);
@@ -274,8 +274,9 @@ public class QuanLyLichHenPanel extends JPanel {
         tblLichHen.getColumnModel().getColumn(1).setPreferredWidth(130);
         tblLichHen.getColumnModel().getColumn(1).setCellRenderer(center);
 
-        // Renderer Badge màu sắc cho cột Trạng thái (kèm cảnh báo Quá giờ)
-        tblLichHen.getColumnModel().getColumn(7).setPreferredWidth(135);
+        // Renderer Badge màu sắc cho cột Trạng thái phân tầng chuyên nghiệp:
+        // Đã hoàn thành (Xanh lá) • Đang phục vụ (Xanh dương / Cam quá giờ) • Chờ tiếp nhận (Vàng / Đỏ quá giờ) • Đã hủy (Xám)
+        tblLichHen.getColumnModel().getColumn(7).setPreferredWidth(140);
         tblLichHen.getColumnModel().getColumn(7).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
@@ -283,21 +284,49 @@ public class QuanLyLichHenPanel extends JPanel {
                 lbl.setHorizontalAlignment(JLabel.CENTER);
                 lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
                 String st = value != null ? value.toString() : "";
-                if (st.contains("Quá giờ")) {
-                    lbl.setBackground(ThemeColors.DANGER_LIGHT);
-                    lbl.setForeground(ThemeColors.DANGER_TEXT);
-                } else if (st.contains("Đang phục vụ")) {
-                    lbl.setBackground(ThemeColors.APPOINTMENT_DOING_BG);
-                    lbl.setForeground(ThemeColors.APPOINTMENT_DOING_TEXT);
-                } else if (st.contains("Hoàn thành")) {
-                    lbl.setBackground(ThemeColors.APPOINTMENT_DONE_BG);
-                    lbl.setForeground(ThemeColors.APPOINTMENT_DONE_TEXT);
-                } else if (st.contains("Hủy")) {
-                    lbl.setBackground(ThemeColors.APPOINTMENT_CANCEL_BG);
-                    lbl.setForeground(ThemeColors.APPOINTMENT_CANCEL_TEXT);
+
+                if (isSelected) {
+                    lbl.setBackground(table.getSelectionBackground());
+                    lbl.setForeground(table.getSelectionForeground());
+                    return lbl;
+                }
+
+                String base = st.replaceAll("\\s*\\(.*\\)$", "").trim();
+                utils.TrangThaiCuocHen tt = utils.TrangThaiCuocHen.fromString(base);
+                boolean isOverdue = st.toLowerCase().contains("quá giờ");
+
+                if (tt == utils.TrangThaiCuocHen.HOAN_THANH) {
+                    // 1. ĐÃ HOÀN THÀNH: Màu xanh lá cây (Success) - Luôn hiển thị hoàn thành, không bao giờ quá giờ
+                    lbl.setBackground(new Color(0xDC, 0xFC, 0xE7)); // Green 100
+                    lbl.setForeground(new Color(0x15, 0x80, 0x3D)); // Green 700
+                } else if (tt == utils.TrangThaiCuocHen.DANG_THUC_HIEN) {
+                    if (isOverdue) {
+                        // 2a. Đang phục vụ quá giờ: Nền vàng cam cảnh báo, chữ cam đỏ đậm
+                        lbl.setBackground(new Color(0xFF, 0xED, 0xD5)); // Orange 100
+                        lbl.setForeground(new Color(0xC2, 0x41, 0x0C)); // Orange 700
+                    } else {
+                        // 2b. Đang phục vụ đúng tiến độ: Nền xanh dương dịu, chữ xanh đậm
+                        lbl.setBackground(new Color(0xDB, 0xEA, 0xFE)); // Blue 100
+                        lbl.setForeground(new Color(0x1D, 0x4E, 0xD8)); // Blue 700
+                    }
+                } else if (tt == utils.TrangThaiCuocHen.CHO_TIEP_NHAN) {
+                    if (isOverdue) {
+                        // 3a. Khách trễ hẹn quá 15 phút: Nền đỏ hồng cảnh báo, chữ đỏ đậm
+                        lbl.setBackground(new Color(0xFE, 0xE2, 0xE2)); // Red 100
+                        lbl.setForeground(new Color(0xB9, 0x1C, 0x1C)); // Red 700
+                    } else {
+                        // 3b. Chờ tiếp nhận bình thường: Nền vàng hổ phách nhạt, chữ nâu cam
+                        lbl.setBackground(new Color(0xFE, 0xF3, 0xC7)); // Amber 100
+                        lbl.setForeground(new Color(0x92, 0x40, 0x0E)); // Amber 800
+                    }
+                } else if (tt == utils.TrangThaiCuocHen.HUY) {
+                    // 4. ĐÃ HỦY: Nền xám nhạt, chữ xám trung tính
+                    lbl.setBackground(new Color(0xF3, 0xF4, 0xF6)); // Gray 100
+                    lbl.setForeground(new Color(0x6B, 0x72, 0x80)); // Gray 500
                 } else {
-                    lbl.setBackground(ThemeColors.APPOINTMENT_WAITING_BG);
-                    lbl.setForeground(ThemeColors.APPOINTMENT_WAITING_TEXT);
+                    // 5. Fallback an toàn cho trạng thái lạ: Nền xám, chữ xám đậm
+                    lbl.setBackground(new Color(0xF3, 0xF4, 0xF6));
+                    lbl.setForeground(new Color(0x37, 0x41, 0x51));
                 }
                 lbl.setOpaque(true);
                 return lbl;
@@ -425,10 +454,7 @@ public class QuanLyLichHenPanel extends JPanel {
 
     private boolean isCaQuaGio(LichHen lh) {
         if (lh == null || lh.getNgayHen() == null) return false;
-        String st = lh.getTrangThaiLichHen() != null ? lh.getTrangThaiLichHen() : "";
-        if ("Hoàn thành".equalsIgnoreCase(st) || "Hủy".equalsIgnoreCase(st) || "Đã hủy".equalsIgnoreCase(st)) {
-            return false;
-        }
+        utils.TrangThaiCuocHen st = utils.TrangThaiCuocHen.fromString(lh.getTrangThaiLichHen());
         int thoiLuong = 60;
         if (lh.getDsChiTiet() != null && !lh.getDsChiTiet().isEmpty()) {
             ChiTietLichHen ct = lh.getDsChiTiet().get(0);
@@ -436,8 +462,7 @@ public class QuanLyLichHenPanel extends JPanel {
                 thoiLuong = ct.getDichVu().getThoiLuongPhut();
             }
         }
-        long elapsedMinutes = java.time.Duration.between(lh.getNgayHen(), java.time.LocalDateTime.now()).toMinutes();
-        return elapsedMinutes > thoiLuong;
+        return utils.TrangThaiCuocHen.isCaQuaGio(lh.getNgayHen(), st, thoiLuong);
     }
 
     private void capNhatDanhSachKtvVaKpi() {
@@ -445,14 +470,14 @@ public class QuanLyLichHenPanel extends JPanel {
         java.util.Map<String, Integer> ktvActiveCount = new java.util.LinkedHashMap<>();
 
         for (LichHen lh : currentList) {
-            String st = lh.getTrangThaiLichHen() != null ? lh.getTrangThaiLichHen() : "Đã đặt";
+            utils.TrangThaiCuocHen st = utils.TrangThaiCuocHen.fromString(lh.getTrangThaiLichHen());
             boolean quaGio = isCaQuaGio(lh);
-            if ("Đang phục vụ".equalsIgnoreCase(st)) {
+            if (st == utils.TrangThaiCuocHen.DANG_THUC_HIEN) {
                 dangLam++;
                 if (quaGio) huyVaQuaGio++;
-            } else if ("Hoàn thành".equalsIgnoreCase(st)) {
+            } else if (st == utils.TrangThaiCuocHen.HOAN_THANH) {
                 xong++;
-            } else if ("Hủy".equalsIgnoreCase(st) || "Đã hủy".equalsIgnoreCase(st)) {
+            } else if (st == utils.TrangThaiCuocHen.HUY) {
                 huyVaQuaGio++;
             } else {
                 cho++;
@@ -462,7 +487,7 @@ public class QuanLyLichHenPanel extends JPanel {
             String tenKtv = layTenKtv(lh);
             if (!"Chưa chỉ định".equalsIgnoreCase(tenKtv)) {
                 ktvActiveCount.putIfAbsent(tenKtv, 0);
-                if ("Đang phục vụ".equalsIgnoreCase(st) || "Đã đặt".equalsIgnoreCase(st)) {
+                if (st == utils.TrangThaiCuocHen.DANG_THUC_HIEN || st == utils.TrangThaiCuocHen.CHO_TIEP_NHAN) {
                     ktvActiveCount.put(tenKtv, ktvActiveCount.get(tenKtv) + 1);
                 }
             }
@@ -509,10 +534,10 @@ public class QuanLyLichHenPanel extends JPanel {
     }
 
     private int xepHangUuTienTrangThai(LichHen lh) {
-        String st = lh.getTrangThaiLichHen() != null ? lh.getTrangThaiLichHen() : "Đã đặt";
-        if ("Đang phục vụ".equalsIgnoreCase(st)) return 1;
-        if ("Đã đặt".equalsIgnoreCase(st)) return 2;
-        if ("Hoàn thành".equalsIgnoreCase(st)) return 3;
+        utils.TrangThaiCuocHen st = utils.TrangThaiCuocHen.fromString(lh.getTrangThaiLichHen());
+        if (st == utils.TrangThaiCuocHen.DANG_THUC_HIEN) return 1;
+        if (st == utils.TrangThaiCuocHen.CHO_TIEP_NHAN) return 2;
+        if (st == utils.TrangThaiCuocHen.HOAN_THANH) return 3;
         return 4;
     }
 
@@ -545,10 +570,12 @@ public class QuanLyLichHenPanel extends JPanel {
             boolean matchSt;
             if ("TẤT CẢ".equalsIgnoreCase(currentStatusFilter)) {
                 matchSt = true;
-            } else if ("⚠️ Quá giờ".equalsIgnoreCase(currentStatusFilter)) {
+            } else if ("Quá giờ".equalsIgnoreCase(currentStatusFilter) || currentStatusFilter.contains("Quá giờ")) {
                 matchSt = quaGio;
             } else {
-                matchSt = rawSt.equalsIgnoreCase(currentStatusFilter);
+                utils.TrangThaiCuocHen filterEnum = utils.TrangThaiCuocHen.fromString(currentStatusFilter);
+                utils.TrangThaiCuocHen rawEnum = utils.TrangThaiCuocHen.fromString(rawSt);
+                matchSt = (filterEnum != null && filterEnum == rawEnum);
             }
 
             if (onlyToday && (lh.getNgayHen() == null || !lh.getNgayHen().toLocalDate().equals(today))) {
@@ -583,10 +610,10 @@ public class QuanLyLichHenPanel extends JPanel {
                     tenDichVu.toLowerCase().contains(kw);
 
             if (matchSt && matchKtv && matchKw) {
-                String stHienThi = quaGio ? (rawSt + " (⚠️ Quá giờ)") : rawSt;
+                String stHienThi = quaGio ? (rawSt + " (Quá giờ)") : rawSt;
                 String ghiChuGoc = lh.getGhiChu() != null ? lh.getGhiChu() : "";
                 String tienDoGhiChu = quaGio
-                        ? ("⚠️ Đã vượt định mức " + thoiLuongPhut + "p • " + ghiChuGoc)
+                        ? ("[Quá giờ] Đã vượt định mức " + thoiLuongPhut + "p • " + ghiChuGoc)
                         : ("Định mức " + thoiLuongPhut + "p" + (ghiChuGoc.isEmpty() ? "" : " • " + ghiChuGoc));
 
                 filteredRows.add(new Object[]{
@@ -657,7 +684,7 @@ public class QuanLyLichHenPanel extends JPanel {
         String ktv = (String) modelLichHen.getValueAt(row, 6);
         String trangThai = (String) modelLichHen.getValueAt(row, 7);
 
-        if (!"Hoàn thành".equalsIgnoreCase(trangThai)) {
+        if (!trangThai.toLowerCase().contains("hoàn thành") && !trangThai.toLowerCase().contains("xong")) {
             int opt = JOptionPane.showConfirmDialog(this,
                     "Lịch hẹn này chưa ở trạng thái 'Hoàn thành'. Bạn có chắc muốn chuyển thẳng sang thanh toán ngay?",
                     "Xác nhận thanh toán trước", JOptionPane.YES_NO_OPTION);

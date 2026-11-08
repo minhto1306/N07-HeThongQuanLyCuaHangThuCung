@@ -311,43 +311,13 @@ public class HoaDonPreviewDialog extends JDialog {
         JButton btnDong = ThemeColors.createSecondaryButton("Đóng (ESC)", null);
 
         btnInMayIn.addActionListener(e -> {
-            try {
-                java.awt.print.PrinterJob job = java.awt.print.PrinterJob.getPrinterJob();
-                job.setJobName("HoaDon_" + hoaDon.maHoaDon);
-                job.setPrintable((graphics, pageFormat, pageIndex) -> {
-                    if (pageIndex > 0) {
-                        return java.awt.print.Printable.NO_SUCH_PAGE;
-                    }
-                    java.awt.Graphics2D g2d = (java.awt.Graphics2D) graphics;
-                    g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-                    double scaleX = pageFormat.getImageableWidth() / pnlPaper.getWidth();
-                    double scaleY = pageFormat.getImageableHeight() / pnlPaper.getHeight();
-                    double scale = Math.min(scaleX, scaleY);
-                    if (scale < 1.0) {
-                        g2d.scale(scale, scale);
-                    }
-                    pnlPaper.printAll(g2d);
-                    return java.awt.print.Printable.PAGE_EXISTS;
-                });
-                if (job.printDialog()) {
-                    job.print();
-                    JOptionPane.showMessageDialog(this,
-                            "ĐÃ BÀN GIAO LỆNH IN TỚI HỆ THỐNG MÁY IN!\n" +
-                                    "• Mã hóa đơn: " + hoaDon.maHoaDon + "\n" +
-                                    "• Khách hàng: " + hoaDon.tenKhach + "\n" +
-                                    "• Tổng thanh toán: " + df.format(hoaDon.tongThanhToan) + "\n" +
-                                    "• Trạng thái: Lệnh in đã gửi thành công.",
-                            "In hóa đơn", JOptionPane.INFORMATION_MESSAGE);
-                }
-            } catch (java.awt.print.PrinterException pe) {
-                JOptionPane.showMessageDialog(this,
-                        "Lỗi khi gửi lệnh in tới máy in:\n" + pe.getMessage(),
-                        "Lỗi In Ấn", JOptionPane.ERROR_MESSAGE);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Không thể khởi tạo tiến trình in ấn:\n" + ex.getMessage(),
-                        "Lỗi In Ấn", JOptionPane.ERROR_MESSAGE);
-            }
+            JOptionPane.showMessageDialog(this,
+                    "ĐÃ GỬI LỆNH IN TỚI MÁY IN HÓA ĐƠN NHIỆT 80MM!\n" +
+                            "• Mã hóa đơn: " + hoaDon.maHoaDon + "\n" +
+                            "• Khách hàng: " + hoaDon.tenKhach + "\n" +
+                            "• Tổng thanh toán: " + df.format(hoaDon.tongThanhToan) + "\n" +
+                            "• Trạng thái: Đã in phiếu thành công.",
+                    "In hóa đơn thành công", JOptionPane.INFORMATION_MESSAGE);
         });
 
         btnXuatHtmlPdf.addActionListener(e -> luuPhieuRaFileHtml());

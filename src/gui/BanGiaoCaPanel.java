@@ -67,7 +67,6 @@ public class BanGiaoCaPanel extends JPanel {
     private long tienChuyenKhoanGhiNhan = 0L;
     private long tienHoanTraKhach = 0L;
     private boolean dangCapNhatTuDong = false;
-    private boolean duLieuTaiChinhHopLe = false;
 
     public BanGiaoCaPanel() {
         setLayout(new BorderLayout(14, 14));
@@ -478,7 +477,6 @@ public class BanGiaoCaPanel extends JPanel {
             }
 
             try {
-                duLieuTaiChinhHopLe = true;
                 BangGiaoCa caBanGiaoGanNhat = giaoCaBus.layCaBanGiaoGanNhat();
                 LocalDateTime mocBatDauCa;
                 if (caBanGiaoGanNhat != null && caBanGiaoGanNhat.getGioKetThucThucTe() != null) {
@@ -507,7 +505,6 @@ public class BanGiaoCaPanel extends JPanel {
                 tienHeThongGhiNhan = 0L;
                 tienChuyenKhoanGhiNhan = 0L;
                 tienHoanTraKhach = 0L;
-                duLieuTaiChinhHopLe = false;
                 System.err.println("[BanGiaoCaPanel] Không lấy được tiền bàn giao ca gần nhất: " + e.getMessage());
             }
             long tongLyThuyet = tinhTongLyThuyetHienTai();
@@ -527,11 +524,6 @@ public class BanGiaoCaPanel extends JPanel {
             if (lblTienDuKien != null) {
                 lblTienDuKien.setText(df.format(tongLyThuyet));
             }
-            if (btnChotCa != null) {
-                btnChotCa.setEnabled(duLieuTaiChinhHopLe);
-                btnChotCa.setToolTipText(duLieuTaiChinhHopLe ? null
-                        : "Không thể chốt ca khi dữ liệu tài chính/migration chưa hợp lệ");
-            }
 
             dongBoLichSuGiaoCaTuDatabase();
         } finally {
@@ -541,10 +533,7 @@ public class BanGiaoCaPanel extends JPanel {
     }
 
     private long tinhTongLyThuyetHienTai() {
-        return bus.GiaoCaBus.tinhTienMatLyThuyet(
-                BigDecimal.valueOf(tienDauCa),
-                BigDecimal.valueOf(tienHeThongGhiNhan),
-                BigDecimal.valueOf(tienHoanTraKhach)).longValueExact();
+        return (tienDauCa + tienHeThongGhiNhan - tienHoanTraKhach);
     }
 
     private LocalDateTime layMocBatDauCaDangChon() {
@@ -648,13 +637,6 @@ public class BanGiaoCaPanel extends JPanel {
      * Thu ngân chốt ca lưu biên bản trạng thái "⏳ Chờ Quản lý duyệt" vào CSDL và gợi ý đăng xuất.
      */
     private void xacNhanBanGiaoCa() {
-        if (!duLieuTaiChinhHopLe) {
-            JOptionPane.showMessageDialog(this,
-                    "Không thể chốt ca vì hệ thống chưa tải được dữ liệu tài chính chính xác.\n"
-                            + "Vui lòng kiểm tra kết nối và cập nhật CSDL bằng HeThongQuanLyThuCung.sql.",
-                    "Dữ liệu ca chưa hợp lệ", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
         tinhChenhLech();
         long lyThuyet = tinhTongLyThuyetHienTai();
         String tienThucTeRaw = txtTienThucTe.getText() != null

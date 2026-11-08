@@ -1,0 +1,26 @@
+PASS cash_sale | stock decremented once
+PASS insufficient_stock_rollback | header and stock preserved
+PASS split_pack_real_base_unit | null QD resolved to real base conversion
+PASS expired_lot_rejected | DAO guard
+PASS negative_export_rejected | DAO guard
+PASS wrong_total_rejected | header1 vs line10000
+PASS foreign_product_unit_rejected | QD must match lot product
+PASS redeem_points | 100-20+floor(80000/100000)
+PASS insufficient_points_rollback | atomic point/stock/header rollback
+PASS damaged_return | records return without stock
+PASS damaged_already_returned_blocks_duplicate | damaged also counts toward sold limit
+PASS concurrent_return_exactly_one | accepted=1 of two attempts for one sold unit
+PASS concurrent_sale_no_oversell | 8-unit orders from stock10; accepted=1
+PASS 400_sales_8_workers | completed=400 errors=0 seconds=54.1663358
+PASS hotel_two_days | qty1 hotel line persists2 calendar days
+PASS two_rooms_one_invoice | two distinct room histories
+PASS two_spa_sessions | counter and history both2
+PASS spa_customer_required | guest cannot consume linked card
+PASS cashier_profile_preserves_points | stale client points999 ignored
+PASS DAO_profile_preserves_points | legacy DAO cannot bypass cashier role
+PASS top_base_units | shown=15 exported=15
+PASS XNT_actual_restock | report=1 physical=1
+PASS preserve_stored_invoice_values | deliberate SQL fixture header123 line99
+PASS negative_stock_adjustment_rejected | no quantity change
+PASS FEFO_excludes_expired | no expired fallback
+TOTAL pass=25 fail=0 run=RMW7ES2B0 database=MioRepair_20261108

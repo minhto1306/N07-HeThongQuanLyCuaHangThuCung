@@ -62,13 +62,7 @@ public class ChiTietDichVu extends ChiTietHoaDon {
         this.tienHoaHong = tienHoaHong;
     }
 
-    @Override
-    public BigDecimal tinhThanhTien() {
-        if (this.donGiaLucBan == null) {
-            return BigDecimal.ZERO;
-        }
-        return this.donGiaLucBan.multiply(BigDecimal.valueOf(this.soLuong));
-    }
+    // note lai: tinhThanhTien cua dich vu da chuyen sang BanHangBus.tinhThanhTien(donGia, sl)
 
     @Override
     public String getTenKhoanMuc() {

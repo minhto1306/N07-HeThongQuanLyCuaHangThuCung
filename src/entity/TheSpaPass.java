@@ -21,7 +21,8 @@ public class TheSpaPass {
     private long donGiaGoi;
     private LocalDate ngayKichHoat;
     private LocalDate ngayHetHan;
-    private String trangThai; // "ĐANG HOẠT ĐỘNG", "ĐÃ HẾT BUỔI", "HẾT HẠN SỬ DỤNG"
+    private String trangThai;
+    private String maHoaDonKichHoat; // "ĐANG HOẠT ĐỘNG", "ĐÃ HẾT BUỔI", "HẾT HẠN SỬ DỤNG"
 
     private static final DateTimeFormatter DF = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -43,47 +44,10 @@ public class TheSpaPass {
         this.donGiaGoi = donGiaGoi;
         this.ngayKichHoat = ngayKichHoat != null ? ngayKichHoat : LocalDate.now();
         this.ngayHetHan = ngayHetHan != null ? ngayHetHan : LocalDate.now().plusDays(90);
-        capNhatTrangThai();
     }
 
-    public void capNhatTrangThai() {
-        if (soBuoiConLai <= 0) {
-            this.trangThai = "ĐÃ HẾT BUỔI";
-        } else if (LocalDate.now().isAfter(ngayHetHan)) {
-            this.trangThai = "HẾT HẠN SỬ DỤNG";
-        } else {
-            this.trangThai = "ĐANG HOẠT ĐỘNG";
-        }
-    }
-
-    public boolean coTheSuDung() {
-        capNhatTrangThai();
-        return "ĐANG HOẠT ĐỘNG".equals(this.trangThai) && soBuoiConLai > 0;
-    }
-
-    public boolean dungMotBuoi() {
-        if (!coTheSuDung()) return false;
-        this.soBuoiDaDung++;
-        this.soBuoiConLai = Math.max(0, tongSoBuoi - soBuoiDaDung);
-        capNhatTrangThai();
-        return true;
-    }
-
-    public void giaHanThem(int soNgay) {
-        if (this.ngayHetHan != null) {
-            this.ngayHetHan = this.ngayHetHan.plusDays(soNgay);
-            capNhatTrangThai();
-        }
-    }
-
-    public void napThemBuoi(int soBuoiNapThem, int soNgayGiaHan) {
-        this.tongSoBuoi += Math.max(0, soBuoiNapThem);
-        this.soBuoiConLai += Math.max(0, soBuoiNapThem);
-        if (soNgayGiaHan > 0 && this.ngayHetHan != null) {
-            this.ngayHetHan = this.ngayHetHan.plusDays(soNgayGiaHan);
-        }
-        capNhatTrangThai();
-    }
+    // note lai: may ham cap nhat trang thai va kiem tra the con dung duoc khong
+    // da duoc chuyen sang SpaPassBus theo dung chuan mo hinh n-tier
 
     public String getMaThe() { return maThe; }
     public void setMaThe(String maThe) { this.maThe = maThe; }
@@ -118,7 +82,9 @@ public class TheSpaPass {
     public String getTrangThai() { return trangThai; }
     public void setTrangThai(String trangThai) { this.trangThai = trangThai; }
 
-    public boolean isKhaDung() { return coTheSuDung(); }
+    public String getMaHoaDonKichHoat() { return maHoaDonKichHoat; }
+    public void setMaHoaDonKichHoat(String maHoaDonKichHoat) { this.maHoaDonKichHoat = maHoaDonKichHoat; }
+
     public String getTenThe() { return tenGoi != null ? tenGoi : "Thẻ Spa Pass"; }
 
     public String getNgayHetHanStr() {

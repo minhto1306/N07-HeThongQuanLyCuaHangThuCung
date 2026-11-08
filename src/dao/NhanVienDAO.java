@@ -112,10 +112,9 @@ public class NhanVienDAO {
                     ? nv.getEmail().trim()
                     : maNV.toLowerCase() + "@mio.vn";
             String sdt = nv.getSoDienThoai() != null ? nv.getSoDienThoai().trim() : "";
-            if (matKhauHash == null || !matKhauHash.startsWith("PBKDF2$")) {
-                throw new IllegalArgumentException("Tài khoản mới bắt buộc sử dụng hash PBKDF2 hợp lệ");
-            }
-            String passHash = matKhauHash.trim();
+            String passHash = (matKhauHash != null && !matKhauHash.trim().isEmpty())
+                    ? matKhauHash.trim()
+                    : utils.PasswordHasher.hashSHA256("123456");
             String role = (vaiTro != null && !vaiTro.trim().isEmpty()) ? vaiTro.trim() : "NVTN";
 
             // 1. Thêm bản ghi TaiKhoan

@@ -17,16 +17,16 @@ public class DoiTraTransferData implements Serializable {
     public static class MonTraLai implements Serializable {
         private static final long serialVersionUID = 1L;
 
-        public String maSP;
-        public String tenSP;
-        public String dvt;
-        public int soLuong;
-        public long donGia;
-        public long thanhTien;
-        public String lyDo;
-        public boolean nguyenTem;
-        public String soLo;
-        public int soLuongCoSoHoan;
+        private String maSP;
+        private String tenSP;
+        private String dvt;
+        private int soLuong;
+        private long donGia;
+        private long thanhTien;
+        private String lyDo;
+        private boolean nguyenTem;
+        private String soLo;
+        private int soLuongCoSoHoan;
 
         public MonTraLai() {}
 
@@ -87,11 +87,11 @@ public class DoiTraTransferData implements Serializable {
     public static class MonDoiMoi implements Serializable {
         private static final long serialVersionUID = 1L;
 
-        public String maSP;
-        public String tenSP;
-        public String dvt;
-        public int soLuong;
-        public long donGia;
+        private String maSP;
+        private String tenSP;
+        private String dvt;
+        private int soLuong;
+        private long donGia;
 
         public MonDoiMoi() {}
 
@@ -119,19 +119,19 @@ public class DoiTraTransferData implements Serializable {
         public void setDonGia(long donGia) { this.donGia = donGia; }
     }
 
-    public String maHoaDonGoc;
-    public String thoiGianGoc;
-    public String tenKhach;
-    public String sdtKhach;
-    public long tongTienTra;
-    public int diemKhauTru;
-    public long giaTriHangTra;
-    public long giaTriHangDoi;
-    public long tienHoanThucTe;
-    public long tienKhachTraThem;
-    public String phuongThucHoanTien = "CHUA_XAC_DINH";
-    public List<MonTraLai> dsMonTra = new ArrayList<>();
-    public List<MonDoiMoi> dsMonMoi = new ArrayList<>();
+    private String maHoaDonGoc;
+    private String thoiGianGoc;
+    private String tenKhach;
+    private String sdtKhach;
+    private long tongTienTra;
+    private int diemKhauTru;
+    private long giaTriHangTra;
+    private long giaTriHangDoi;
+    private long tienHoanThucTe;
+    private long tienKhachTraThem;
+    private String phuongThucHoanTien= "CHUA_XAC_DINH";
+    private List<MonTraLai> dsMonTra= new ArrayList<>();
+    private List<MonDoiMoi> dsMonMoi= new ArrayList<>();
 
     public DoiTraTransferData() {}
 

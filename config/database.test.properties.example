@@ -1,0 +1,7 @@
+# Sao chép thành config/database.test.properties. Chỉ dùng cho kiểm thử tích hợp.
+db.host=localhost
+db.port=1433
+db.instance=SQLEXPRESS
+db.name=QuanLyCuaHangThuCung_Test
+db.user=sa
+db.password=YOUR_TEST_DATABASE_PASSWORD_HERE

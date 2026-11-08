@@ -249,13 +249,22 @@ public class HoaDonDAO {
         if (hoaDon.getTienBuTruDoiTra() != null && hoaDon.getTienBuTruDoiTra().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Tiền bù trừ đổi trả không được âm");
         }
-        for (ChiTietHoaDon ct : hoaDon.getDsChiTiet()) {
+        for (int i = 0; i < hoaDon.getDsChiTiet().size(); i++) {
+            ChiTietHoaDon ct = hoaDon.getDsChiTiet().get(i);
             if (ct == null || ct.getSoLuong() <= 0) {
                 throw new IllegalArgumentException("Số lượng chi tiết hóa đơn phải lớn hơn 0");
             }
-            if (ct.getDonGiaLucBan() == null || ct.getDonGiaLucBan().compareTo(BigDecimal.ZERO) < 0
-                    || ct.getThanhTien() == null || ct.getThanhTien().compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException("Đơn giá và thành tiền chi tiết không được âm");
+            if (ct.getDonGiaLucBan() == null) {
+                ct.setDonGiaLucBan(BigDecimal.ZERO);
+            }
+            if (ct.getThanhTien() == null) {
+                ct.setThanhTien(ct.getDonGiaLucBan().multiply(BigDecimal.valueOf(ct.getSoLuong())));
+            }
+            if (ct.getDonGiaLucBan().compareTo(BigDecimal.ZERO) < 0
+                    || ct.getThanhTien().compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Dòng hóa đơn " + (i + 1)
+                        + " [" + ct.getTenKhoanMuc() + "]: đơn giá và thành tiền không được âm"
+                        + " (đơn giá=" + ct.getDonGiaLucBan() + ", thành tiền=" + ct.getThanhTien() + ")");
             }
         }
     }
@@ -279,7 +288,7 @@ public class HoaDonDAO {
         String sqlCTDichVu = "INSERT INTO ChiTietDichVu (maChiTiet, maDichVu, maThuCung, maKtvThucHien, tienHoaHong) VALUES (?, ?, ?, ?, ?)";
         String sqlTichDiem = "UPDATE KhachHang SET diemTichLuy = diemTichLuy + ? WHERE maKhachHang = ?";
 
-        hoaDon.capNhatTongTien();
+        bus.BanHangBus.tinhTongTienHoaDon(hoaDon);
         try (PreparedStatement ps = conn.prepareStatement(sqlHoaDon)) {
             ps.setString(1, hoaDon.getMaHoaDon());
             if (hoaDon.getKhachHang() != null && hoaDon.getKhachHang().getMaKhachHang() != null) {

@@ -100,4 +100,17 @@ public class DoiTraBus {
     public boolean luuPhieuDoiTra(PhieuDoiTra pdt) {
         return luuPhieuDoiTra(pdt, null, 0);
     }
+
+    // note lại: tính tổng tiền hoàn cho phiếu đổi trả, tách ra khỏi entity PhieuDoiTra
+    public static java.math.BigDecimal tinhTongTienHoan(PhieuDoiTra pdt) {
+        if (pdt == null || pdt.getDsChiTietDoiTra() == null) return java.math.BigDecimal.ZERO;
+        java.math.BigDecimal tong = java.math.BigDecimal.ZERO;
+        for (entity.ChiTietDoiTra ct : pdt.getDsChiTietDoiTra()) {
+            if (ct != null && ct.getTienHoanLai() != null) {
+                tong = tong.add(ct.getTienHoanLai());
+            }
+        }
+        pdt.setTongTienHoan(tong);
+        return tong;
+    }
 }

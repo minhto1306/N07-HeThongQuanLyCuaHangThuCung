@@ -1,4 +1,4 @@
-# 🐾 HỆ THỐNG QUẢN LÝ CỬA HÀNG THÚ CƯNG MIO (MIO PET SHOP MANAGEMENT SYSTEM)
+﻿# 🐾 HỆ THỐNG QUẢN LÝ CỬA HÀNG THÚ CƯNG MIO (MIO PET SHOP MANAGEMENT SYSTEM)
 
 > **Đồ án học phần:** Phát triển Ứng dụng (Application Development - AD)  
 > **Đơn vị đào tạo:** Khoa Công nghệ Thông tin - Trường Đại học Công nghiệp TP.HCM (IUH)  
@@ -214,8 +214,7 @@ N07-HeThongQuanLyCuaHangThuCungMio/
 │   └── vnpay.properties                # Cấu hình Merchant Terminal Cổng thanh toán VNPay Sandbox
 │
 ├── sql/                                # Cơ sở dữ liệu quan hệ
-│   ├── HeThongQuanLyThuCung.sql        # Kịch bản DDL hợp nhất tạo mới CSDL 30 Bảng & Cấu hình chuẩn
-│   └── archive/                        # Lưu trữ kịch bản gốc, migrations, seed, validate và cleanup
+│   └── HeThongQuanLyCuaHangThuCung.sql # Kịch bản DDL tạo Database, Bảng, Khóa chính, Khóa ngoại & Dữ liệu mẫu
 │
 ├── lib/                                # Các thư viện phụ thuộc (Dependencies)
 │   ├── flatlaf-3.5.4.jar               # Giao diện phẳng FlatLaf hiện đại
@@ -292,33 +291,14 @@ N07-HeThongQuanLyCuaHangThuCungMio/
 
 ### 2. Khởi tạo Cơ sở dữ liệu SQL Server
 1. Mở công cụ **SQL Server Management Studio (SSMS)** hoặc **Azure Data Studio**.
-2. Mở tệp kịch bản: [`sql/HeThongQuanLyThuCung.sql`](sql/HeThongQuanLyThuCung.sql).
-   File được lưu UTF-8 có BOM. Nếu chạy bằng `sqlcmd`, cần dùng `-f 65001` để đọc đúng tiếng Việt; trong SSMS mở trực tiếp file bằng chế độ UTF-8.
-3. Tự tạo và chọn đúng database đích. Script **không tự tạo, đổi hoặc xóa database**.
-4. Trong cùng cửa sổ truy vấn/session, xác nhận database và chạy chế độ chỉ tạo schema:
-   ```sql
-   USE QuanLyCuaHangThuCung;
-   EXEC sp_set_session_context N'XacNhanDatabase', N'QuanLyCuaHangThuCung';
-   EXEC sp_set_session_context N'CheDo', N'SCHEMA_ONLY';
-   -- Sau đó chạy toàn bộ sql/HeThongQuanLyThuCung.sql trong chính session này.
-   ```
-5. Tạo tài khoản quản lý đầu tiên bằng `utils.BootstrapAdminAccount`; không có mật khẩu mặc định trong source.
-6. Chỉ khi cần dữ liệu mẫu, dùng database cô lập tên chính xác `QuanLyCuaHangThuCung_Test` hoặc `QuanLyCuaHangThuCung_Dev`, bootstrap NV001 trước, rồi xác nhận trong cùng session:
-   ```sql
-   DECLARE @databaseDich sysname = DB_NAME();
-   EXEC sp_set_session_context N'XacNhanDatabase', @databaseDich;
-   EXEC sp_set_session_context N'CheDo', N'DEMO_DATA';
-   EXEC sp_set_session_context N'XacNhanDemo', N'PETSHOP_MIO_DEMO_FRESH_ONLY';
-   -- Sau đó chạy lại toàn bộ file. Script sẽ từ chối nếu database không còn trống.
-   ```
-   Các tài khoản mẫu phụ được tạo ở trạng thái khóa; quản lý phải đặt mật khẩu riêng trước khi kích hoạt.
-7. Mở tệp [`config/database.properties`](config/database.properties) để kiểm tra lại tài khoản kết nối:
+2. Mở tệp kịch bản: [`sql/HeThongQuanLyCuaHangThuCung.sql`](sql/HeThongQuanLyCuaHangThuCung.sql).
+3. Nhấn **Execute (F5)** để tự động tạo cơ sở dữ liệu `QuanLyCuaHangThuCung`, toàn bộ các bảng, ràng buộc khóa ngoại và nạp sẵn dữ liệu mẫu thực tế.
+4. Mở tệp [`config/database.properties`](config/database.properties) để kiểm tra lại tài khoản kết nối:
    ```properties
    db.url=jdbc:sqlserver://localhost:1433;databaseName=QuanLyCuaHangThuCung;encrypt=true;trustServerCertificate=true;
    db.user=sa
-   db.password=YOUR_DATABASE_PASSWORD_HERE
+   db.password=sapassword
    ```
-   *(Lưu ý: Bạn có thể tạo file `config/database.local.properties` từ file `.example` để lưu mật khẩu cá nhân không bị Git theo dõi).*
 
 ### 3. Biên dịch và khởi chạy chương trình
 
@@ -339,14 +319,53 @@ run.bat
 
 ---
 
-## 🔑 TÀI KHOẢN VÀ PHÂN QUYỀN (RBAC)
+## 🔑 TÀI KHOẢN ĐĂNG NHẬP MẪU THEO PHÂN QUYỀN (RBAC)
 
-Hệ thống hỗ trợ bốn vai trò được lưu trong CSDL: `NVQL`, `NVTN`, `NVBH` và `NVCS`. Repository không công khai tài khoản hoặc mật khẩu dùng chung.
+Hệ thống thiết lập cơ chế kiểm soát truy cập dựa trên vai trò (Role-Based Access Control - RBAC) nghiêm ngặt gồm 4 vai trò:
 
-- Tài khoản quản lý đầu tiên phải được tạo bằng `utils.BootstrapAdminAccount` trên đúng database đích.
-- Các tài khoản demo phụ được tạo ở trạng thái khóa. Quản lý đặt mật khẩu riêng, đủ mạnh rồi mới kích hoạt.
-- Mật khẩu mới được băm một chiều bằng PBKDF2 với salt ngẫu nhiên. SHA-256 cũ chỉ được đọc để nâng cấp khi đăng nhập thành công, không dùng để tạo/reset mật khẩu mới.
-- Nhân viên quên mật khẩu sử dụng luồng OTP qua email đã cấu hình; không có mật khẩu dự phòng trong source.
+<table border="1" style="border-collapse: collapse; width: 100%; border: 1px solid #cbd5e1;">
+  <thead>
+    <tr style="background-color: #f1f5f9;">
+      <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">Số Điện Thoại (Đăng nhập)</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">Mật Khẩu Mẫu</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Họ Tên &amp; Mã NV</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">Chức Vụ / Vai Trò</th>
+      <th style="padding: 8px; border: 1px solid #cbd5e1;">Phạm Vi Quyền Hạn Thực Tế Trên Menu</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b><code>0901234567</code></b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>123456</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Lê Khãi Minh (<code>NV001</code>)</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>Quản Lý (NVQL)</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Toàn quyền hệ thống:</b> Truy cập đầy đủ cả 10 phân hệ (Tổng quan, POS, Kho lô hàng, Đổi trả, Thú cưng, Lịch hẹn, Khách sạn, Bàn giao ca, Phân ca, Quản lý nhân viên).</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b><code>0912345678</code></b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>123456</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Lê Anh Minh (<code>NV003</code>)</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>Thu Ngân (NVTN)</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Quầy thu ngân:</b> Bán hàng POS, In hóa đơn, Đổi trả hàng hóa, Bàn giao ca két tiền cuối ngày, Xem lịch trực cá nhân <i>(Bị khóa: Quản lý nhập kho, Quản lý nhân sự, Phân ca tuần)</i>.</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b><code>0923456789</code></b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>123456</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Tô Thành Đạt (<code>NV002</code>)</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>Thủ Kho (NVKHO)</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Kho &amp; Lô hàng:</b> Quản lý sản phẩm, nhập kho theo lô (FEFO), cảnh báo ROP, thiết lập quy đổi đơn vị tính <i>(Bị khóa: Quầy thu ngân POS, Quản lý nhân sự)</i>.</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b><code>0945678901</code></b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><code>123456</code></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;">Võ Thị Hồng Ngọc (<code>NV004</code>)</td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;"><b>Chăm Sóc Thú Cưng (NVCS)</b></td>
+      <td style="padding: 8px; border: 1px solid #cbd5e1;"><b>Chăm sóc Spa &amp; Hotel:</b> Hồ sơ sức khỏe thú cưng, Tiếp nhận &amp; điều phối lịch hẹn Spa Grooming, Quản lý lưu trú Pet Hotel <i>(Bị khóa: Quầy thu ngân POS, Quản lý kho, Quản lý phân ca)</i>.</td>
+    </tr>
+  </tbody>
+</table>
+
+> **Lưu ý bảo mật:** Mật khẩu trong CSDL được băm một chiều bằng thuật toán **SHA-256 (64 ký tự)**. Khi đăng nhập, hệ thống tự động băm mật khẩu người dùng nhập để so sánh với CSDL. Nhân viên quên mật khẩu có thể sử dụng chức năng **Quên mật khẩu?** tại màn hình đăng nhập để nhận mã OTP qua Email công việc.
 
 ---
 

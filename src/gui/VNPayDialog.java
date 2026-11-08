@@ -263,27 +263,25 @@ public class VNPayDialog extends JDialog {
         lblTrangThai.setForeground(new Color(0x02, 0x84, 0xC7));
         lblTrangThai.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Card thông tin thẻ test NCB Sandbox
+        // Bảng tóm tắt thông tin thanh toán chuẩn hóa thương mại
         JPanel pnlCardTest = new JPanel(new GridBagLayout());
         pnlCardTest.setBackground(Color.WHITE);
         pnlCardTest.setBorder(new CompoundBorder(
                 new LineBorder(new Color(0xBA, 0xE6, 0xFD), 1, true),
-                new EmptyBorder(8, 12, 8, 12)
+                new EmptyBorder(10, 14, 10, 14)
         ));
-        pnlCardTest.setMaximumSize(new Dimension(460, 180));
-        pnlCardTest.setPreferredSize(new Dimension(460, 180));
+        pnlCardTest.setMaximumSize(new Dimension(460, 120));
+        pnlCardTest.setPreferredSize(new Dimension(460, 120));
         pnlCardTest.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(2, 4, 2, 4);
+        gbc.insets = new Insets(3, 4, 3, 4);
 
-        themDong(pnlCardTest, gbc, 0, "Số tiền thanh toán:", df.format(tongThanhToan), null, true);
-        themDong(pnlCardTest, gbc, 1, "Ngân hàng test:", "NCB (Ngân hàng Quốc Dân)", null, false);
-        themDong(pnlCardTest, gbc, 2, "Số thẻ ATM test:", "9704198526191432198", "9704198526191432198", false);
-        themDong(pnlCardTest, gbc, 3, "Tên chủ thẻ:", "NGUYEN VAN A", "NGUYEN VAN A", false);
-        themDong(pnlCardTest, gbc, 4, "Ngày phát hành:", "07/15", "07/15", false);
-        themDong(pnlCardTest, gbc, 5, "Mật khẩu OTP:", "123456", "123456", false);
+        themDong(pnlCardTest, gbc, 0, "Mã hóa đơn:", maHoaDon, null, false);
+        themDong(pnlCardTest, gbc, 1, "Khách hàng:", tenKhach, null, false);
+        themDong(pnlCardTest, gbc, 2, "Số tiền thanh toán:", df.format(tongThanhToan), null, true);
+        themDong(pnlCardTest, gbc, 3, "Kênh giao dịch:", "Cổng thanh toán điện tử VNPay Gateway", null, false);
 
         pnlBody.add(pnlQRWrapper);
         pnlBody.add(Box.createVerticalStrut(8));

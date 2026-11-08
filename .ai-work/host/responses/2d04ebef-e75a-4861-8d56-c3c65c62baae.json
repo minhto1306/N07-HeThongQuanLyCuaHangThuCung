@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "result": {
+    "id": "mio-agy-project-handover-20261108-v2",
+    "digest": "3b96e6c914d614ca8396cce6d4bd53840cb63aca68c453d13e53d4c63b0408c2",
+    "taskIds": [
+      "agy-project-context-handover-v2-20261108"
+    ]
+  }
+}

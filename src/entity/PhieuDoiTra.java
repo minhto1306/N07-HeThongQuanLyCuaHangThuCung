@@ -103,21 +103,12 @@ public class PhieuDoiTra {
         this.trangThaiDoiTra = trangThaiDoiTra;
     }
 
-    public List<ChiTietDoiTra> getDsChiTietDoiTra() {
-        return dsChiTietDoiTra;
-    }
-
-    public void setDsChiTietDoiTra(List<ChiTietDoiTra> dsChiTietDoiTra) {
-        this.dsChiTietDoiTra = dsChiTietDoiTra;
-        capNhatTongTienHoan();
-    }
-
     public BigDecimal getGiaTriHangTra() {
         return giaTriHangTra;
     }
 
     public void setGiaTriHangTra(BigDecimal giaTriHangTra) {
-        this.giaTriHangTra = giaTriHangTra;
+        this.giaTriHangTra = giaTriHangTra != null ? giaTriHangTra : BigDecimal.ZERO;
     }
 
     public BigDecimal getGiaTriHangDoi() {
@@ -125,7 +116,7 @@ public class PhieuDoiTra {
     }
 
     public void setGiaTriHangDoi(BigDecimal giaTriHangDoi) {
-        this.giaTriHangDoi = giaTriHangDoi;
+        this.giaTriHangDoi = giaTriHangDoi != null ? giaTriHangDoi : BigDecimal.ZERO;
     }
 
     public BigDecimal getTienHoanThucTe() {
@@ -133,7 +124,7 @@ public class PhieuDoiTra {
     }
 
     public void setTienHoanThucTe(BigDecimal tienHoanThucTe) {
-        this.tienHoanThucTe = tienHoanThucTe;
+        this.tienHoanThucTe = tienHoanThucTe != null ? tienHoanThucTe : BigDecimal.ZERO;
     }
 
     public BigDecimal getTienKhachTraThem() {
@@ -141,7 +132,7 @@ public class PhieuDoiTra {
     }
 
     public void setTienKhachTraThem(BigDecimal tienKhachTraThem) {
-        this.tienKhachTraThem = tienKhachTraThem;
+        this.tienKhachTraThem = tienKhachTraThem != null ? tienKhachTraThem : BigDecimal.ZERO;
     }
 
     public String getPhuongThucHoanTien() {
@@ -149,25 +140,22 @@ public class PhieuDoiTra {
     }
 
     public void setPhuongThucHoanTien(String phuongThucHoanTien) {
-        this.phuongThucHoanTien = phuongThucHoanTien;
+        this.phuongThucHoanTien = phuongThucHoanTien != null ? phuongThucHoanTien : "CHUA_XAC_DINH";
+    }
+
+    public List<ChiTietDoiTra> getDsChiTietDoiTra() {
+        return dsChiTietDoiTra;
+    }
+
+    public void setDsChiTietDoiTra(List<ChiTietDoiTra> dsChiTietDoiTra) {
+        this.dsChiTietDoiTra = dsChiTietDoiTra;
     }
 
     public void addChiTietDoiTra(ChiTietDoiTra chiTiet) {
         this.dsChiTietDoiTra.add(chiTiet);
-        capNhatTongTienHoan();
     }
 
-    public void capNhatTongTienHoan() {
-        BigDecimal tong = BigDecimal.ZERO;
-        if (this.dsChiTietDoiTra != null) {
-            for (ChiTietDoiTra ct : this.dsChiTietDoiTra) {
-                if (ct.getTienHoanLai() != null) {
-                    tong = tong.add(ct.getTienHoanLai());
-                }
-            }
-        }
-        this.tongTienHoan = tong;
-    }
+
 
     @Override
     public String toString() {

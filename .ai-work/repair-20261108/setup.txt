@@ -1,0 +1,2 @@
+base-schema batch=6 ERROR=10609
+SANDBOX_READY name=MioRepair_20261108 tables=28 baseSchemaErrors=1

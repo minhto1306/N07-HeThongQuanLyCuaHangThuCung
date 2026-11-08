@@ -1,7 +1,7 @@
 package bus;
 
 import dao.PhongLuuTruDAO;
-import gui.PetHotelPanel.PhongLuuTru;
+import entity.PhongLuuTru;
 
 import java.sql.SQLException;
 import java.util.Collections;
@@ -51,9 +51,9 @@ public class PetHotelBus {
         if (p == null) return false;
         try {
             return phongLuuTruDAO.insertLichSuLuuTru(
-                    p.maPhong, p.tenThuCung, p.tenChu, p.sdtChu,
-                    p.thoiGianCheckIn, java.time.LocalDateTime.now(),
-                    soNgay, p.donGiaNgay, p.phiDichVuPhatSinh, tongTien, p.ghiChuChamSoc
+                    p.getMaPhong(), p.getTenThuCung(), p.getTenChu(), p.getSdtChu(),
+                    p.getThoiGianCheckIn(), java.time.LocalDateTime.now(),
+                    soNgay, p.getDonGiaNgay(), p.getPhiDichVuPhatSinh(), tongTien, p.getGhiChuChamSoc()
             );
         } catch (SQLException e) {
             System.err.println("[PetHotelBus] Lỗi luuLichSuLuuTru CSDL: " + e.getMessage());
@@ -77,7 +77,7 @@ public class PetHotelBus {
     public int demSoPhongDangLuuTru() {
         int count = 0;
         for (PhongLuuTru p : layDanhSachPhong()) {
-            if (p != null && ("ĐANG CÓ KHÁCH".equalsIgnoreCase(p.trangThai) || "ĐANG LƯU TRÚ".equalsIgnoreCase(p.trangThai))) {
+            if (p != null && "ĐANG LƯU TRÚ".equalsIgnoreCase(p.getTrangThai())) {
                 count++;
             }
         }

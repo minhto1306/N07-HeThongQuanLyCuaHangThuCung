@@ -119,9 +119,7 @@ public class MainDashboard extends JFrame {
         chonManHinhMacDinhTheoVaiTro();
     }
 
-    // =========================================================================
     // 1. THANH THỰC ĐƠN ĐỈNH MÀN HÌNH (JMENUBAR 6 NHÓM CHỨC NĂNG CHUẨN SLIDE 17)
-    // =========================================================================
     private JMenuBar taoJMenuBarHuongChucNang(UserSession.Role role) {
         JMenuBar menuBar = new JMenuBar();
         menuBar.setBackground(ThemeColors.SURFACE);
@@ -283,9 +281,7 @@ public class MainDashboard extends JFrame {
         return item;
     }
 
-    // =========================================================================
     // 2. THANH ĐIỀU HƯỚNG NGANG (TOP NAVIGATION BAR 6 NHÓM CHỨC NĂNG SLIDE 17 IUH)
-    // =========================================================================
     private JPanel taoTopNavigationBar(UserSession.Role role) {
         JPanel navBar = new JPanel(new BorderLayout());
         navBar.setBackground(ThemeColors.SURFACE);
@@ -555,6 +551,9 @@ public class MainDashboard extends JFrame {
             doiTraHangPanel.lamMoiGiaoDien();
         } else if (CARD_GIAO_CA.equals(targetCard) && banGiaoCaPanel != null) {
             banGiaoCaPanel.lamMoiDuLieuCaHienTai();
+        } else if (CARD_KHO.equals(targetCard) && khoLoHangPanel != null) {
+            khoLoHangPanel.dongBoLoHangTuDatabase();
+            khoLoHangPanel.lamMoiBangSanPhamTuDatabase();
         }
 
         cardLayout.show(pnlContentCards, targetCard);
@@ -598,9 +597,7 @@ public class MainDashboard extends JFrame {
         }
     }
 
-    // =========================================================================
     // 3. THANH TIÊU ĐỀ & THANH TRẠNG THÁI
-    // =========================================================================
     private JPanel taoTopHeader() {
         JPanel header = new JPanel(new BorderLayout(14, 0));
         header.setBackground(ThemeColors.HEADER_BG);
@@ -713,9 +710,7 @@ public class MainDashboard extends JFrame {
         return status;
     }
 
-    // =========================================================================
     // 4. HÀNH ĐỘNG HỆ THỐNG
-    // =========================================================================
     public void thucHienDoiMatKhau() {
         JPasswordField txtOldPass = new JPasswordField();
         txtOldPass.putClientProperty("FlatLaf.style", "showRevealButton: true");

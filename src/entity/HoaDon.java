@@ -94,7 +94,8 @@ public class HoaDon {
 
     public void setGiamGia(BigDecimal giamGia) {
         this.giamGia = giamGia != null ? giamGia : BigDecimal.ZERO;
-        capNhatTongTien();
+        this.tienDoiDiem = BigDecimal.ZERO;
+        this.tienBuTruDoiTra = BigDecimal.ZERO;
     }
 
     public BigDecimal getTienDoiDiem() {
@@ -103,7 +104,6 @@ public class HoaDon {
 
     public void setTienDoiDiem(BigDecimal tienDoiDiem) {
         this.tienDoiDiem = tienDoiDiem != null ? tienDoiDiem : BigDecimal.ZERO;
-        capNhatTongTien();
     }
 
     public BigDecimal getTienBuTruDoiTra() {
@@ -112,12 +112,10 @@ public class HoaDon {
 
     public void setTienBuTruDoiTra(BigDecimal tienBuTruDoiTra) {
         this.tienBuTruDoiTra = tienBuTruDoiTra != null ? tienBuTruDoiTra : BigDecimal.ZERO;
-        capNhatTongTien();
     }
 
     public BigDecimal getThanhTien() {
         if (this.thanhTien == null || this.thanhTien.compareTo(BigDecimal.ZERO) == 0) {
-            capNhatTongTien();
         }
         return thanhTien;
     }
@@ -148,44 +146,17 @@ public class HoaDon {
 
     public void setDsChiTiet(List<ChiTietHoaDon> dsChiTiet) {
         this.dsChiTiet = dsChiTiet;
-        capNhatTongTien();
     }
 
     public void addChiTiet(ChiTietHoaDon chiTiet) {
         this.dsChiTiet.add(chiTiet);
-        capNhatTongTien();
     }
 
     public void removeChiTiet(ChiTietHoaDon chiTiet) {
         this.dsChiTiet.remove(chiTiet);
-        capNhatTongTien();
     }
 
-    /**
-     * Tự động tính toán tổng thành tiền của hóa đơn:
-     * Tổng tiền = (Tổng thành tiền các dòng chi tiết) - Giảm giá.
-     */
-    public void capNhatTongTien() {
-        BigDecimal tong = BigDecimal.ZERO;
-        if (this.dsChiTiet != null) {
-            for (ChiTietHoaDon ct : this.dsChiTiet) {
-                if (ct.getThanhTien() != null) {
-                    tong = tong.add(ct.getThanhTien());
-                }
-            }
-        }
-        if (this.giamGia != null) {
-            tong = tong.subtract(this.giamGia);
-        }
-        if (this.tienDoiDiem != null) {
-            tong = tong.subtract(this.tienDoiDiem);
-        }
-        if (this.tienBuTruDoiTra != null) {
-            tong = tong.subtract(this.tienBuTruDoiTra);
-        }
-        // Đảm bảo không âm
-        this.thanhTien = tong.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : tong;
-    }
+
 
     @Override
     public String toString() {

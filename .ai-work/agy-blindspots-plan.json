@@ -1,0 +1,33 @@
+{
+  "id": "mio-blindspots-20261108-v1",
+  "summary": "Find unseen cashier, appointment, stock, SQL mapping, and large-data failure modes before the 18:00 deadline.",
+  "approval": "User directly requested discovery of problems they cannot yet see, with AGY doing code and documentation reading while Codex plans and reviews.",
+  "tasks": [
+    {
+      "id": "agy-blindspots-20261108",
+      "readOnly": true,
+      "goal": "Audit current working tree for previously unreported defects and practical cashier bottlenecks. Prioritize novel findings over repeating A01-A15.",
+      "design": "Trace Java GUI->BUS->DAO->entity and SQL schema for 1) 20k+ invoice history and 5k+ products, 2) product selection and keyboard/scanner flow, 3) appointment no-show/late/cancel/reschedule and resource conflicts, 4) split lots, returns, loyalty, Hotel/Spa and shift closing, 5) failures and partial writes, 6) SQL validation script false results and migration order. Treat the prior audit as baseline but recheck source. For each novel finding give exact file/method, plausible trigger, concrete impact, severity, reproduction steps, and smallest safe fix. Separate proven-by-code findings from hypotheses. Provide no code changes, no DB writes, no Git, no secrets. Return a prioritized 18:00 repair shortlist with member ownership matching the existing AGY plan.",
+      "askWhen": "If indispensable source is missing, return precise blockers; do not invent evidence.",
+      "steps": ["Read selected source and prior audit", "Trace interactions and look for gaps not exercised by the 25 regression checks", "Return concise prioritized findings and reproduction steps"],
+      "acceptance": ["Novel findings have source location and reproduction", "Existing confirmed issues are not counted as new", "A small deadline-based repair shortlist assigns actual module owners"],
+      "allowedFiles": [],
+      "contextFiles": [
+        "docs/test_plan/POST_PULL_CASHIER_AUDIT_224a140.md",
+        "docs/ai-context/REPAIR_AUTHORIZATION_20261108.md",
+        "src/gui/BanHangPOSPanel.java",
+        "src/gui/DoiTraHangPanel.java",
+        "src/dao/HoaDonDAO.java",
+        "src/dao/HoaDonIntegrity.java",
+        "src/dao/HoaDonDichVu.java",
+        "src/dao/LichHenDAO.java",
+        "src/dao/BaoCaoThongKeDAO.java",
+        "src/bus/ThongKeBus.java",
+        "sql/HeThongQuanLyCuaHangThuCung.sql",
+        "sql/ValidateDuLieuMau.sql"
+      ],
+      "dependencies": [],
+      "checks": [{"kind":"manual","description":"Codex verifies each claimed finding against current source and distinguishes observed from inferred risk."}]
+    }
+  ]
+}

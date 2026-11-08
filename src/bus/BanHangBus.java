@@ -194,6 +194,15 @@ public class BanHangBus {
         if (diemSuDung < 0) {
             throw new IllegalArgumentException("Điểm sử dụng không được là số âm: " + diemSuDung);
         }
+        if (hd != null && hd.getDsChiTiet() != null) {
+            for (ChiTietHoaDon ct : hd.getDsChiTiet()) {
+                if (ct == null) continue;
+                if (ct.getDonGiaLucBan() == null) ct.setDonGiaLucBan(BigDecimal.ZERO);
+                if (ct.getThanhTien() == null) {
+                    ct.setThanhTien(ct.getDonGiaLucBan().multiply(BigDecimal.valueOf(Math.max(1, ct.getSoLuong()))));
+                }
+            }
+        }
         if (diemThuHoiDoTraHang < 0) {
             throw new IllegalArgumentException("Điểm thu hồi do trả hàng không được là số âm: " + diemThuHoiDoTraHang);
         }
@@ -463,8 +472,18 @@ public class BanHangBus {
             throw new IllegalArgumentException("Thông tin sản phẩm hoặc số lượng không hợp lệ!");
         }
 
-        // đổi ra số lượng cơ sở
-        int soLuongCoSoCanXuat = soLuong * qd.getTyLeQuyDoi();
+        // kiểm tra tỷ lệ quy đổi (fail fast: không chấp nhận <= 0)
+        if (qd.getTyLeQuyDoi() <= 0) {
+            throw new IllegalArgumentException("Tỷ lệ quy đổi không hợp lệ!");
+        }
+        int tyLe = qd.getTyLeQuyDoi();
+
+        // đổi ra số lượng cơ sở (kiểm tra chống tràn số nguyên)
+        long soLuongCoSoCanXuatLong = (long) soLuong * tyLe;
+        if (soLuongCoSoCanXuatLong > Integer.MAX_VALUE || soLuongCoSoCanXuatLong <= 0) {
+            throw new IllegalArgumentException("Số lượng xuất kho vượt quá giới hạn cho phép của hệ thống!");
+        }
+        int soLuongCoSoCanXuat = (int) soLuongCoSoCanXuatLong;
 
         // lấy các lô còn hạn theo thứ tự FEFO (cận date nhất lên trước)
         List<LoHang> dsLoHang = loHangDAO.getAvailableLotsFEFO(sp.getMaSanPham());
@@ -472,15 +491,14 @@ public class BanHangBus {
             throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] đã hết hàng hoặc hết hạn sử dụng!");
         }
 
-        int tongTonKhaDung = dsLoHang.stream().mapToInt(LoHang::getSoLuongTon).sum();
-        if (tongTonKhaDung < soLuongCoSoCanXuat) {
-            throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] chỉ còn tổng tồn " + tongTonKhaDung
+        long tongTonKhaDungLong = dsLoHang.stream().mapToLong(LoHang::getSoLuongTon).sum();
+        if (tongTonKhaDungLong < soLuongCoSoCanXuatLong) {
+            throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] chỉ còn tổng tồn " + tongTonKhaDungLong
                     + " đơn vị cơ sở, không đủ xuất số lượng yêu cầu (" + soLuongCoSoCanXuat + ")!");
         }
 
         // Phân bổ xuất hàng qua nhiều lô FEFO nếu một lô không đủ số lượng (BH01)
         int conLaiCoSo = soLuongCoSoCanXuat;
-        int tyLe = (qd.getTyLeQuyDoi() > 0) ? qd.getTyLeQuyDoi() : 1;
         for (LoHang lo : dsLoHang) {
             if (lo.getSoLuongTon() <= 0) continue;
             int xuatLoNayCoSo = Math.min(conLaiCoSo, lo.getSoLuongTon());
@@ -494,10 +512,16 @@ public class BanHangBus {
             } else if (tyLe > 1 && xuatLoNayCoSo % tyLe == 0) {
                 slXuat = xuatLoNayCoSo / tyLe;
             } else if (tyLe > 1) {
-                // Xuất lẻ theo đơn vị cơ sở vì lô không đủ nguyên thùng/hộp
+                // Xuất lẻ theo đơn vị cơ sở vì lô không đủ nguyên thùng/hộp (giữ chuẩn scale 2 và tránh NPE)
                 slXuat = xuatLoNayCoSo;
-                donGiaXuat = qd.getGiaBan().divide(BigDecimal.valueOf(tyLe), 0, java.math.RoundingMode.HALF_UP);
-                qdXuat = null;
+                if (sp.getGiaBanCoSo() != null && sp.getGiaBanCoSo().compareTo(BigDecimal.ZERO) > 0) {
+                    donGiaXuat = sp.getGiaBanCoSo();
+                } else {
+                    donGiaXuat = qd.getGiaBan().divide(BigDecimal.valueOf(tyLe), 2, java.math.RoundingMode.HALF_UP);
+                }
+                // Tạo đối tượng QuyDoiDonVi cơ sở để không bao giờ bị NPE khi format/in hóa đơn
+                String tenDvCoSo = (sp.getDonViCoSo() != null && !sp.getDonViCoSo().isEmpty()) ? sp.getDonViCoSo() : "Đơn vị";
+                qdXuat = new QuyDoiDonVi("QD_CS_" + sp.getMaSanPham(), sp, new entity.DonViTinh("DVT_CS", tenDvCoSo), 1, true, donGiaXuat);
             } else {
                 slXuat = xuatLoNayCoSo;
             }
@@ -516,7 +540,9 @@ public class BanHangBus {
             hoaDonHienTai.addChiTiet(ctXuatLo);
 
             conLaiCoSo -= xuatLoNayCoSo;
-            if (conLaiCoSo <= 0) break;
+            if (conLaiCoSo <= 0) {
+                break; // FEFO: stop when done
+            }
         }
 
         return true;
@@ -649,5 +675,37 @@ public class BanHangBus {
     }
 
     private void unusedEndMarker() {
+    }
+
+    // note lại: tính thành tiền chi tiết (đơn giá x số lượng), tách khỏi entity ChiTietDichVu và ChiTietHoaDon
+    public static java.math.BigDecimal tinhThanhTien(java.math.BigDecimal donGia, int soLuong) {
+        if (donGia == null || soLuong <= 0) return java.math.BigDecimal.ZERO;
+        return donGia.multiply(java.math.BigDecimal.valueOf(soLuong));
+    }
+
+    // note lại: tính số lượng quy đổi ra đơn vị cơ sở để trừ tồn kho, tách khỏi entity ChiTietXuatLo
+    public static int tinhSoLuongXuatCoSo(int soLuong, int tyLeQuyDoi) {
+        return Math.max(0, soLuong) * Math.max(1, tyLeQuyDoi);
+    }
+
+    // note lại: tính tổng tiền hóa đơn sau khi trừ giảm giá, đổi điểm và bù trừ đổi trả
+    public static void tinhTongTienHoaDon(entity.HoaDon hd) {
+        if (hd == null) return;
+        java.math.BigDecimal tong = java.math.BigDecimal.ZERO;
+        if (hd.getDsChiTiet() != null) {
+            for (entity.ChiTietHoaDon ct : hd.getDsChiTiet()) {
+                if (ct != null && ct.getThanhTien() != null) {
+                    tong = tong.add(ct.getThanhTien());
+                }
+            }
+        }
+        java.math.BigDecimal giam = hd.getGiamGia() != null ? hd.getGiamGia() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal doiDiem = hd.getTienDoiDiem() != null ? hd.getTienDoiDiem() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal buTru = hd.getTienBuTruDoiTra() != null ? hd.getTienBuTruDoiTra() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal thanhTien = tong.subtract(giam).subtract(doiDiem).subtract(buTru);
+        if (thanhTien.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            thanhTien = java.math.BigDecimal.ZERO;
+        }
+        hd.setThanhTien(thanhTien);
     }
 }

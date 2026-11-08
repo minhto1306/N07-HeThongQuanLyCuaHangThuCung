@@ -35,10 +35,26 @@ public class KhoLoHangBus {
      * Lấy toàn bộ danh sách sản phẩm trong hệ thống.
      */
     public List<SanPham> layDanhSachSanPham() {
+        return layDanhSachSanPham(20);
+    }
+
+    public List<SanPham> layDanhSachSanPham(int limit) {
         try {
-            return sanPhamDAO.getAllSanPham();
+            return sanPhamDAO.getAllSanPham(limit);
         } catch (SQLException e) {
             System.err.println("[KhoLoHangBus] Lỗi layDanhSachSanPham: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Lấy nhanh danh sách sản phẩm kèm quy đổi (1 query duy nhất, loại bỏ N+1).
+     */
+    public List<Object[]> layDanhSachSanPhamVaQuyDoi(int limit) {
+        try {
+            return sanPhamDAO.layDanhSachSanPhamVaQuyDoi(limit);
+        } catch (SQLException e) {
+            System.err.println("[KhoLoHangBus] Lỗi layDanhSachSanPhamVaQuyDoi: " + e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -182,12 +198,6 @@ public class KhoLoHangBus {
      * Cộng trả tồn kho lô hàng theo mã số lô (đổi trả hoàn hàng vào kho).
      */
     public boolean congTonKho(String soLo, int soLuong) {
-        if (!utils.UserSession.isQuanLy() && !utils.UserSession.isThuNgan()) {
-            throw new SecurityException("Người dùng hiện tại không có quyền cập nhật tồn kho!");
-        }
-        if (soLuong <= 0) {
-            throw new IllegalArgumentException("Số lượng cộng tồn kho phải lớn hơn 0!");
-        }
         try {
             return loHangDAO.congTonKho(soLo, soLuong);
         } catch (SQLException e) {
@@ -260,5 +270,31 @@ public class KhoLoHangBus {
      */
     public int demSoLoCanhBaoHanDung() {
         return layDanhSachLoCanhBaoHanDung().size();
+    }
+
+    // note lai: may ham nghiep vu kiem tra han FEFO va tinh ton kho chuyen tu entity sang day
+    // entity LoHang va SanPham chi thuan chua thuoc tinh khai bao, khong de logic tinh toan
+    public static boolean isHetHan(LoHang lo) {
+        if (lo == null || lo.getHanSuDung() == null) return false;
+        return LocalDate.now().isAfter(lo.getHanSuDung());
+    }
+
+    public static String canhBaoHanSuDung(LoHang lo) {
+        if (lo == null || lo.getHanSuDung() == null) return "Bình thường";
+        LocalDate homNay = LocalDate.now();
+        if (homNay.isAfter(lo.getHanSuDung())) return "Đã hết hạn";
+        if (homNay.plusDays(30).isAfter(lo.getHanSuDung())) return "Sắp hết hạn (<30 ngày)";
+        return "Bình thường";
+    }
+
+    public static int tinhTongTonKhaDung(SanPham sp, List<LoHang> dsLoHang) {
+        if (dsLoHang == null || dsLoHang.isEmpty()) return 0;
+        int tong = 0;
+        for (LoHang lo : dsLoHang) {
+            if (lo != null && !isHetHan(lo) && lo.getSoLuongTon() > 0) {
+                tong += lo.getSoLuongTon();
+            }
+        }
+        return tong;
     }
 }

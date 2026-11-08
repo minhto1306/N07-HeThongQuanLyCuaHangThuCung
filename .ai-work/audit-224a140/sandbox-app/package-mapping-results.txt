@@ -1,0 +1,3 @@
+FAIL top_base_units_for_one_10_unit_pack | shownBaseQty=1 exportedBaseQty=10
+FAIL XNT_counts_only_saleable_restock | reportReturn=3 realRestock=2 (damaged return must not add stock)
+TOTAL pass=0 fail=2

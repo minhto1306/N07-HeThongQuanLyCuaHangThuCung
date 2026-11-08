@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "result": {
+    "id": "mio-blindspots-20261108-v1",
+    "digest": "0e5c0720df06b911d1c6781b8e0a19294cfd4346f1351908c332c5b2b39958b7",
+    "taskIds": [
+      "agy-blindspots-20261108"
+    ]
+  }
+}

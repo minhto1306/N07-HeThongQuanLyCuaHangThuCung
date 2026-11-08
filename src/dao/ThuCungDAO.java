@@ -24,8 +24,14 @@ public class ThuCungDAO {
      * Lấy toàn bộ danh sách thú cưng kèm thông tin chủ nuôi và mã Microchip
      */
     public List<HoSoThuCung> getAllHoSoThuCung() throws SQLException {
+        return getAllHoSoThuCung(0);
+    }
+
+    public List<HoSoThuCung> getAllHoSoThuCung(int limit) throws SQLException {
         List<HoSoThuCung> list = new ArrayList<>();
-        String sql = "SELECT hs.maHoSo, hs.soMicrochip, hs.ngayDangKy, hs.trangThaiNuoi, " +
+        int safeLimit = Math.max(0, Math.min(limit, 1000));
+        String topClause = safeLimit > 0 ? "TOP (" + safeLimit + ") " : "";
+        String sql = "SELECT " + topClause + "hs.maHoSo, hs.soMicrochip, hs.ngayDangKy, hs.trangThaiNuoi, " +
                 "tc.maThuCung, tc.tenThuCung, tc.giongLoai, tc.ngaySinh, tc.gioiTinh, " +
                 "kh.maKhachHang, kh.hoTen AS tenKhachHang, kh.soDienThoai, kh.diemTichLuy " +
                 "FROM HoSoThuCung hs " +
@@ -66,6 +72,62 @@ public class ThuCungDAO {
                         rs.getString("trangThaiNuoi")
                 );
                 list.add(hs);
+            }
+        }
+        return list;
+    }
+
+    public List<HoSoThuCung> timKiemHoSoThuCung(String keyword, int limit) throws SQLException {
+        List<HoSoThuCung> list = new ArrayList<>();
+        int safeLimit = Math.max(0, Math.min(limit, 1000));
+        String topClause = safeLimit > 0 ? "TOP (" + safeLimit + ") " : "";
+        String sql = "SELECT " + topClause + "hs.maHoSo, hs.soMicrochip, hs.ngayDangKy, hs.trangThaiNuoi, " +
+                "tc.maThuCung, tc.tenThuCung, tc.giongLoai, tc.ngaySinh, tc.gioiTinh, " +
+                "kh.maKhachHang, kh.hoTen AS tenKhachHang, kh.soDienThoai, kh.diemTichLuy " +
+                "FROM HoSoThuCung hs " +
+                "JOIN ThuCung tc ON hs.maThuCung = tc.maThuCung " +
+                "JOIN KhachHang kh ON hs.maKhachHang = kh.maKhachHang " +
+                "WHERE tc.tenThuCung LIKE ? OR tc.maThuCung LIKE ? OR hs.soMicrochip LIKE ? OR kh.soDienThoai LIKE ? " +
+                "ORDER BY hs.ngayDangKy DESC";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            String kw = "%" + (keyword == null ? "" : keyword.trim()) + "%";
+            ps.setString(1, kw);
+            ps.setString(2, kw);
+            ps.setString(3, kw);
+            ps.setString(4, kw);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    KhachHang kh = new KhachHang(
+                            rs.getString("maKhachHang"),
+                            rs.getString("tenKhachHang"),
+                            rs.getString("soDienThoai"),
+                            rs.getInt("diemTichLuy")
+                    );
+
+                    Date ns = rs.getDate("ngaySinh");
+                    LocalDate ngaySinh = (ns != null) ? ns.toLocalDate() : null;
+                    ThuCung tc = new ThuCung(
+                            rs.getString("maThuCung"),
+                            rs.getString("tenThuCung"),
+                            rs.getString("giongLoai"),
+                            ngaySinh,
+                            rs.getString("gioiTinh")
+                    );
+
+                    Date ndk = rs.getDate("ngayDangKy");
+                    LocalDate ngayDangKy = (ndk != null) ? ndk.toLocalDate() : LocalDate.now();
+
+                    list.add(new HoSoThuCung(
+                            rs.getString("maHoSo"),
+                            kh,
+                            tc,
+                            rs.getString("soMicrochip"),
+                            ngayDangKy,
+                            rs.getString("trangThaiNuoi")
+                    ));
+                }
             }
         }
         return list;
@@ -226,8 +288,14 @@ public class ThuCungDAO {
      * Lấy danh sách lịch sử kiểm tra sức khỏe thể trạng
      */
     public List<HoSoSucKhoe> getAllHoSoSucKhoe() throws SQLException {
+        return getAllHoSoSucKhoe(0);
+    }
+
+    public List<HoSoSucKhoe> getAllHoSoSucKhoe(int limit) throws SQLException {
         List<HoSoSucKhoe> list = new ArrayList<>();
-        String sql = "SELECT sk.*, tc.tenThuCung, tc.giongLoai, nv.hoTen AS tenNhanVien " +
+        int safeLimit = Math.max(0, Math.min(limit, 1000));
+        String topClause = safeLimit > 0 ? "TOP (" + safeLimit + ") " : "";
+        String sql = "SELECT " + topClause + "sk.*, tc.tenThuCung, tc.giongLoai, nv.hoTen AS tenNhanVien " +
                 "FROM HoSoSucKhoe sk " +
                 "JOIN ThuCung tc ON sk.maThuCung = tc.maThuCung " +
                 "LEFT JOIN NhanVien nv ON sk.maNhanVienKiemTra = nv.maNhanVien " +

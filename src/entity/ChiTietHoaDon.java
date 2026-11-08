@@ -17,8 +17,8 @@ public abstract class ChiTietHoaDon {
     protected String maChiTiet;
     protected HoaDon hoaDon;
     protected int soLuong;
-    protected BigDecimal donGiaLucBan;
-    protected BigDecimal thanhTien;
+    protected BigDecimal donGiaLucBan = BigDecimal.ZERO;
+    protected BigDecimal thanhTien = BigDecimal.ZERO;
 
     // Liên kết trực tiếp sản phẩm hoặc dịch vụ
     protected SanPham sanPham;
@@ -33,9 +33,9 @@ public abstract class ChiTietHoaDon {
     public ChiTietHoaDon(String maChiTiet, HoaDon hoaDon, int soLuong, BigDecimal donGiaLucBan) {
         this.maChiTiet = maChiTiet;
         this.hoaDon = hoaDon;
-        this.soLuong = soLuong;
-        this.donGiaLucBan = donGiaLucBan != null ? donGiaLucBan : BigDecimal.ZERO;
-        this.thanhTien = tinhThanhTien();
+        this.soLuong = Math.max(1, soLuong);
+        this.donGiaLucBan = donGiaLucBan != null && donGiaLucBan.compareTo(BigDecimal.ZERO) >= 0 ? donGiaLucBan : BigDecimal.ZERO;
+        this.thanhTien = this.donGiaLucBan.multiply(BigDecimal.valueOf(this.soLuong));
     }
 
     public String getMaChiTiet() {
@@ -60,7 +60,6 @@ public abstract class ChiTietHoaDon {
 
     public void setSoLuong(int soLuong) {
         this.soLuong = Math.max(1, soLuong);
-        this.thanhTien = tinhThanhTien();
     }
 
     public BigDecimal getDonGiaLucBan() {
@@ -69,18 +68,18 @@ public abstract class ChiTietHoaDon {
 
     public void setDonGiaLucBan(BigDecimal donGiaLucBan) {
         this.donGiaLucBan = donGiaLucBan != null ? donGiaLucBan : BigDecimal.ZERO;
-        this.thanhTien = tinhThanhTien();
     }
 
     public BigDecimal getThanhTien() {
-        if (this.thanhTien == null || this.thanhTien.compareTo(BigDecimal.ZERO) == 0) {
-            this.thanhTien = tinhThanhTien();
+        if (this.thanhTien == null) {
+            BigDecimal dg = this.donGiaLucBan != null ? this.donGiaLucBan : BigDecimal.ZERO;
+            this.thanhTien = dg.multiply(BigDecimal.valueOf(Math.max(1, this.soLuong)));
         }
-        return thanhTien;
+        return this.thanhTien;
     }
 
     public void setThanhTien(BigDecimal thanhTien) {
-        this.thanhTien = thanhTien;
+        this.thanhTien = thanhTien != null && thanhTien.compareTo(BigDecimal.ZERO) >= 0 ? thanhTien : BigDecimal.ZERO;
     }
 
     public SanPham getSanPham() {
@@ -89,9 +88,7 @@ public abstract class ChiTietHoaDon {
 
     public void setSanPham(SanPham sanPham) {
         this.sanPham = sanPham;
-        if ((this.donGiaLucBan == null || this.donGiaLucBan.compareTo(BigDecimal.ZERO) <= 0) && sanPham != null) {
-            apDungGiaNiemYet();
-        }
+// note: donGia niem yet do BanHangBus ap dung khi dua vao gio hang
     }
 
     public DichVu getDichVu() {
@@ -100,29 +97,16 @@ public abstract class ChiTietHoaDon {
 
     public void setDichVu(DichVu dichVu) {
         this.dichVu = dichVu;
-        if ((this.donGiaLucBan == null || this.donGiaLucBan.compareTo(BigDecimal.ZERO) <= 0) && dichVu != null) {
-            apDungGiaNiemYet();
-        }
+// note: donGia niem yet do BanHangBus ap dung khi dua vao gio hang
     }
 
-    /**
-     * Tự động áp dụng giá bán niêm yết từ SanPham / QuyDoiDonVi hoặc DichVu vào donGiaLucBan,
-     * đảm bảo cơ chế định giá trước (tránh nhân viên tự ý đặt giá bán tại quầy).
-     */
-    public void apDungGiaNiemYet() {
-        if (dichVu != null && dichVu.getGiaDichVu() != null && dichVu.getGiaDichVu().compareTo(BigDecimal.ZERO) > 0) {
-            this.donGiaLucBan = dichVu.getGiaDichVu();
-        } else if (sanPham != null && sanPham.getGiaBanCoSo() != null && sanPham.getGiaBanCoSo().compareTo(BigDecimal.ZERO) > 0) {
-            this.donGiaLucBan = sanPham.getGiaBanCoSo();
-        }
-        this.thanhTien = tinhThanhTien();
-    }
+    // note lai: apDungGiaNiemYet da chuyen sang BanHangBus
 
     /**
      * Phương thức trừu tượng tính toán thành tiền cho từng loại chi tiết hóa đơn.
      * Được định nghĩa ở lớp con và được gọi ở tầng Business / Entity, không tính ở View.
      */
-    public abstract BigDecimal tinhThanhTien();
+    // note lai: entity chi thuan chua thuoc tinh thanhTien va getter/setter, tinh toan da chuyen ve BanHangBus.tinhThanhTien()
 
     /**
      * Tên khoản mục hiển thị trên giao diện hoặc bản in hóa đơn.

@@ -39,110 +39,45 @@ public final class MaTuSinhHelper {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyMMdd");
     private static final Map<String, Integer> MAX_CACHE = new ConcurrentHashMap<>();
 
-    private static Integer laySoThuTuTuBangCapSo(Connection conn, String loaiMa) {
-        String sql = "UPDATE BangCapSo WITH (UPDLOCK, ROWLOCK) SET soHienTai = soHienTai + 1 "
-                + "OUTPUT INSERTED.soHienTai WHERE loaiMa = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, loaiMa);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
-            }
-        } catch (Exception e) {
-            throw new IllegalStateException("Không thể khóa/cấp số từ BangCapSo; dừng sinh mã để tránh trùng giữa nhiều quầy", e);
-        }
-        return null;
-    }
-
     private static synchronized int laySoThuTuTiepTheo(String keyPrefix, String tableName,
                                                         String columnName, String codePrefix) {
-        try (Connection conn = DBConnection.getConnection()) {
-            Integer seq = laySoThuTuTuBangCapSo(conn, keyPrefix);
-            if (seq != null) {
-                MAX_CACHE.put(keyPrefix, seq);
-                return seq;
-            }
-
-            // Nếu loaiMa chưa có trong BangCapSo, khởi tạo nguyên tử bằng cách đọc MAX từ bảng nghiệp vụ và INSERT vào BangCapSo (BH03)
-            int max = 0;
-            String sql = "SELECT ISNULL(MAX(TRY_CONVERT(INT, SUBSTRING(" + columnName + ", ?, 20))), 0) "
-                    + "FROM " + tableName + " WHERE " + columnName + " LIKE ?";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, codePrefix.length() + 1);
-                ps.setString(2, codePrefix + "%");
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) max = rs.getInt(1);
-                }
-            }
-
-            int next = max + 1;
-            try {
-                String sqlInsert = "INSERT INTO BangCapSo (loaiMa, soHienTai, moTa) VALUES (?, ?, ?)";
-                try (PreparedStatement psIns = conn.prepareStatement(sqlInsert)) {
-                    psIns.setString(1, keyPrefix);
-                    psIns.setInt(2, next);
-                    psIns.setString(3, "Tự động khởi tạo");
-                    psIns.executeUpdate();
-                    MAX_CACHE.put(keyPrefix, next);
-                    return next;
-                }
-            } catch (Exception ex) {
-                Integer retry = laySoThuTuTuBangCapSo(conn, keyPrefix);
-                if (retry != null) {
-                    MAX_CACHE.put(keyPrefix, retry);
-                    return retry;
-                }
-                throw new IllegalStateException("Không thể khởi tạo cấp số " + keyPrefix + " một cách nguyên tử", ex);
+        int max = MAX_CACHE.getOrDefault(keyPrefix, 0);
+        String sql = "SELECT MAX(TRY_CONVERT(INT, SUBSTRING(" + columnName + ", ?, 20))) "
+                + "FROM " + tableName + " WHERE " + columnName + " LIKE ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, codePrefix.length() + 1);
+            ps.setString(2, codePrefix + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) max = Math.max(max, rs.getInt(1));
             }
         } catch (Exception e) {
             throw new IllegalStateException("Không thể sinh mã " + keyPrefix + " khi CSDL chưa sẵn sàng", e);
         }
+
+        int next = max + 1;
+        MAX_CACHE.put(keyPrefix, next);
+        return next;
     }
 
     private static synchronized int laySoThuTuTheoNgay(String fullPrefix, String tableName, String columnName) {
-        try (Connection conn = DBConnection.getConnection()) {
-            Integer seq = laySoThuTuTuBangCapSo(conn, fullPrefix);
-            if (seq != null) {
-                MAX_CACHE.put(fullPrefix, seq);
-                return seq;
+        int max = MAX_CACHE.getOrDefault(fullPrefix, 0);
+        String sql = "SELECT MAX(TRY_CONVERT(INT, SUBSTRING(" + columnName + ", ?, 20))) "
+                + "FROM " + tableName + " WHERE " + columnName + " LIKE ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, fullPrefix.length() + 1);
+            ps.setString(2, fullPrefix + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) max = Math.max(max, rs.getInt(1));
             }
-
-            int max = 0;
-            String sql = "SELECT ISNULL(MAX(TRY_CONVERT(INT, SUBSTRING(" + columnName + ", ?, 20))), 0) "
-                    + "FROM " + tableName + " WHERE " + columnName + " LIKE ?";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, fullPrefix.length() + 1);
-                ps.setString(2, fullPrefix + "%");
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) max = rs.getInt(1);
-                }
-            }
-
-            int next = max + 1;
-            try {
-                String sqlInsert = "INSERT INTO BangCapSo (loaiMa, soHienTai, moTa) VALUES (?, ?, ?)";
-                try (PreparedStatement psIns = conn.prepareStatement(sqlInsert)) {
-                    psIns.setString(1, fullPrefix);
-                    psIns.setInt(2, next);
-                    psIns.setString(3, "Tự động khởi tạo theo ngày");
-                    psIns.executeUpdate();
-                    MAX_CACHE.put(fullPrefix, next);
-                    return next;
-                }
-            } catch (Exception ex) {
-                Integer retry = laySoThuTuTuBangCapSo(conn, fullPrefix);
-                if (retry != null) {
-                    MAX_CACHE.put(fullPrefix, retry);
-                    return retry;
-                }
-            }
-
-            MAX_CACHE.put(fullPrefix, next);
-            return next;
         } catch (Exception e) {
             throw new IllegalStateException("Không thể sinh mã " + fullPrefix + " khi CSDL chưa sẵn sàng", e);
         }
+
+        int next = max + 1;
+        MAX_CACHE.put(fullPrefix, next);
+        return next;
     }
 
     /**

@@ -15,7 +15,6 @@ public class SpaPassBus {
 
     private static final List<TheSpaPass> DANH_SACH_THE = new ArrayList<>();
     private static final TheSpaPassDAO dao = new TheSpaPassDAO();
-    private final dao.GoiSpaPassDAO goiSpaPassDAO = new dao.GoiSpaPassDAO();
 
     static {
         dongBoDuLieuTuDatabase();
@@ -44,13 +43,13 @@ public class SpaPassBus {
         if (sdt == null || sdt.trim().isEmpty()) return null;
         String cleanSdt = sdt.trim();
         for (TheSpaPass the : DANH_SACH_THE) {
-            if (the.getSdtKhachHang().equals(cleanSdt) && the.coTheSuDung()) {
+            if (the.getSdtKhachHang().equals(cleanSdt) && coTheSuDung(the)) {
                 return the;
             }
         }
         try {
             TheSpaPass fromDb = dao.getTheSpaPassBySdt(cleanSdt);
-            if (fromDb != null && fromDb.coTheSuDung()) {
+            if (fromDb != null && coTheSuDung(fromDb)) {
                 DANH_SACH_THE.removeIf(t -> t.getMaThe().equalsIgnoreCase(fromDb.getMaThe()));
                 DANH_SACH_THE.add(0, fromDb);
                 return fromDb;
@@ -70,7 +69,7 @@ public class SpaPassBus {
     public boolean suDungMotBuoi(String maTheOrSdt, String maHD, String ghiChu) {
         if (maTheOrSdt == null) return false;
         for (TheSpaPass the : DANH_SACH_THE) {
-            if ((maTheOrSdt.equalsIgnoreCase(the.getMaThe()) || maTheOrSdt.equalsIgnoreCase(the.getSdtKhachHang())) && the.coTheSuDung()) {
+            if ((maTheOrSdt.equalsIgnoreCase(the.getMaThe()) || maTheOrSdt.equalsIgnoreCase(the.getSdtKhachHang())) && coTheSuDung(the)) {
                 try {
                     boolean ok = dao.suDungMotBuoi(the.getMaThe(), maHD,
                             utils.UserSession.getUserId(), ghiChu);
@@ -117,22 +116,29 @@ public class SpaPassBus {
         return false;
     }
 
-    /**
-     * Lấy cấu hình gói Spa Pass chuẩn từ CSDL (DV14).
-     * Ném ngoại lệ cấu hình nếu không tìm thấy, không dùng regex hoặc đoán mò.
-     */
-    public entity.GoiSpaPass layCauHinhGoi(String maGoi) {
-        if (maGoi == null || maGoi.isBlank()) {
-            throw new IllegalArgumentException("Mã gói Spa Pass không được để trống!");
+    // note lai: logic trang thai va kiem tra the con dung duoc khong chuyen tu entity sang BUS
+    // entity TheSpaPass chi thuan POJO chua data thoi
+    public static void capNhatTrangThai(TheSpaPass the) {
+        if (the == null) return;
+        if (the.getTongSoBuoi() > 0 && the.getSoBuoiDaDung() > 0) {
+            the.setSoBuoiConLai(Math.max(0, the.getTongSoBuoi() - the.getSoBuoiDaDung()));
         }
-        entity.GoiSpaPass goi = goiSpaPassDAO.findByMaGoi(maGoi);
-        if (goi == null) {
-            throw new IllegalStateException("Không tìm thấy cấu hình hợp lệ cho gói Spa Pass [" + maGoi + "] trong cơ sở dữ liệu! Vui lòng kiểm tra bảng GoiSpaPass.");
+        if (the.getSoBuoiConLai() <= 0) {
+            the.setTrangThai("ĐÃ HẾT BUỔI");
+        } else if (the.getNgayHetHan() != null && java.time.LocalDate.now().isAfter(the.getNgayHetHan())) {
+            the.setTrangThai("HẾT HẠN SỬ DỤNG");
+        } else {
+            the.setTrangThai("ĐANG HOẠT ĐỘNG");
         }
-        return goi;
     }
 
-    public List<entity.GoiSpaPass> layDanhSachGoiKhaDung() {
-        return goiSpaPassDAO.getAllGoiSpaPass();
+    public static boolean isKhaDung(TheSpaPass the) {
+        return coTheSuDung(the);
+    }
+
+    public static boolean coTheSuDung(TheSpaPass the) {
+        if (the == null) return false;
+        capNhatTrangThai(the);
+        return "ĐANG HOẠT ĐỘNG".equalsIgnoreCase(the.getTrangThai()) && the.getSoBuoiConLai() > 0;
     }
 }

@@ -29,61 +29,42 @@ public class DBConnection {
 
     private DBConnection() {}
 
-    // đọc file cấu hình database theo thứ tự ưu tiên:
-    // 1. config/database.properties (mẫu cơ bản)
-    // 2. config/database.local.properties (cấu hình máy cá nhân, không theo dõi Git)
-    // 3. Biến môi trường (Environment Variables - mức ưu tiên cao nhất)
+    // đọc file database.properties trong thư mục config
     private static void loadConfig() {
-        // 1. Nạp tệp cấu hình mẫu
-        File baseConfigFile = new File("config/database.properties");
-        if (baseConfigFile.exists()) {
-            applyPropertiesFile(baseConfigFile);
+        String configPath = System.getProperty("petshop.db.config", "config/database.properties");
+        File configFile = new File(configPath);
+        if (!configFile.isFile() && System.getProperty("petshop.db.config") != null) {
+            throw new IllegalStateException("Không tìm thấy cấu hình CSDL: " + configFile.getAbsolutePath());
         }
+        if (configFile.exists()) {
+            try (InputStream input = new FileInputStream(configFile)) {
+                Properties prop = new Properties();
+                prop.load(input);
 
-        // 2. Nạp tệp cấu hình máy cá nhân (nếu có) để ghi đè
-        File localConfigFile = new File("config/database.local.properties");
-        if (localConfigFile.exists()) {
-            applyPropertiesFile(localConfigFile);
-        }
-
-        // 3. Ưu tiên cao nhất từ biến môi trường (Environment Variables) nếu có
-        String envHost = System.getenv("DB_HOST");
-        String envPort = System.getenv("DB_PORT");
-        String envName = System.getenv("DB_NAME");
-        String envUser = System.getenv("DB_USER");
-        String envPass = System.getenv("DB_PASSWORD");
-        String envInst = System.getenv("DB_INSTANCE");
-
-        if (envHost != null && !envHost.isBlank()) host = envHost.trim();
-        if (envPort != null && !envPort.isBlank()) port = envPort.trim();
-        if (envName != null && !envName.isBlank()) databaseName = envName.trim();
-        if (envUser != null && !envUser.isBlank()) user = envUser.trim();
-        if (envPass != null && !envPass.isBlank()) password = envPass.trim();
-        if (envInst != null && !envInst.isBlank()) instance = envInst.trim();
-    }
-
-    private static void applyPropertiesFile(File file) {
-        try (InputStream input = new FileInputStream(file)) {
-            Properties prop = new Properties();
-            prop.load(input);
-
-            if (prop.getProperty("db.host") != null)
-                host = prop.getProperty("db.host").trim();
-            if (prop.getProperty("db.port") != null)
-                port = prop.getProperty("db.port").trim();
-            if (prop.getProperty("db.name") != null)
-                databaseName = prop.getProperty("db.name").trim();
-            if (prop.getProperty("db.user") != null)
-                user = prop.getProperty("db.user").trim();
-            if (prop.getProperty("db.password") != null)
-                password = prop.getProperty("db.password").trim();
-            if (prop.getProperty("db.instance") != null)
-                instance = prop.getProperty("db.instance").trim();
-            if (prop.getProperty("db.timeout") != null) {
-                try { loginTimeout = Integer.parseInt(prop.getProperty("db.timeout").trim()); } catch (NumberFormatException ignored) {}
+                if (prop.getProperty("db.host") != null)
+                    host = prop.getProperty("db.host").trim();
+                if (prop.getProperty("db.port") != null)
+                    port = prop.getProperty("db.port").trim();
+                if (prop.getProperty("db.name") != null)
+                    databaseName = prop.getProperty("db.name").trim();
+                if (prop.getProperty("db.user") != null)
+                    user = prop.getProperty("db.user").trim();
+                if (prop.getProperty("db.password") != null)
+                    password = prop.getProperty("db.password").trim();
+                if (prop.getProperty("db.instance") != null)
+                    instance = prop.getProperty("db.instance").trim();
+            } catch (Exception e) {
+                System.err.println("ko doc dc file config db: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("[DBConnection] Không đọc được file config db [" + file.getName() + "]: " + e.getMessage());
+        }
+        // Đọc dự phòng biến môi trường hệ thống nếu chưa có trong file (null-safe check)
+        if (user == null || user.isBlank()) {
+            String envUser = System.getenv("DB_USER");
+            if (envUser != null && !envUser.isBlank()) user = envUser.trim();
+        }
+        if (password == null || password.isBlank()) {
+            String envPass = System.getenv("DB_PASSWORD");
+            if (envPass != null && !envPass.isBlank()) password = envPass.trim();
         }
     }
 
@@ -110,18 +91,19 @@ public class DBConnection {
         return getNewConnection();
     }
 
-    // mở kết nối mới bằng thông tin đã được cấu hình minh bạch, không đoán mò mật khẩu
+    // mở kết nối mới (chỉ dùng tài khoản và mật khẩu được cấu hình tường minh, cấm mật khẩu rỗng và cấm tự gán sa)
     public static Connection getNewConnection() throws SQLException {
-        if (user == null || user.isBlank() || password == null || password.isBlank()
-                || password.startsWith("YOUR_") || password.contains("PLACEHOLDER")) {
-            dbAvailable = false;
-            throw new SQLException("Cơ sở dữ liệu chưa được cấu hình thông tin xác thực! Vui lòng cấu hình tài khoản và mật khẩu trong 'config/database.local.properties' (sao chép từ 'config/database.properties.example') hoặc đặt biến môi trường DB_USER và DB_PASSWORD.");
+        if (user == null || user.isBlank()) {
+            throw new IllegalStateException("Chưa cấu hình tài khoản (db.user) truy cập CSDL trong config/database.properties hoặc biến môi trường DB_USER!");
+        }
+        if (password == null || password.isBlank()) {
+            throw new IllegalStateException("Chưa cấu hình mật khẩu (db.password) truy cập CSDL trong config/database.properties hoặc biến môi trường DB_PASSWORD!");
         }
         SQLException lastEx = null;
 
-        // 1. Thử kết nối qua Port (chuẩn SQL Server TCP/IP)
+        // 1. Thử kết nối qua port mặc định 1433
         try {
-            String url1 = buildUrl(true, password != null ? password : "");
+            String url1 = buildUrl(true, password);
             Connection conn = DriverManager.getConnection(url1);
             dbAvailable = true;
             return conn;
@@ -129,9 +111,9 @@ public class DBConnection {
             lastEx = e1;
         }
 
-        // 2. Thử kết nối qua Named Instance (SQLEXPRESS)
+        // 2. Thử kết nối qua Named Instance SQLEXPRESS
         try {
-            String url2 = buildUrl(false, password != null ? password : "");
+            String url2 = buildUrl(false, password);
             Connection conn = DriverManager.getConnection(url2);
             dbAvailable = true;
             return conn;
@@ -140,8 +122,7 @@ public class DBConnection {
         }
 
         dbAvailable = false;
-        throw new SQLException("Không thể kết nối CSDL SQL Server [" + databaseName + "] trên host [" + host
-                + "]. Vui lòng kiểm tra lại cấu hình trong config/database.properties hoặc biến môi trường DB_PASSWORD.", lastEx);
+        throw new SQLException("Không thể kết nối đến máy chủ CSDL SQL Server (" + databaseName + ") với tài khoản [" + user + "]. Vui lòng kiểm tra lại cấu hình trong " + System.getProperty("petshop.db.config", "config/database.properties") + "!", lastEx);
     }
 
     // check xem có đang online ko

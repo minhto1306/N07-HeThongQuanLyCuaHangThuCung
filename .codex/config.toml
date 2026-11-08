@@ -1,0 +1,5 @@
+[mcp_servers.mio_antigravity]
+command = "C:\\Users\\lekha\\AppData\\Local\\Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\\node-v24.20.0-win-x64\\node.exe"
+args = ["C:\\Users\\lekha\\eclipse-workspace\\N07-HeThongQuanLyCuaHangThuCungMio\\tools\\ai-flow\\src\\cli.mjs","serve","--project","C:\\Users\\lekha\\eclipse-workspace\\N07-HeThongQuanLyCuaHangThuCungMio"]
+startup_timeout_sec = 20
+tool_timeout_sec = 120

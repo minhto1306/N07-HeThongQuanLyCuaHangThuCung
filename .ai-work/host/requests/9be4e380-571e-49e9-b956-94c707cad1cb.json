@@ -1,0 +1,13 @@
+{
+  "id": "9be4e380-571e-49e9-b956-94c707cad1cb",
+  "session": "b6ac4780-c7d0-452a-8385-aafe65d023f9",
+  "name": "worker_review",
+  "args": {
+    "taskId": "agy-patch-jdbc-close-20261108",
+    "decision": "accept",
+    "proposalDigest": "6be9f5ed09122c3b02b4373c4cdccec233f9c2e61eb3dacbb0d2942f61aa2fe7",
+    "evidence": "Reviewed every exact edit: seven formerly leaking transaction methods gain independent conn.close in finally; existing LichHen insert separates reset and close. All other lines equal before/after. Validated raw hashes and unique exact matches in all eight edits. JSON artifact check passed. Accepting proposal artifact only; source application, compilation and live session-delta regression follow separately."
+  },
+  "createdAt": "2026-11-08T05:36:54.416Z",
+  "expiresAt": "2026-11-08T05:38:24.416Z"
+}
