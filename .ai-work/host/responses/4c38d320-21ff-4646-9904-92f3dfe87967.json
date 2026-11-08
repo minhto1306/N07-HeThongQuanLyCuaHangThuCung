@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "result": {
+    "id": "agy-patch-simple-batch-20261108",
+    "planId": "repair-20261108-batch-v1",
+    "planDigest": "5e3766b8b32eaf22163cb8a29c46c1d9a4b406038750e95210308e43cb67f1f8",
+    "attempt": 1,
+    "repairs": 0,
+    "createdAt": "2026-11-08T05:37:45.071Z",
+    "status": "accepted",
+    "ownerPid": 33248,
+    "startedAt": "2026-11-08T05:37:45.072Z",
+    "model": "gemini-3.8-flash-medium",
+    "error": null,
+    "updatedAt": "2026-11-08T05:44:00.515Z",
+    "sourceChanges": [],
+    "proposalDigest": "5acd9c9c4ab6d04b3a4f30a5d6b08996ee125b8e8e8c4373584e548674ddaea8",
+    "checks": [
+      {
+        "kind": "json-parse",
+        "path": "docs/ai-context/patches/agy-patch-simple-batch-20261108.json",
+        "passed": true
+      },
+      {
+        "kind": "manual",
+        "description": "Codex checks each exact edit and hash before accepting artifact, then applies, compiles and regression-tests separately.",
+        "passed": null,
+        "message": "Codex must supply actual review evidence"
+      }
+    ],
+    "conversationId": "8235f475-2487-49dd-827f-c0ad2053184e",
+    "finishedAt": "2026-11-08T05:43:26.510Z",
+    "reviewEvidence": "Read all proposed edits across eight targets, including whole sequence allocator, profile cache behavior, report aggregate join and unit-dialog failure paths. Raw SHA and exact-match validation passed for every edit. Artifact JSON parsed successfully. Accept artifact only, not test completion. Parent will explicitly roll back runtime allocator failures, narrow missing-table detection, validate overflow before write, and avoid phone-prefix truncation. Stock guards returning false are valid rejection and regression must assert false, not require exception. Actual source compile and fresh DB integration tests follow application.",
+    "acceptedAt": "2026-11-08T05:44:00.515Z"
+  }
+}

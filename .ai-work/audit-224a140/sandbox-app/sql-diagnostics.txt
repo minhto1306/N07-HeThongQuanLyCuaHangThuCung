@@ -1,0 +1,4 @@
+69|running|null|block=0|ms=20|SELECT session_id,status,wait_type,blocking_session_id,total_elapsed_time,LEFT(t.text,180) FROM sys.dm_exec_requests r OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) t WHERE databa
+89|background|null|block=0|ms=2|null
+SERVER_READ_ONLY max degree of parallelism=0
+SERVER_READ_ONLY max server memory (MB)=2147483647

@@ -1,0 +1,35 @@
+✔ proposal is isolated, checks run, backup and non-Git diff exist; accept is idempotent-safe (110.4061ms)
+✔ no plan, modified plan, missing dependency and cyclic plan are rejected (30.2845ms)
+✔ out-of-scope proposal never writes original or stages attacker path (53.4657ms)
+✔ two failed repair rounds lead to Codex takeover, not endless dispatch (168.4756ms)
+✔ concurrent edit after worker finishes blocks apply and preserves user content (70.0603ms)
+✔ external edits during run are detected even on an unrelated file (61.3476ms)
+✔ only one worker, cancellation persists and does not integrate proposals (55.2907ms)
+✔ quota failure invalidates readiness and preserves task; no automatic retry or API fallback (60.2312ms)
+✔ restart reports interrupted worker, never replays without explicit resume (24.7986ms)
+✔ tampered result cannot bypass verified proposal (63.8909ms)
+✔ failed check cannot be accepted; manual checks remain explicitly unverified (61.7018ms)
+✔ path traversal, Windows aliases, protected edits and SQL without approval are rejected (12.1058ms)
+✔ production dispatch blocked until live validation and smoke bypass cannot edit source (42.2343ms)
+✔ context is never silently truncated (43.051ms)
+✔ doctor does not invent Flash availability, model choice must match account listing (12.9114ms)
+✔ re-approving identical plan is idempotent but changed scope needs new revision (20.5548ms)
+✔ partial apply checkpoint blocks new work until Codex explicitly takes over (25.164ms)
+✔ sensitive values redacted and paid API env keys removed from worker (0.9034ms)
+✔ foreground host serves status/approval, rejects arbitrary commands and never replays old-session requests (994.1291ms)
+✔ adapter uses account CLI, denies tools, sends stdin JSON and parses documented result envelope (9.0164ms)
+✔ adapter rejects unexpected tool execution even when result says SUCCESS (6.1837ms)
+✔ documented real CLI finish event is accepted as structured final output, not an external tool (6.1764ms)
+✔ adapter classifies account/quota failures and does not retry (6.8209ms)
+✔ subprocess passes literal input without shell evaluation and captures UTF-8 (118.6741ms)
+✔ subprocess cancellation terminates long-running worker (608.392ms)
+✔ MCP stdio handshake, tool discovery, validation and missing-readiness gate (134.5504ms)
+✔ Java verification overlays proposed source without copying or modifying original files (556.7845ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1597.6666

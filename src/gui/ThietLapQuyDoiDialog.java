@@ -342,7 +342,6 @@ public class ThietLapQuyDoiDialog extends JDialog {
         }
     }
     
-//    ---------------
 
     private void xuLyThemQuyDoi() {
         String tenDvt = txtDonViMoi.getText().trim();

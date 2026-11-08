@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "result": {
+    "id": "agy-patch-simple-batch-20261108",
+    "planId": "repair-20261108-batch-v1",
+    "planDigest": "5e3766b8b32eaf22163cb8a29c46c1d9a4b406038750e95210308e43cb67f1f8",
+    "attempt": 1,
+    "repairs": 0,
+    "createdAt": "2026-11-08T05:37:45.071Z",
+    "status": "running",
+    "ownerPid": 33248,
+    "startedAt": "2026-11-08T05:37:45.072Z",
+    "model": "gemini-3.8-flash-medium",
+    "error": null,
+    "updatedAt": "2026-11-08T05:37:45.373Z"
+  }
+}

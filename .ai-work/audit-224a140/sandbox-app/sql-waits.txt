@@ -1,0 +1,9 @@
+69|running|null|block=0|ms=4|SELECT session_id,status,wait_type,blocking_session_id,total_elapsed_time,LEFT(t.text,180) FROM sys.dm_exec_requests r OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) t WHERE databa
+86|suspended|RESOURCE_SEMAPHORE|block=0|ms=11205|SET NOCOUNT ON; DECLARE @ErrCount INT=0; DECLARE @Details NVARCHAR(MAX)=N''; BEGIN TRY
+    DECLARE @TongDoanhThuHoaDon BIGINT;
+    DECLARE @TongDoanhThuChiTiet BIGINT;
+
+    SEL
+87|suspended|RESOURCE_SEMAPHORE|block=0|ms=134436|SELECT ct.maChiTiet, ct.maHoaDon, ct.loaiChiTiet, ct.soLuong, ct.donGiaLucBan, ct.thanhTien, xl.soLo, xl.maQuyDoi, xl.soLuongXuatCoSo, COALESCE(ct.maSanPham, l.maSanPham) AS maSanP
+GRANT session=86 requestedKB=9216 requiredKB=1024 grantedKB=0 waitMS=11219
+GRANT session=87 requestedKB=44368 requiredKB=8192 grantedKB=0 waitMS=134234

@@ -1,0 +1,18 @@
+{
+  "id": "replace-with-approved-plan-id",
+  "summary": "Replace with user-reviewed scope and design",
+  "approval": "Replace with the actual user approval and scope; this template is not approval",
+  "tasks": [{
+    "id": "replace-with-task-id",
+    "readOnly": false,
+    "goal": "Specific observable behavior",
+    "design": "Concrete design, interfaces and restrictions chosen by Codex",
+    "askWhen": "Missing context, architecture change, schema change or unexpected side effects",
+    "steps": ["Implement the agreed behavior", "Return full file replacement proposals without running tools"],
+    "acceptance": ["Observable behavior and regression criteria"],
+    "allowedFiles": ["src/bus/REPLACE.java"],
+    "contextFiles": ["README.md"],
+    "dependencies": [],
+    "checks": [{ "kind": "java-compile" }, { "kind": "manual", "description": "Codex verifies the agreed business behavior separately" }]
+  }]
+}

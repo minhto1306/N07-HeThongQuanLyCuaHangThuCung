@@ -1,0 +1,86 @@
+{
+  "exportedAt": "2026-11-07T17:40:48.353Z",
+  "project": "C:\\Users\\lekha\\eclipse-workspace\\N07-HeThongQuanLyCuaHangThuCungMio",
+  "scope": "Selected related Antigravity artifacts and inter-agent message excerpts; no complete chat export",
+  "sources": [
+    {
+      "type": "artifact",
+      "original": "C:\\Users\\lekha\\.gemini\\antigravity\\brain\\2c6fd9a7-35a2-47f2-a744-cafd6c27fbdd\\handover_state.md",
+      "local": "docs/ai-context/sources/2c6fd9a7-handover_state.md",
+      "originalSha256": "c4be85ddddcd5233e184b5b2709d61c4f211c370e5212dfd2f8a0e0134d295eb",
+      "exportedSha256": "f62eca330c11bbed9c4a94e07345f5fb1d2020fc1f2e13549eacf274f712fe7f",
+      "sourceModifiedAt": "2026-11-07T09:34:24.801Z",
+      "note": "Historical claim; verify against current code. Sample passwords and detected secrets redacted."
+    },
+    {
+      "type": "artifact",
+      "original": "C:\\Users\\lekha\\.gemini\\antigravity\\brain\\2c6fd9a7-35a2-47f2-a744-cafd6c27fbdd\\PROJECT_CHECKPOINT_MIO_PETSHOP.md",
+      "local": "docs/ai-context/sources/2c6fd9a7-PROJECT_CHECKPOINT_MIO_PETSHOP.md",
+      "originalSha256": "7463ad9ed9251e802c681640bb3be09f5de94ab6cd4b4ae186cf3a9d983964f2",
+      "exportedSha256": "cbfdb6de25108c6e6b8b5b576303913f79eb4a8200ab70dda84ae1c46e17119e",
+      "sourceModifiedAt": "2026-11-07T08:48:57.652Z",
+      "note": "Historical claim; verify against current code. Sample passwords and detected secrets redacted."
+    },
+    {
+      "type": "artifact",
+      "original": "C:\\Users\\lekha\\.gemini\\antigravity\\brain\\2c6fd9a7-35a2-47f2-a744-cafd6c27fbdd\\implementation_plan.md",
+      "local": "docs/ai-context/sources/2c6fd9a7-implementation_plan.md",
+      "originalSha256": "822c00a2b67b0f967baa913267ff99ddcaa9a6a8e139903c76454bfb6fd6752a",
+      "exportedSha256": "1fa30a6a390927de665bc39c8c73662cd8ac9d2581c67001c98a67efa31f3af7",
+      "sourceModifiedAt": "2026-11-07T08:17:23.475Z",
+      "note": "Historical claim; verify against current code. Sample passwords and detected secrets redacted."
+    },
+    {
+      "type": "artifact",
+      "original": "C:\\Users\\lekha\\.gemini\\antigravity\\brain\\115a9c0a-620c-4687-98b4-c18938fb3ce3\\ke_hoach_nang_cap_he_thong.md",
+      "local": "docs/ai-context/sources/115a9c0a-ke_hoach_nang_cap_he_thong.md",
+      "originalSha256": "e510708e6bb46580de1e28be7c68937927680fa178904969c8e957c81a13ce08",
+      "exportedSha256": "e510708e6bb46580de1e28be7c68937927680fa178904969c8e957c81a13ce08",
+      "sourceModifiedAt": "2026-10-27T05:18:05.654Z",
+      "note": "Historical claim; verify against current code. Sample passwords and detected secrets redacted."
+    },
+    {
+      "type": "artifact",
+      "original": "C:\\Users\\lekha\\.gemini\\antigravity\\brain\\c9294613-d4b5-4079-9d93-2c898dcc7abb\\bao_cao_ket_qua_kiem_thu_toan_dien.md",
+      "local": "docs/ai-context/sources/c9294613-bao_cao_ket_qua_kiem_thu_toan_dien.md",
+      "originalSha256": "fd591ec0de790f7964358236cda995a308a8136f46560f3f95d062230c3af2e4",
+      "exportedSha256": "fd591ec0de790f7964358236cda995a308a8136f46560f3f95d062230c3af2e4",
+      "sourceModifiedAt": "2026-11-02T19:47:22.982Z",
+      "note": "Historical claim; verify against current code. Sample passwords and detected secrets redacted."
+    },
+    {
+      "type": "artifact",
+      "original": "C:\\Users\\lekha\\.gemini\\antigravity\\brain\\c9294613-d4b5-4079-9d93-2c898dcc7abb\\prompt_kiem_thu_toan_dien_cua_hang_thu_cung.md",
+      "local": "docs/ai-context/sources/c9294613-prompt_kiem_thu_toan_dien_cua_hang_thu_cung.md",
+      "originalSha256": "8020d6e731078c0b5ee70f2130a3aafb47b53edbbac59298eea0a4a65792a1d0",
+      "exportedSha256": "8020d6e731078c0b5ee70f2130a3aafb47b53edbbac59298eea0a4a65792a1d0",
+      "sourceModifiedAt": "2026-11-02T19:29:13.865Z",
+      "note": "Historical claim; verify against current code. Sample passwords and detected secrets redacted."
+    },
+    {
+      "type": "artifact",
+      "original": "C:\\Users\\lekha\\.gemini\\antigravity\\brain\\daac4688-fb77-46ed-bdce-85cf41a0c9ad\\ke_hoach_toi_gian_hoa_du_an.md",
+      "local": "docs/ai-context/sources/daac4688-ke_hoach_toi_gian_hoa_du_an.md",
+      "originalSha256": "98eddc3dc46bd061cd3b1c5c827edf37f16b97295ee58f27fa3615d56c9064ea",
+      "exportedSha256": "d11b56d38397a302c90db579c4b2080a27352f7bf56292bfbb8ba575a6c38a0c",
+      "sourceModifiedAt": "2026-10-12T19:17:06.799Z",
+      "note": "Historical claim; verify against current code. Sample passwords and detected secrets redacted."
+    },
+    {
+      "type": "artifact",
+      "original": "C:\\Users\\lekha\\.gemini\\antigravity\\brain\\edcc51b2-2ef4-400a-9801-2af386164e80\\migration_to_eclipse_export_plan.md",
+      "local": "docs/ai-context/sources/edcc51b2-migration_to_eclipse_export_plan.md",
+      "originalSha256": "495148c8121df5cba6c9f04634c55e1ad31f7da91ff9e228e2b89c80ae75d811",
+      "exportedSha256": "495148c8121df5cba6c9f04634c55e1ad31f7da91ff9e228e2b89c80ae75d811",
+      "sourceModifiedAt": "2026-10-12T18:53:49.907Z",
+      "note": "Historical claim; verify against current code. Sample passwords and detected secrets redacted."
+    },
+    {
+      "type": "message_excerpts",
+      "original": "C:\\Users\\lekha\\.gemini\\antigravity\\brain\\2c6fd9a7-35a2-47f2-a744-cafd6c27fbdd\\.system_generated\\messages",
+      "local": "docs/ai-context/sources/2c6fd9a7-message-excerpts.json",
+      "count": 26,
+      "note": "Only timestamp, original path and content; not a complete conversation transcript"
+    }
+  ]
+}

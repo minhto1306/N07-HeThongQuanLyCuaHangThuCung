@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "result": {
+    "id": "repair-20261108-batch-v1",
+    "digest": "5e3766b8b32eaf22163cb8a29c46c1d9a4b406038750e95210308e43cb67f1f8",
+    "taskIds": [
+      "agy-patch-simple-batch-20261108"
+    ]
+  }
+}

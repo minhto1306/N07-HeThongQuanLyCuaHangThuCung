@@ -1,0 +1,1112 @@
+diff --git a/src/bus/BanHangBus.java b/src/bus/BanHangBus.java
+index b0e5890..03107d4 100644
+--- a/src/bus/BanHangBus.java
++++ b/src/bus/BanHangBus.java
+@@ -285,7 +285,7 @@ public class BanHangBus {
+         return kq;
+     }
+ 
+-    // Lưu mới hoặc cập nhật thông tin khách hàng và điểm tích lũy xuống SQL Server
++    // Lưu mới hoặc cập nhật thông tin khách hàng xuống SQL Server (hồ sơ giữ nguyên điểm tích lũy CSDL)
+     public static KhachHang luuHoacCapNhatKhachHang(String soDienThoai, String hoTen, int diemMoi) {
+         if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
+             return null;
+@@ -297,17 +297,22 @@ public class BanHangBus {
+             sdt = sdt.substring(0, 15);
+         }
+ 
+-        // Trường hợp 1: Nếu khách đã tồn tại trong hệ thống -> Cập nhật tên và điểm tích lũy
++        // Trường hợp 1: Nếu khách đã tồn tại trong hệ thống -> Cập nhật tên, bỏ qua diemMoi và giữ nguyên điểm CSDL
+         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
+             if (kh.getSoDienThoai().equalsIgnoreCase(sdt)) {
+-                if (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai")) {
+-                    kh.setHoTen(hoTen.trim());
+-                }
+-                // Đảm bảo điểm tích lũy không bao giờ bị âm
+-                kh.setDiemTichLuy(Math.max(0, diemMoi));
++                String tenCapNhat = (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai"))
++                        ? hoTen.trim() : kh.getHoTen();
++                KhachHang updateObj = new KhachHang(kh.getMaKhachHang(), tenCapNhat, sdt, kh.getDiemTichLuy(), kh.getEmail(), kh.getDiaChi());
+                 try {
+-                    STATIC_KH_DAO.update(kh);
+-                    return kh;
++                    if (STATIC_KH_DAO.updateProfile(updateObj)) {
++                        kh.setHoTen(tenCapNhat);
++                        KhachHang persisted = STATIC_KH_DAO.findByMaKhachHang(kh.getMaKhachHang());
++                        if (persisted != null) {
++                            kh.setDiemTichLuy(persisted.getDiemTichLuy());
++                        }
++                        return kh;
++                    }
++                    return null;
+                 } catch (SQLException e) {
+                     System.err.println("[BanHangBus] Lỗi update KhachHang CSDL: " + e.getMessage());
+                     return null;
+@@ -315,16 +320,18 @@ public class BanHangBus {
+             }
+         }
+ 
+-        // Trường hợp 2: Khách hàng mới toanh -> Tự động sinh mã KH mới và thêm vào CSDL
++        // Trường hợp 2: Khách hàng mới toanh -> Tự động sinh mã KH mới và bắt đầu với 0 điểm
+         String tenMoi = (hoTen == null || hoTen.trim().isEmpty() || hoTen.trim().equalsIgnoreCase("Khách vãng lai"))
+                 ? "Khách hàng mới"
+                 : hoTen.trim();
+         String maMoi = sinhMaKhachHangMoi();
+-        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi));
++        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, 0);
+         try {
+-            STATIC_KH_DAO.insert(khMoi);
+-            DANH_SACH_KHACH_HANG.add(khMoi);
+-            return khMoi;
++            if (STATIC_KH_DAO.insert(khMoi)) {
++                DANH_SACH_KHACH_HANG.add(khMoi);
++                return khMoi;
++            }
++            return null;
+         } catch (SQLException e) {
+             System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
+             return null;
+@@ -341,19 +348,32 @@ public class BanHangBus {
+         return capNhatThongTinKhachHang(maKH, hoTenMoi, sdtMoi, diemMoi, "", "");
+     }
+ 
+-    // overload cập nhật thông tin khách hàng có cả email và địa chỉ để gửi mail thông báo
++    // overload cập nhật thông tin khách hàng: chỉ quản lý mới được chỉnh sửa điểm, nhân viên chỉ sửa hồ sơ
+     public static boolean capNhatThongTinKhachHang(String maKH, String hoTenMoi, String sdtMoi, int diemMoi, String emailMoi, String diaChiMoi) {
+         dongBoKhachHangTuDatabase();
+         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
+             if (kh.getMaKhachHang().equalsIgnoreCase(maKH)) {
+-                kh.setHoTen(hoTenMoi.trim());
+-                kh.setSoDienThoai(sdtMoi.trim());
+-                kh.setDiemTichLuy(Math.max(0, diemMoi));
+-                kh.setEmail(emailMoi != null ? emailMoi.trim() : "");
+-                kh.setDiaChi(diaChiMoi != null ? diaChiMoi.trim() : "");
++                boolean isManager = utils.UserSession.isQuanLy();
++                String ten = hoTenMoi != null ? hoTenMoi.trim() : kh.getHoTen();
++                String sdt = sdtMoi != null ? sdtMoi.trim() : kh.getSoDienThoai();
++                String email = emailMoi != null ? emailMoi.trim() : "";
++                String diaChi = diaChiMoi != null ? diaChiMoi.trim() : "";
++                int diem = isManager ? Math.max(0, diemMoi) : kh.getDiemTichLuy();
++                KhachHang updateObj = new KhachHang(kh.getMaKhachHang(), ten, sdt, diem, email, diaChi);
+                 try {
+-                    STATIC_KH_DAO.update(kh);
+-                    return true;
++                    boolean ok = isManager ? STATIC_KH_DAO.update(updateObj) : STATIC_KH_DAO.updateProfile(updateObj);
++                    if (ok) {
++                        kh.setHoTen(ten);
++                        kh.setSoDienThoai(sdt);
++                        kh.setEmail(email);
++                        kh.setDiaChi(diaChi);
++                        KhachHang persisted = STATIC_KH_DAO.findByMaKhachHang(kh.getMaKhachHang());
++                        if (persisted != null) {
++                            kh.setDiemTichLuy(persisted.getDiemTichLuy());
++                        }
++                        return true;
++                    }
++                    return false;
+                 } catch (SQLException e) {
+                     System.err.println("[BanHangBus] Lỗi capNhatThongTinKhachHang CSDL: " + e.getMessage());
+                     return false;
+@@ -363,7 +383,7 @@ public class BanHangBus {
+         return false;
+     }
+ 
+-    // thêm khách hàng mới hoặc cập nhật kèm cả email và địa chỉ nhà
++    // thêm khách hàng mới hoặc cập nhật kèm cả email và địa chỉ nhà (hồ sơ giữ nguyên điểm tích lũy CSDL)
+     public static KhachHang luuHoacCapNhatKhachHang(String soDienThoai, String hoTen, int diemMoi, String email, String diaChi) {
+         if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
+             return null;
+@@ -376,15 +396,23 @@ public class BanHangBus {
+ 
+         for (KhachHang kh : DANH_SACH_KHACH_HANG) {
+             if (kh.getSoDienThoai().equalsIgnoreCase(sdt)) {
+-                if (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai")) {
+-                    kh.setHoTen(hoTen.trim());
+-                }
+-                kh.setDiemTichLuy(Math.max(0, diemMoi));
+-                if (email != null && !email.trim().isEmpty()) kh.setEmail(email.trim());
+-                if (diaChi != null && !diaChi.trim().isEmpty()) kh.setDiaChi(diaChi.trim());
++                String tenCapNhat = (hoTen != null && !hoTen.trim().isEmpty() && !hoTen.trim().equalsIgnoreCase("Khách vãng lai"))
++                        ? hoTen.trim() : kh.getHoTen();
++                String emailCapNhat = (email != null && !email.trim().isEmpty()) ? email.trim() : kh.getEmail();
++                String diaChiCapNhat = (diaChi != null && !diaChi.trim().isEmpty()) ? diaChi.trim() : kh.getDiaChi();
++                KhachHang updateObj = new KhachHang(kh.getMaKhachHang(), tenCapNhat, sdt, kh.getDiemTichLuy(), emailCapNhat, diaChiCapNhat);
+                 try {
+-                    STATIC_KH_DAO.update(kh);
+-                    return kh;
++                    if (STATIC_KH_DAO.updateProfile(updateObj)) {
++                        kh.setHoTen(tenCapNhat);
++                        kh.setEmail(emailCapNhat);
++                        kh.setDiaChi(diaChiCapNhat);
++                        KhachHang persisted = STATIC_KH_DAO.findByMaKhachHang(kh.getMaKhachHang());
++                        if (persisted != null) {
++                            kh.setDiemTichLuy(persisted.getDiemTichLuy());
++                        }
++                        return kh;
++                    }
++                    return null;
+                 } catch (SQLException e) {
+                     System.err.println("[BanHangBus] Lỗi update KhachHang CSDL: " + e.getMessage());
+                     return null;
+@@ -396,11 +424,13 @@ public class BanHangBus {
+                 ? "Khách hàng mới"
+                 : hoTen.trim();
+         String maMoi = sinhMaKhachHangMoi();
+-        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi), email, diaChi);
++        KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, 0, email, diaChi);
+         try {
+-            STATIC_KH_DAO.insert(khMoi);
+-            DANH_SACH_KHACH_HANG.add(khMoi);
+-            return khMoi;
++            if (STATIC_KH_DAO.insert(khMoi)) {
++                DANH_SACH_KHACH_HANG.add(khMoi);
++                return khMoi;
++            }
++            return null;
+         } catch (SQLException e) {
+             System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
+             return null;
+diff --git a/src/bus/ThongKeBus.java b/src/bus/ThongKeBus.java
+index 5d19da9..246cfbd 100644
+--- a/src/bus/ThongKeBus.java
++++ b/src/bus/ThongKeBus.java
+@@ -33,7 +33,7 @@ public class ThongKeBus {
+     }
+ 
+     public List<DoanhThuRow> layBaoCaoDoanhThu(LocalDate tuNgay, LocalDate denNgay) {
+-        return layBaoCaoDoanhThu(tuNgay.atStartOfDay(), denNgay.atTime(23, 59, 59));
++        return layBaoCaoDoanhThu(tuNgay.atStartOfDay(), denNgay.plusDays(1).atStartOfDay());
+     }
+ 
+     public List<TopBanChayRow> layTopBanChay(LocalDateTime tuNgay, LocalDateTime denNgay) {
+@@ -46,7 +46,7 @@ public class ThongKeBus {
+     }
+ 
+     public List<TopBanChayRow> layTopBanChay(LocalDate tuNgay, LocalDate denNgay) {
+-        return layTopBanChay(tuNgay.atStartOfDay(), denNgay.atTime(23, 59, 59));
++        return layTopBanChay(tuNgay.atStartOfDay(), denNgay.plusDays(1).atStartOfDay());
+     }
+ 
+     public List<HieuSuatNhanSuRow> layHieuSuatNhanSu(LocalDateTime tuNgay, LocalDateTime denNgay) {
+@@ -59,7 +59,7 @@ public class ThongKeBus {
+     }
+ 
+     public List<HieuSuatNhanSuRow> layHieuSuatNhanSu(LocalDate tuNgay, LocalDate denNgay) {
+-        return layHieuSuatNhanSu(tuNgay.atStartOfDay(), denNgay.atTime(23, 59, 59));
++        return layHieuSuatNhanSu(tuNgay.atStartOfDay(), denNgay.plusDays(1).atStartOfDay());
+     }
+ 
+     public List<KhachHangRow> layThongKeKhachHang() {
+@@ -90,7 +90,7 @@ public class ThongKeBus {
+     }
+ 
+     public DoiTraSummary layDoiTraSummary(LocalDate tuNgay, LocalDate denNgay) {
+-        return layDoiTraSummary(tuNgay.atStartOfDay(), denNgay.atTime(23, 59, 59));
++        return layDoiTraSummary(tuNgay.atStartOfDay(), denNgay.plusDays(1).atStartOfDay());
+     }
+ 
+     public List<LoHangFefoRow> layLoHangFefo() {
+@@ -112,7 +112,7 @@ public class ThongKeBus {
+     }
+ 
+     public List<XuatNhapTonRow> layXuatNhapTon(LocalDate tuNgay, LocalDate denNgay) {
+-        return layXuatNhapTon(tuNgay.atStartOfDay(), denNgay.atTime(23, 59, 59));
++        return layXuatNhapTon(tuNgay.atStartOfDay(), denNgay.plusDays(1).atStartOfDay());
+     }
+ 
+     /**
+@@ -122,7 +122,7 @@ public class ThongKeBus {
+         long[] result = new long[7];
+         LocalDate today = LocalDate.now();
+         LocalDateTime tuNgay = today.minusDays(6).atStartOfDay();
+-        LocalDateTime denNgay = today.atTime(23, 59, 59);
++        LocalDateTime denNgay = today.plusDays(1).atStartOfDay();
+         List<DoanhThuRow> rows = layBaoCaoDoanhThu(tuNgay, denNgay);
+ 
+         Map<LocalDate, Long> mapNgayDoanhThu = new HashMap<>();
+@@ -147,7 +147,7 @@ public class ThongKeBus {
+         int[] result = new int[7];
+         LocalDate today = LocalDate.now();
+         LocalDateTime tuNgay = today.minusDays(6).atStartOfDay();
+-        LocalDateTime denNgay = today.atTime(23, 59, 59);
++        LocalDateTime denNgay = today.plusDays(1).atStartOfDay();
+         List<DoanhThuRow> rows = layBaoCaoDoanhThu(tuNgay, denNgay);
+ 
+         Map<LocalDate, Integer> mapNgayDon = new HashMap<>();
+diff --git a/src/dao/BaoCaoThongKeDAO.java b/src/dao/BaoCaoThongKeDAO.java
+index e91a869..1dc4070 100644
+--- a/src/dao/BaoCaoThongKeDAO.java
++++ b/src/dao/BaoCaoThongKeDAO.java
+@@ -163,13 +163,18 @@ public class BaoCaoThongKeDAO {
+ 
+     public List<TopBanChayRow> getTopBanChay(LocalDateTime tu, LocalDateTime den) throws SQLException {
+         String sql =
+-                "SELECT COALESCE(ct.maDichVu, ct.maSanPham) ma," +
++                "WITH XL AS (" +
++                " SELECT maChiTiet, SUM(soLuongXuatCoSo) tongXuatCoSo FROM ChiTietXuatLo GROUP BY maChiTiet" +
++                ")" +
++                " SELECT COALESCE(ct.maDichVu, ct.maSanPham) ma," +
+                 " COALESCE(d.tenDichVu, sp.tenSanPham, N'Sản phẩm') ten," +
+                 " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN N'Dịch vụ' ELSE N'Hàng hóa' END phanNhom," +
+                 " CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN N'Lượt' ELSE COALESCE(sp.donViCoSo, N'Đơn vị') END donViTinh," +
+-                " SUM(ct.soLuong) soLuong, SUM(CAST(ct.thanhTien AS BIGINT)) doanhThu" +
++                " SUM(CASE WHEN ct.loaiChiTiet IN ('DICH_VU','ChiTietDichVu') THEN ct.soLuong ELSE COALESCE(xl.tongXuatCoSo, ct.soLuong) END) soLuong," +
++                " SUM(CAST(ct.thanhTien AS BIGINT)) doanhThu" +
+                 " FROM ChiTietHoaDon ct" +
+                 " JOIN HoaDon h ON h.maHoaDon=ct.maHoaDon" +
++                " LEFT JOIN XL xl ON xl.maChiTiet=ct.maChiTiet" +
+                 " LEFT JOIN SanPham sp ON sp.maSanPham=ct.maSanPham" +
+                 " LEFT JOIN DichVu d ON d.maDichVu=ct.maDichVu" +
+                 " WHERE h.trangThaiHoaDon=N'Đã thanh toán'" +
+@@ -351,9 +356,9 @@ public class BaoCaoThongKeDAO {
+                 " FROM ChiTietXuatLo x JOIN LoHang l ON l.soLo=x.soLo JOIN ChiTietHoaDon cthd ON cthd.maChiTiet=x.maChiTiet" +
+                 " JOIN HoaDon h ON h.maHoaDon=cthd.maHoaDon WHERE h.trangThaiHoaDon=N'Đã thanh toán' GROUP BY l.maSanPham)," +
+                 " R AS (SELECT ct.maSanPham," +
+-                " SUM(CASE WHEN p.ngayDoiTra>=? AND p.ngayDoiTra<? THEN COALESCE(NULLIF(ct.soLuongCoSoHoan,0),ct.soLuongDoiTra) ELSE 0 END) traKy," +
+-                " SUM(CASE WHEN p.ngayDoiTra>=? THEN COALESCE(NULLIF(ct.soLuongCoSoHoan,0),ct.soLuongDoiTra) ELSE 0 END) traSau," +
+-                " SUM(CASE WHEN p.ngayDoiTra>=? THEN CAST(COALESCE(NULLIF(ct.soLuongCoSoHoan,0),ct.soLuongDoiTra) AS BIGINT)*CAST(COALESCE(l.donGiaNhapCoSo,0) AS BIGINT) ELSE 0 END) giaTriTraSau" +
++                " SUM(CASE WHEN p.ngayDoiTra>=? AND p.ngayDoiTra<? THEN COALESCE(ct.soLuongCoSoHoan,0) ELSE 0 END) traKy," +
++                " SUM(CASE WHEN p.ngayDoiTra>=? THEN COALESCE(ct.soLuongCoSoHoan,0) ELSE 0 END) traSau," +
++                " SUM(CASE WHEN p.ngayDoiTra>=? THEN CAST(COALESCE(ct.soLuongCoSoHoan,0) AS BIGINT)*CAST(COALESCE(l.donGiaNhapCoSo,0) AS BIGINT) ELSE 0 END) giaTriTraSau" +
+                 " FROM ChiTietDoiTra ct JOIN PhieuDoiTra p ON p.maPhieuDoiTra=ct.maPhieuDoiTra LEFT JOIN LoHang l ON l.soLo=ct.soLo GROUP BY ct.maSanPham)" +
+                 " SELECT sp.maSanPham,sp.tenSanPham,COALESCE(dvt.tenDonVi,N'Đơn vị') donViTinh," +
+                 " (COALESCE(l.tonHienTai,0)-COALESCE(n.nhapSau,0)+COALESCE(x.xuatSau,0)-COALESCE(r.traSau,0)) tonCuoi," +
+diff --git a/src/dao/HoaDonDAO.java b/src/dao/HoaDonDAO.java
+index bedf384..d3ae32f 100644
+--- a/src/dao/HoaDonDAO.java
++++ b/src/dao/HoaDonDAO.java
+@@ -52,6 +52,7 @@ public class HoaDonDAO {
+                                      List<String> dsMaPhongHotel, int diemSuDung,
+                                      int diemThuHoiDoTraHang) throws SQLException {
+         kiemTraHoaDonHopLe(hoaDon);
++        if (diemSuDung < 0 || diemThuHoiDoTraHang < 0) throw new IllegalArgumentException("Số điểm không được âm");
+         try (Connection conn = DBConnection.getNewConnection()) {
+             conn.setAutoCommit(false);
+             try {
+@@ -59,7 +60,8 @@ public class HoaDonDAO {
+                     luuPhieuDoiTraTrongTransaction(conn, phieuDoiTra);
+                 }
+                 luuHoaDonTrongTransaction(conn, hoaDon);
+-                truDiemTrongTransaction(conn, hoaDon, diemSuDung, diemThuHoiDoTraHang);
++                // Return-point recovery is derived from the original customer inside the return transaction.
++                truDiemTrongTransaction(conn, hoaDon, diemSuDung, 0);
+                 xuLySpaPassTrongTransaction(conn, hoaDon, maTheSuDung, theMoi);
+                 hoanTatHotelTrongTransaction(conn, hoaDon, dsMaPhongHotel);
+                 conn.commit();
+@@ -107,112 +109,23 @@ public class HoaDonDAO {
+         }
+     }
+ 
+-    private void hoanTatHotelTrongTransaction(Connection conn, HoaDon hoaDon,
+-                                               List<String> dsMaPhongHotel) throws SQLException {
+-        if (dsMaPhongHotel == null || dsMaPhongHotel.isEmpty()) return;
+-
+-        int soNgayHD = 1;
+-        BigDecimal tongTienHD = null;
+-        if (hoaDon != null && hoaDon.getDsChiTiet() != null) {
+-            for (ChiTietHoaDon ct : hoaDon.getDsChiTiet()) {
+-                if (ct.getDichVu() != null && "DV008".equalsIgnoreCase(ct.getDichVu().getMaDichVu())) {
+-                    if (ct.getSoLuong() > 0) soNgayHD = ct.getSoLuong();
+-                    if (ct.getThanhTien() != null && ct.getThanhTien().compareTo(BigDecimal.ZERO) > 0) {
+-                        tongTienHD = ct.getThanhTien();
+-                    }
+-                    break;
+-                }
+-            }
+-        }
+-
+-        String sqlLichSu = "INSERT INTO LichSuLuuTru (maPhong,tenThuCung,tenChu,sdtChu,thoiGianCheckIn,thoiGianCheckOut,soNgayLuuTru,donGiaNgay,phiPhatSinh,tongTien,ghiChu,maHoaDon,trangThaiThanhToan) "
+-                + "SELECT maPhong,tenThuCung,tenChu,sdtChu,thoiGianCheckIn,SYSDATETIME(),"
+-                + "?,"
+-                + "donGiaNgay,phiDichVuPhatSinh,"
+-                + "COALESCE(?, (CASE WHEN DATEDIFF(DAY,CAST(thoiGianCheckIn AS DATE),CAST(GETDATE() AS DATE))<1 THEN 1 ELSE DATEDIFF(DAY,CAST(thoiGianCheckIn AS DATE),CAST(GETDATE() AS DATE)) END)*donGiaNgay+phiDichVuPhatSinh),"
+-                + "ghiChuChamSoc,?,N'DA_THANH_TOAN' FROM PhongLuuTru WHERE maPhong=? AND trangThai=N'ĐANG CÓ KHÁCH'";
+-        String sqlPhong = "UPDATE PhongLuuTru SET trangThai=N'ĐANG DỌN DẸP' WHERE maPhong=? AND trangThai=N'ĐANG CÓ KHÁCH'";
+-        try (PreparedStatement psLichSu = conn.prepareStatement(sqlLichSu);
+-             PreparedStatement psPhong = conn.prepareStatement(sqlPhong)) {
+-            for (String maPhong : dsMaPhongHotel) {
+-                psLichSu.setInt(1, soNgayHD);
+-                if (tongTienHD != null) {
+-                    psLichSu.setBigDecimal(2, tongTienHD);
+-                } else {
+-                    psLichSu.setNull(2, Types.DECIMAL);
+-                }
+-                psLichSu.setString(3, hoaDon != null ? hoaDon.getMaHoaDon() : "");
+-                psLichSu.setString(4, maPhong);
+-                if (psLichSu.executeUpdate() != 1) {
+-                    throw new SQLException("Phòng " + maPhong + " không còn khách hoặc dữ liệu checkout không hợp lệ");
+-                }
+-                psPhong.setString(1, maPhong);
+-                if (psPhong.executeUpdate() != 1) {
+-                    throw new SQLException("Không thể chuyển phòng " + maPhong + " sang trạng thái dọn dẹp");
+-                }
+-            }
+-        }
++    private void hoanTatHotelTrongTransaction(Connection conn, HoaDon hoaDon, List<String> rooms) throws SQLException {
++        HoaDonDichVu.completeHotel(conn, hoaDon, rooms);
+     }
+ 
+-    private void xuLySpaPassTrongTransaction(Connection conn, HoaDon hoaDon,
+-                                              String maTheSuDung, TheSpaPass theMoi) throws SQLException {
+-        if (maTheSuDung != null && !maTheSuDung.isBlank()) {
+-            String sqlUpdate = "UPDATE TheSpaPass SET soBuoiDaDung=soBuoiDaDung+1 "
+-                    + "WHERE maThe=? AND trangThai=N'ĐANG HOẠT ĐỘNG' "
+-                    + "AND ngayHetHan>=CAST(GETDATE() AS DATE) AND soBuoiDaDung<tongSoBuoi";
+-            try (PreparedStatement ps = conn.prepareStatement(sqlUpdate)) {
+-                ps.setString(1, maTheSuDung);
+-                if (ps.executeUpdate() != 1) {
+-                    throw new SQLException("Thẻ Spa Pass không còn lượt, đã hết hạn hoặc vừa được sử dụng ở giao dịch khác");
+-                }
+-            }
+-            String sqlHistory = "INSERT INTO LichSuSuDungSpaPass(maThe,maHoaDon,maNhanVien,thoiGianSuDung,ghiChu) VALUES(?,?,?,SYSDATETIME(),?)";
+-            try (PreparedStatement ps = conn.prepareStatement(sqlHistory)) {
+-                ps.setString(1, maTheSuDung);
+-                ps.setString(2, hoaDon.getMaHoaDon());
+-                ps.setString(3, hoaDon.getNhanVien().getMaNhanVien());
+-                ps.setString(4, "Thanh toán tại POS đơn " + hoaDon.getMaHoaDon());
+-                ps.executeUpdate();
+-            }
+-        }
+-
+-        if (theMoi != null) {
+-            if (theMoi.getSdtKhachHang() == null || theMoi.getSdtKhachHang().isBlank()) {
+-                throw new IllegalArgumentException("Mua Spa Pass bắt buộc phải chọn khách hàng có số điện thoại");
+-            }
+-            String sqlInsert = "INSERT INTO TheSpaPass (maThe,sdtKhachHang,tenKhachHang,tenGoi,tongSoBuoi,soBuoiDaDung,donGiaGoi,ngayKichHoat,ngayHetHan,trangThai,maHoaDonKichHoat) VALUES(?,?,?,?,?,?,?,?,?,?,?)";
+-            try (PreparedStatement ps = conn.prepareStatement(sqlInsert)) {
+-                ps.setString(1, theMoi.getMaThe());
+-                ps.setString(2, theMoi.getSdtKhachHang());
+-                ps.setString(3, theMoi.getTenKhachHang());
+-                ps.setString(4, theMoi.getTenGoi());
+-                ps.setInt(5, theMoi.getTongSoBuoi());
+-                ps.setInt(6, theMoi.getSoBuoiDaDung());
+-                ps.setBigDecimal(7, BigDecimal.valueOf(theMoi.getDonGiaGoi()));
+-                ps.setDate(8, Date.valueOf(theMoi.getNgayKichHoat()));
+-                ps.setDate(9, Date.valueOf(theMoi.getNgayHetHan()));
+-                ps.setString(10, theMoi.getTrangThai());
+-                ps.setString(11, hoaDon.getMaHoaDon());
+-                ps.executeUpdate();
+-            }
+-        }
++    private void xuLySpaPassTrongTransaction(Connection conn, HoaDon hoaDon, String card, TheSpaPass newCard) throws SQLException {
++        HoaDonDichVu.processSpa(conn, hoaDon, card, newCard);
+     }
+ 
+     private void kiemTraHoaDonHopLe(HoaDon hoaDon) {
+-        if (hoaDon == null || hoaDon.getDsChiTiet() == null || hoaDon.getDsChiTiet().isEmpty()) {
+-            throw new IllegalArgumentException("Hóa đơn phải có ít nhất một khoản mục chi tiết để thanh toán!");
+-        }
+-        if (hoaDon.getNhanVien() == null || hoaDon.getNhanVien().getMaNhanVien() == null
+-                || hoaDon.getNhanVien().getMaNhanVien().isBlank()) {
+-            throw new IllegalArgumentException("Hóa đơn phải xác định nhân viên đang đăng nhập");
+-        }
++        HoaDonIntegrity.validateSale(hoaDon);
+     }
+ 
+     private void luuHoaDonTrongTransaction(Connection conn, HoaDon hoaDon) throws SQLException {
+         String sqlHoaDon = "INSERT INTO HoaDon (maHoaDon, maKhachHang, maNhanVien, ngayLap, thoiGianThanhToan, giamGia, thanhTien, phuongThucThanhToan, trangThaiHoaDon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+         String sqlCTHoaDon = "INSERT INTO ChiTietHoaDon (maChiTiet, maHoaDon, loaiChiTiet, maSanPham, maDichVu, soLuong, donGiaLucBan, thanhTien) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+         String sqlCTXuatLo = "INSERT INTO ChiTietXuatLo (maChiTiet, soLo, maQuyDoi, soLuongXuatCoSo) VALUES (?, ?, ?, ?)";
+-        String sqlTruKho = "UPDATE LoHang SET soLuongTon = soLuongTon - ? WHERE soLo = ? AND soLuongTon >= ?";
++        String sqlTruKho = "UPDATE LoHang SET soLuongTon = soLuongTon - ? WHERE soLo = ? AND soLuongTon >= ? AND hanSuDung >= CAST(GETDATE() AS DATE)";
+         String sqlCTDichVu = "INSERT INTO ChiTietDichVu (maChiTiet, maDichVu, maThuCung, maKtvThucHien, tienHoaHong) VALUES (?, ?, ?, ?, ?)";
+         String sqlTichDiem = "UPDATE KhachHang SET diemTichLuy = diemTichLuy + ? WHERE maKhachHang = ?";
+ 
+@@ -267,7 +180,7 @@ public class HoaDonDAO {
+                     }
+                     psXuat.setString(1, maChiTiet);
+                     psXuat.setString(2, xuatLo.getLoHang().getSoLo());
+-                    psXuat.setString(3, xuatLo.getQuyDoiDonVi() != null ? xuatLo.getQuyDoiDonVi().getMaQuyDoi() : null);
++                    psXuat.setString(3, HoaDonIntegrity.resolveUnit(conn, xuatLo));
+                     psXuat.setInt(4, xuatLo.getSoLuongXuatCoSo());
+                     psXuat.executeUpdate();
+ 
+@@ -352,7 +265,7 @@ public class HoaDonDAO {
+                     ChiTietHoaDon ct = mapResultSetToChiTiet(rs);
+                     if (ct != null) {
+                         ct.setHoaDon(hd);
+-                        hd.addChiTiet(ct);
++                        hd.getDsChiTiet().add(ct); // Preserve the persisted invoice total.
+                     }
+                 }
+             }
+@@ -376,7 +289,7 @@ public class HoaDonDAO {
+             try (ResultSet rs = ps.executeQuery()) {
+                 if (rs.next()) {
+                     HoaDon hd = mapResultSetToHoaDon(rs);
+-                    hd.setDsChiTiet(getChiTietByHoaDon(hd.getMaHoaDon()));
++                    hd.getDsChiTiet().addAll(getChiTietByHoaDon(hd.getMaHoaDon()));
+                     return hd;
+                 }
+             }
+@@ -447,6 +360,7 @@ public class HoaDonDAO {
+             );
+             c.setSanPham(sp);
+             c.setSoLuongXuatCoSo(rs.getInt("soLuongXuatCoSo"));
++            c.setThanhTien(rs.getBigDecimal("thanhTien"));
+             return c;
+         } else if ("DICH_VU".equalsIgnoreCase(loai) || "ChiTietDichVu".equalsIgnoreCase(loai)) {
+             DichVu d = new DichVu();
+@@ -464,7 +378,7 @@ public class HoaDonDAO {
+             NhanVien ktv = new NhanVien();
+             ktv.setMaNhanVien(rs.getString("maKtvThucHien"));
+ 
+-            return new ChiTietDichVu(
++            ChiTietDichVu c = new ChiTietDichVu(
+                     rs.getString("maChiTiet"),
+                     null,
+                     rs.getInt("soLuong"),
+@@ -474,6 +388,8 @@ public class HoaDonDAO {
+                     ktv,
+                     rs.getBigDecimal("tienHoaHong")
+             );
++            c.setThanhTien(rs.getBigDecimal("thanhTien"));
++            return c;
+         }
+         return null;
+     }
+@@ -485,7 +401,7 @@ public class HoaDonDAO {
+     public java.util.Map<String, Integer> layMapSoLuongDaTra(String maHoaDonGoc) {
+         java.util.Map<String, Integer> map = new java.util.HashMap<>();
+         if (maHoaDonGoc == null || maHoaDonGoc.trim().isEmpty()) return map;
+-        String sql = "SELECT ct.maSanPham, SUM(ct.soLuongDoiTra) AS tongDaTra " +
++        String sql = "SELECT ct.maSanPham, SUM(ct.soLuongCoSoTra) AS tongDaTra " +
+                      "FROM ChiTietDoiTra ct " +
+                      "JOIN PhieuDoiTra p ON ct.maPhieuDoiTra = p.maPhieuDoiTra " +
+                      "WHERE p.maHoaDonGoc = ? " +
+@@ -503,7 +419,7 @@ public class HoaDonDAO {
+                 }
+             }
+         } catch (Exception e) {
+-            System.err.println("[HoaDonDAO] Lỗi tra cứu số lượng đã trả: " + e.getMessage());
++            throw new IllegalStateException("Không tải được lịch sử trả hàng; hãy kiểm tra migration và thử lại", e);
+         }
+         return map;
+     }
+@@ -535,8 +451,9 @@ public class HoaDonDAO {
+                 || pdt.getNhanVien().getMaNhanVien().isBlank()) {
+             throw new IllegalArgumentException("Phiếu đổi trả phải xác định nhân viên tiếp nhận");
+         }
++        HoaDonIntegrity.ReturnPoints returnPoints = HoaDonIntegrity.validateReturn(conn, pdt);
+         String sqlPhieu = "INSERT INTO PhieuDoiTra (maPhieuDoiTra, maHoaDonGoc, maNhanVienTiepNhan, ngayDoiTra, lyDoDoiTra, tongTienHoan, trangThaiDoiTra) VALUES (?, ?, ?, ?, ?, ?, ?)";
+-        String sqlCT = "INSERT INTO ChiTietDoiTra (maChiTietDoiTra, maPhieuDoiTra, maSanPham, soLuongDoiTra, tienHoanLai, soLo, soLuongCoSoHoan) VALUES (?, ?, ?, ?, ?, ?, ?)";
++        String sqlCT = "INSERT INTO ChiTietDoiTra (maChiTietDoiTra, maPhieuDoiTra, maSanPham, soLuongDoiTra, tienHoanLai, soLo, soLuongCoSoHoan, soLuongCoSoTra) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+         String sqlHoanLo = "UPDATE LoHang SET soLuongTon = soLuongTon + ? WHERE soLo = ? AND maSanPham = ?";
+ 
+         try (PreparedStatement ps = conn.prepareStatement(sqlPhieu)) {
+@@ -572,6 +489,7 @@ public class HoaDonDAO {
+                     psCT.setNull(6, Types.NVARCHAR);
+                     psCT.setInt(7, 0);
+                 }
++                psCT.setInt(8, ct.getSoLuongCoSoTra());
+                 psCT.executeUpdate();
+ 
+                 if (canHoanKho) {
+@@ -584,6 +502,7 @@ public class HoaDonDAO {
+                 }
+             }
+         }
++        returnPoints.apply(conn);
+     }
+ 
+     /**
+diff --git a/src/dao/KhachHangDAO.java b/src/dao/KhachHangDAO.java
+index b081bca..ffa9330 100644
+--- a/src/dao/KhachHangDAO.java
++++ b/src/dao/KhachHangDAO.java
+@@ -104,6 +104,7 @@ public class KhachHangDAO {
+             return ps.executeUpdate() > 0;
+         } catch (SQLException e) {
+             // nếu lỗi do chưa có cột email hoặc diaChi thì fallback về câu lệnh insert cũ
++            if (e.getErrorCode() != 207) throw e;
+             String sqlCu = "INSERT INTO KhachHang (maKhachHang, hoTen, soDienThoai, diemTichLuy) VALUES (?, ?, ?, ?)";
+             try (Connection conn = DBConnection.getConnection();
+                  PreparedStatement psCu = conn.prepareStatement(sqlCu)) {
+@@ -116,8 +117,35 @@ public class KhachHangDAO {
+         }
+     }
+ 
+-    // Cập nhật thông tin khách hàng, có cập nhật cả email và địa chỉ mới
++    // Cập nhật thông tin hồ sơ khách hàng (họ tên, SĐT, email, địa chỉ) - GIỮ NGUYÊN điểm tích lũy trong CSDL
++    public boolean updateProfile(KhachHang kh) throws SQLException {
++        String sqlCoEmail = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ?, email = ?, diaChi = ? WHERE maKhachHang = ?";
++        try (Connection conn = DBConnection.getConnection();
++             PreparedStatement ps = conn.prepareStatement(sqlCoEmail)) {
++            ps.setString(1, kh.getHoTen());
++            ps.setString(2, kh.getSoDienThoai());
++            ps.setString(3, kh.getEmail());
++            ps.setString(4, kh.getDiaChi());
++            ps.setString(5, kh.getMaKhachHang());
++            return ps.executeUpdate() > 0;
++        } catch (SQLException e) {
++            if (e.getErrorCode() != 207) throw e;
++            String sqlCu = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ? WHERE maKhachHang = ?";
++            try (Connection conn = DBConnection.getConnection();
++                 PreparedStatement psCu = conn.prepareStatement(sqlCu)) {
++                psCu.setString(1, kh.getHoTen());
++                psCu.setString(2, kh.getSoDienThoai());
++                psCu.setString(3, kh.getMaKhachHang());
++                return psCu.executeUpdate() > 0;
++            }
++        }
++    }
++
++    // Cập nhật thông tin khách hàng: chỉ quản lý mới được ghi đè điểm tích lũy, thu ngân chỉ cập nhật hồ sơ
+     public boolean update(KhachHang kh) throws SQLException {
++        if (!utils.UserSession.isQuanLy()) {
++            return updateProfile(kh);
++        }
+         String sqlCoEmail = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ?, diemTichLuy = ?, email = ?, diaChi = ? WHERE maKhachHang = ?";
+         try (Connection conn = DBConnection.getConnection();
+              PreparedStatement ps = conn.prepareStatement(sqlCoEmail)) {
+@@ -130,6 +158,7 @@ public class KhachHangDAO {
+             return ps.executeUpdate() > 0;
+         } catch (SQLException e) {
+             // fallback nếu csdl máy bạn khác chưa kịp alter table
++            if (e.getErrorCode() != 207) throw e;
+             String sqlCu = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ?, diemTichLuy = ? WHERE maKhachHang = ?";
+             try (Connection conn = DBConnection.getConnection();
+                  PreparedStatement psCu = conn.prepareStatement(sqlCu)) {
+diff --git a/src/dao/LoHangDAO.java b/src/dao/LoHangDAO.java
+index b92cc8b..e72caf0 100644
+--- a/src/dao/LoHangDAO.java
++++ b/src/dao/LoHangDAO.java
+@@ -66,7 +66,7 @@ public class LoHangDAO {
+                 "FROM LoHang l " +
+                 "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
+                 "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
+-                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 " +
++                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 AND l.hanSuDung >= CAST(GETDATE() AS DATE) " +
+                 "ORDER BY l.hanSuDung ASC";
+ 
+         try (Connection conn = DBConnection.getConnection();
+@@ -78,23 +78,6 @@ public class LoHangDAO {
+                 }
+             }
+         }
+-
+-        // Nếu hết hàng hoặc chưa có lô, thử lấy lô bất kỳ của sản phẩm
+-        String sqlFallback = "SELECT TOP 1 l.*, s.tenSanPham, n.tenNhaCungCap " +
+-                "FROM LoHang l " +
+-                "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
+-                "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
+-                "WHERE l.maSanPham = ? " +
+-                "ORDER BY l.hanSuDung DESC";
+-        try (Connection conn = DBConnection.getConnection();
+-             PreparedStatement ps = conn.prepareStatement(sqlFallback)) {
+-            ps.setString(1, maSanPham);
+-            try (ResultSet rs = ps.executeQuery()) {
+-                if (rs.next()) {
+-                    return mapResultSetToLoHang(rs);
+-                }
+-            }
+-        }
+         return null;
+     }
+ 
+@@ -154,6 +137,9 @@ public class LoHangDAO {
+      * Trừ tồn kho của một lô hàng cụ thể
+      */
+     public boolean truTonKho(String soLo, int soLuongXuat) throws SQLException {
++        if (soLuongXuat <= 0) {
++            return false;
++        }
+         String sql = "UPDATE LoHang SET soLuongTon = soLuongTon - ? WHERE soLo = ? AND soLuongTon >= ?";
+         try (Connection conn = DBConnection.getConnection();
+              PreparedStatement ps = conn.prepareStatement(sql)) {
+@@ -168,6 +154,9 @@ public class LoHangDAO {
+      * Cộng hoàn trả tồn kho cho một lô hàng cụ thể (khi đổi trả hàng nguyên tem)
+      */
+     public boolean congTonKho(String soLo, int soLuongCong) throws SQLException {
++        if (soLuongCong <= 0) {
++            return false;
++        }
+         String sql = "UPDATE LoHang SET soLuongTon = soLuongTon + ? WHERE soLo = ?";
+         try (Connection conn = DBConnection.getConnection();
+              PreparedStatement ps = conn.prepareStatement(sql)) {
+@@ -181,10 +170,13 @@ public class LoHangDAO {
+      * Cập nhật số lượng tồn kho thực tế sau kiểm kê
+      */
+     public boolean capNhatSoLuongTon(String soLo, int soLuongMoi) throws SQLException {
++        if (soLuongMoi < 0) {
++            return false;
++        }
+         String sql = "UPDATE LoHang SET soLuongTon = ? WHERE soLo = ?";
+         try (Connection conn = DBConnection.getConnection();
+              PreparedStatement ps = conn.prepareStatement(sql)) {
+-            ps.setInt(1, Math.max(0, soLuongMoi));
++            ps.setInt(1, soLuongMoi);
+             ps.setString(2, soLo);
+             return ps.executeUpdate() > 0;
+         }
+diff --git a/src/entity/ChiTietDichVu.java b/src/entity/ChiTietDichVu.java
+index 5e3f42a..59269fe 100644
+--- a/src/entity/ChiTietDichVu.java
++++ b/src/entity/ChiTietDichVu.java
+@@ -11,6 +11,8 @@ public class ChiTietDichVu extends ChiTietHoaDon {
+     private ThuCung thuCung;
+     private NhanVien ktvThucHien;
+     private BigDecimal tienHoaHong;
++    private String maPhongHotel;
++    private boolean suDungSpaPass;
+ 
+     public ChiTietDichVu() {
+         super();
+@@ -38,6 +40,11 @@ public class ChiTietDichVu extends ChiTietHoaDon {
+         super.dichVu = dichVu;
+     }
+ 
++    public String getMaPhongHotel() { return maPhongHotel; }
++    public void setMaPhongHotel(String value) { maPhongHotel = value; }
++    public boolean isSuDungSpaPass() { return suDungSpaPass; }
++    public void setSuDungSpaPass(boolean value) { suDungSpaPass = value; }
++
+     public ThuCung getThuCung() {
+         return thuCung;
+     }
+diff --git a/src/entity/ChiTietDoiTra.java b/src/entity/ChiTietDoiTra.java
+index ba454b7..0b0f8ec 100644
+--- a/src/entity/ChiTietDoiTra.java
++++ b/src/entity/ChiTietDoiTra.java
+@@ -13,6 +13,7 @@ public class ChiTietDoiTra {
+     private BigDecimal tienHoanLai;
+     private String soLo;
+     private int soLuongCoSoHoan;
++    private int soLuongCoSoTra;
+ 
+     public ChiTietDoiTra() {
+         this.soLuongDoiTra = 1;
+@@ -69,6 +70,8 @@ public class ChiTietDoiTra {
+ 
+     public String getSoLo() { return soLo; }
+     public void setSoLo(String soLo) { this.soLo = soLo; }
++    public int getSoLuongCoSoTra() { return soLuongCoSoTra; }
++    public void setSoLuongCoSoTra(int value) { soLuongCoSoTra = value; }
+     public int getSoLuongCoSoHoan() { return soLuongCoSoHoan; }
+     public void setSoLuongCoSoHoan(int soLuongCoSoHoan) { this.soLuongCoSoHoan = soLuongCoSoHoan; }
+ 
+diff --git a/src/entity/ChiTietHoaDon.java b/src/entity/ChiTietHoaDon.java
+index 761bbf6..76d919d 100644
+--- a/src/entity/ChiTietHoaDon.java
++++ b/src/entity/ChiTietHoaDon.java
+@@ -73,7 +73,7 @@ public abstract class ChiTietHoaDon {
+     }
+ 
+     public BigDecimal getThanhTien() {
+-        if (this.thanhTien == null || this.thanhTien.compareTo(BigDecimal.ZERO) == 0) {
++        if (this.thanhTien == null) {
+             this.thanhTien = tinhThanhTien();
+         }
+         return thanhTien;
+diff --git a/src/entity/DoiTraTransferData.java b/src/entity/DoiTraTransferData.java
+index 3ec6ce9..08270d6 100644
+--- a/src/entity/DoiTraTransferData.java
++++ b/src/entity/DoiTraTransferData.java
+@@ -27,6 +27,7 @@ public class DoiTraTransferData implements Serializable {
+         public boolean nguyenTem;
+         public String soLo;
+         public int soLuongCoSoHoan;
++        public int soLuongCoSoTra;
+ 
+         public MonTraLai() {}
+ 
+@@ -46,8 +47,9 @@ public class DoiTraTransferData implements Serializable {
+             this.thanhTien = thanhTien;
+             this.lyDo = lyDo;
+             this.nguyenTem = nguyenTem;
+-            this.soLo = soLo;
+-            this.soLuongCoSoHoan = soLuongCoSoHoan;
++            this.soLuongCoSoTra = soLuongCoSoHoan;
++            this.soLo = nguyenTem ? soLo : null;
++            this.soLuongCoSoHoan = nguyenTem ? soLuongCoSoHoan : 0;
+         }
+ 
+         public String getMaSP() { return maSP; }
+@@ -77,6 +79,8 @@ public class DoiTraTransferData implements Serializable {
+         public String getSoLo() { return soLo; }
+         public void setSoLo(String soLo) { this.soLo = soLo; }
+ 
++        public int getSoLuongCoSoTra() { return soLuongCoSoTra; }
++        public void setSoLuongCoSoTra(int value) { soLuongCoSoTra = value; }
+         public int getSoLuongCoSoHoan() { return soLuongCoSoHoan; }
+         public void setSoLuongCoSoHoan(int soLuongCoSoHoan) { this.soLuongCoSoHoan = soLuongCoSoHoan; }
+     }
+diff --git a/src/entity/HoaDon.java b/src/entity/HoaDon.java
+index 18c64a7..34323ff 100644
+--- a/src/entity/HoaDon.java
++++ b/src/entity/HoaDon.java
+@@ -92,7 +92,7 @@ public class HoaDon {
+     }
+ 
+     public BigDecimal getThanhTien() {
+-        if (this.thanhTien == null || this.thanhTien.compareTo(BigDecimal.ZERO) == 0) {
++        if (this.thanhTien == null) {
+             capNhatTongTien();
+         }
+         return thanhTien;
+diff --git a/src/gui/BanHangPOSPanel.java b/src/gui/BanHangPOSPanel.java
+index 7e3929e..14d3e91 100644
+--- a/src/gui/BanHangPOSPanel.java
++++ b/src/gui/BanHangPOSPanel.java
+@@ -1876,6 +1876,9 @@ public class BanHangPOSPanel extends JPanel {
+             }
+         });
+         btnThanhToan.addActionListener(e -> thucHienThanhToan());
++        registerKeyboardAction(e -> {
++            if (isShowing() && btnThanhToan.isEnabled()) btnThanhToan.doClick();
++        }, KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F9, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
+ 
+         pnlActionButtons.add(pnlSubActions, BorderLayout.WEST);
+         pnlActionButtons.add(btnThanhToan, BorderLayout.CENTER);
+@@ -2835,7 +2838,7 @@ public class BanHangPOSPanel extends JPanel {
+         int diemDaDung = (spnDiemDung != null && diemHienCo > 0) ? ((Number) spnDiemDung.getValue()).intValue() : 0;
+         if (diemDaDung < 0) diemDaDung = 0;
+         if (diemDaDung > diemHienCo) diemDaDung = diemHienCo;
+-        int diemThuongMoi = (int) (canTra / 100000L);
++        int diemThuongMoi = (sdt.isEmpty() && tenKhach.equalsIgnoreCase("Khách vãng lai")) ? 0 : (int) (canTra / 100000L);
+         int diemKhauTruDT = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getDiemKhauTru() : 0;
+         int tongDiemMoi = Math.max(0, diemHienCo - diemDaDung - diemKhauTruDT) + diemThuongMoi;
+ 
+@@ -2847,6 +2850,10 @@ public class BanHangPOSPanel extends JPanel {
+             if (khSaved != null) {
+                 tenKhach = khSaved.getHoTen();
+                 sdt = khSaved.getSoDienThoai();
++            } else {
++                JOptionPane.showMessageDialog(this, "Không lưu được hồ sơ khách hàng. Vui lòng kiểm tra kết nối và thử lại.",
++                        "Chưa thanh toán", JOptionPane.ERROR_MESSAGE);
++                return;
+             }
+         }
+ 
+@@ -2910,6 +2917,7 @@ public class BanHangPOSPanel extends JPanel {
+                     int tyLe = (qd != null && qd.getTyLeQuyDoi() > 0) ? qd.getTyLeQuyDoi() : 1;
+                     int soLuongCoSoCanXuat = sl * tyLe;
+                     int remainingCoSo = soLuongCoSoCanXuat;
++                    java.math.BigDecimal remainingLineMoney = dg.multiply(java.math.BigDecimal.valueOf(sl));
+ 
+                     if (allLo != null) {
+                         for (entity.LoHang candidate : allLo) {
+@@ -2924,8 +2932,9 @@ public class BanHangPOSPanel extends JPanel {
+                                 candidate.setSoLuongTon(candidate.getSoLuongTon() - take);
+ 
+                                 java.math.BigDecimal itemTotal = dg.multiply(java.math.BigDecimal.valueOf(sl));
+-                                java.math.BigDecimal ctTotal = (take == soLuongCoSoCanXuat) ? itemTotal
++                                java.math.BigDecimal ctTotal = (take == remainingCoSo) ? remainingLineMoney
+                                         : itemTotal.multiply(java.math.BigDecimal.valueOf(take)).divide(java.math.BigDecimal.valueOf(soLuongCoSoCanXuat), 0, java.math.RoundingMode.HALF_UP);
++                                remainingLineMoney = remainingLineMoney.subtract(ctTotal);
+ 
+                                 int slXuat;
+                                 java.math.BigDecimal donGiaXuat = dg;
+@@ -2937,7 +2946,7 @@ public class BanHangPOSPanel extends JPanel {
+                                 } else if (tyLe > 1) {
+                                     // Bán lẻ theo đơn vị cơ sở vì lô chia không tròn quy cách hộp/thùng
+                                     slXuat = take;
+-                                    donGiaXuat = dg.divide(java.math.BigDecimal.valueOf(tyLe), 0, java.math.RoundingMode.HALF_UP);
++                                    donGiaXuat = ctTotal.divide(java.math.BigDecimal.valueOf(take), 2, java.math.RoundingMode.HALF_UP);
+                                     qdXuat = null;
+                                 } else {
+                                     slXuat = take;
+@@ -2999,6 +3008,8 @@ public class BanHangPOSPanel extends JPanel {
+                     entity.ChiTietDichVu ct = new entity.ChiTietDichVu(
+                             maHD + "_CT" + (ctSeq++), hdReal, sl, dg, dv, null, ktvThucHien, hoaHong
+                     );
++                    if (ma.startsWith("DV-HOTEL-")) ct.setMaPhongHotel(ma.substring("DV-HOTEL-".length()));
++                    ct.setSuDungSpaPass("DV_SPAPASS".equals(ma));
+                     hdReal.addChiTiet(ct);
+                 }
+             }
+@@ -3031,11 +3042,14 @@ public class BanHangPOSPanel extends JPanel {
+                         );
+                         ctDoiTra.setSoLo(mon.soLo);
+                         ctDoiTra.setSoLuongCoSoHoan(mon.soLuongCoSoHoan);
++                        ctDoiTra.setSoLuongCoSoTra(mon.soLuongCoSoTra);
+                         pdt.addChiTietDoiTra(ctDoiTra);
+                     }
+                 }
+             }
+ 
++            if (pdt != null) pdt.setTongTienHoan(java.math.BigDecimal.valueOf(tienHoanThua));
++
+             String maTheSuDung = null;
+             entity.TheSpaPass theMoi = null;
+             List<String> dsMaPhongHotel = new ArrayList<>();
+@@ -3080,6 +3094,14 @@ public class BanHangPOSPanel extends JPanel {
+                 throw new SQLException("Lưu hóa đơn và cập nhật kho không thành công trong CSDL SQL Server!");
+             }
+ 
++            if (hdReal.getKhachHang() == null) {
++                diemThuongMoi = 0;
++                tongDiemMoi = 0;
++            } else {
++                entity.KhachHang persisted = new bus.KhachHangBus().timKhachHangTheoSoDienThoai(sdt);
++                if (persisted != null) tongDiemMoi = persisted.getDiemTichLuy();
++            }
++
+             // Đồng bộ lại từ DB; không cộng RAM thủ công để tránh hoàn kho hai lần/sai lô.
+             KhoLoHangPanel.dongBoLoHangTuDatabase();
+             BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
+diff --git a/src/gui/DoiTraHangPanel.java b/src/gui/DoiTraHangPanel.java
+index 0dcdacc..ac00165 100644
+--- a/src/gui/DoiTraHangPanel.java
++++ b/src/gui/DoiTraHangPanel.java
+@@ -568,7 +568,13 @@ public class DoiTraHangPanel extends JPanel {
+         lblInfoTongTien.setText("• Tổng thanh toán: " + df.format(hd.tongThanhToan) + " (" + hd.phuongThuc + ")");
+ 
+         // Tra cứu số lượng đã đổi trả ở các lần trước từ CSDL để chống trả lố / trả trùng
+-        java.util.Map<String, Integer> mapDaTra = doiTraBus.layMapSoLuongDaTra(hd.maHoaDon);
++        java.util.Map<String, Integer> mapDaTra;
++        try { mapDaTra = doiTraBus.layMapSoLuongDaTra(hd.maHoaDon); }
++        catch (RuntimeException ex) {
++            modelSanPham.setRowCount(0);
++            JOptionPane.showMessageDialog(this, ex.getMessage(), "Không tải được lịch sử trả", JOptionPane.ERROR_MESSAGE);
++            return;
++        }
+ 
+         // Đổ sản phẩm vào bảng
+         modelSanPham.setRowCount(0);
+@@ -589,8 +595,12 @@ public class DoiTraHangPanel extends JPanel {
+ 
+             // Chỉ cho phép đổi trả hàng hóa vật lý (bắt đầu bằng SP), không đổi dịch vụ đã thực hiện
+             if (ma.startsWith("SP")) {
+-                int slDaTra = mapDaTra.getOrDefault(ma.trim().toUpperCase(), 0);
+-                int slConDuocTra = Math.max(0, slMua - slDaTra);
++                String productKey = ma.trim().toUpperCase();
++                int daTraCoSo = mapDaTra.getOrDefault(productKey, 0);
++                int consumed = Math.min(tongSoLuongCoSo, daTraCoSo);
++                mapDaTra.put(productKey, Math.max(0, daTraCoSo - consumed));
++                int slConDuocTra = Math.max(0, (tongSoLuongCoSo - consumed) / soLuongCoSoMoiDonVi);
++                int slDaTra = slMua - slConDuocTra;
+                 if (slConDuocTra > 0) {
+                     String tenHienThi = slDaTra > 0 ? (ten + " (Đã trả " + slDaTra + "/" + slMua + ")") : ten;
+                     modelSanPham.addRow(new Object[]{
+@@ -849,9 +859,7 @@ public class DoiTraHangPanel extends JPanel {
+             diemMoi += diemCongThem;
+         }
+ 
+-        if (currentHoaDon.sdt != null && !currentHoaDon.sdt.trim().isEmpty()) {
+-            BanHangBus.luuHoacCapNhatKhachHang(currentHoaDon.sdt, currentHoaDon.tenKhach, diemMoi);
+-        }
++        // Points are recovered by the DAO in the same transaction as the return.
+ 
+         // Lưu Phiếu Đổi Trả vào SQL Server
+         String maPhieu = utils.MaTuSinhHelper.sinhMaPhieuDoiTra();
+@@ -882,6 +890,7 @@ public class DoiTraHangPanel extends JPanel {
+                         pdt, new entity.SanPham(ma, null, "", ""), sl,
+                         java.math.BigDecimal.valueOf(thanhTien)
+                 );
++                chiTiet.setSoLuongCoSoTra((Integer) mon[9]);
+                 if ((Boolean) mon[7]) {
+                     chiTiet.setSoLo((String) mon[8]);
+                     chiTiet.setSoLuongCoSoHoan((Integer) mon[9]);
+diff --git a/src/gui/ThietLapQuyDoiDialog.java b/src/gui/ThietLapQuyDoiDialog.java
+index d50cfa2..86f9e08 100644
+--- a/src/gui/ThietLapQuyDoiDialog.java
++++ b/src/gui/ThietLapQuyDoiDialog.java
+@@ -364,13 +364,17 @@ public class ThietLapQuyDoiDialog extends JDialog {
+                 bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
+                 String maDvt = utils.MaTuSinhHelper.sinhMaDonViTinh();
+                 entity.DonViTinh dvt = new entity.DonViTinh(maDvt, tenDvt);
+-                khoBus.themDonViTinh(dvt);
++                if (!khoBus.themDonViTinh(dvt)) {
++                    throw new java.sql.SQLException("Không thể thêm đơn vị tính [" + tenDvt + "] vào CSDL");
++                }
+                 entity.SanPham sp = new entity.SanPham(maSP, null, tenSP, "");
+                 entity.QuyDoiDonVi qd = new entity.QuyDoiDonVi(
+                         utils.MaTuSinhHelper.sinhMaQuyDoi(),
+                         sp, dvt, tyLe, false, java.math.BigDecimal.valueOf(giaBan)
+                 );
+-                khoBus.themQuyDoi(qd);
++                if (!khoBus.themQuyDoi(qd)) {
++                    throw new java.sql.SQLException("Không thể thêm quy đổi đơn vị vào CSDL");
++                }
+             } catch (Exception ex) {
+                 System.err.println("[ThietLapQuyDoiDialog] Lỗi lưu quy đổi CSDL: " + ex.getMessage());
+                 JOptionPane.showMessageDialog(this, "Không thể lưu quy cách mới vào CSDL: " + ex.getMessage(), "Lỗi CSDL", JOptionPane.ERROR_MESSAGE);
+diff --git a/src/utils/MaTuSinhHelper.java b/src/utils/MaTuSinhHelper.java
+index bd65cad..e48338c 100644
+--- a/src/utils/MaTuSinhHelper.java
++++ b/src/utils/MaTuSinhHelper.java
+@@ -3,6 +3,7 @@ package utils;
+ import java.sql.Connection;
+ import java.sql.PreparedStatement;
+ import java.sql.ResultSet;
++import java.sql.SQLException;
+ import java.time.LocalDate;
+ import java.time.format.DateTimeFormatter;
+ import java.util.Map;
+@@ -29,8 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
+  * - Mã Đơn Vị Tính: DVT{2 chữ số tự tăng} (Ví dụ: DVT03)
+  * - Mã Thẻ Spa Pass: PASS-{SĐT}-{Số thứ tự 2 số} (Ví dụ: PASS-0988111222-01)
+  *
+- * Tích hợp bộ đệm an toàn (ConcurrentHashMap) và log ngoại lệ minh bạch,
+- * chống phát sinh mã trùng lặp (NV001, SP001,...) khi đường truyền CSDL bị gián đoạn.
++ * Cấp phát số thứ tự qua transaction SQL dùng chung giữa các tiến trình.
++ * Mã đã cấp không tái sử dụng; giao dịch bị hủy có thể để lại khoảng trống.
+  */
+ public final class MaTuSinhHelper {
+ 
+@@ -39,45 +40,104 @@ public final class MaTuSinhHelper {
+     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyMMdd");
+     private static final Map<String, Integer> MAX_CACHE = new ConcurrentHashMap<>();
+ 
+-    private static synchronized int laySoThuTuTiepTheo(String keyPrefix, String tableName,
+-                                                        String columnName, String codePrefix) {
+-        int max = MAX_CACHE.getOrDefault(keyPrefix, 0);
+-        String sql = "SELECT MAX(TRY_CONVERT(INT, SUBSTRING(" + columnName + ", ?, 20))) "
+-                + "FROM " + tableName + " WHERE " + columnName + " LIKE ?";
+-        try (Connection conn = DBConnection.getConnection();
+-             PreparedStatement ps = conn.prepareStatement(sql)) {
+-            ps.setInt(1, codePrefix.length() + 1);
+-            ps.setString(2, codePrefix + "%");
+-            try (ResultSet rs = ps.executeQuery()) {
+-                if (rs.next()) max = Math.max(max, rs.getInt(1));
++    private static int reserveNextSequence(String prefixKey, String tableName, String columnName, String codePrefix) {
++        int maxRetries = 3;
++        for (int attempt = 1; attempt <= maxRetries; attempt++) {
++            Connection conn = null;
++            try {
++                conn = DBConnection.getConnection();
++                conn.setAutoCommit(false);
++                conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
++
++                String selectSeqSql = "SELECT giaTri FROM dbo.MaTuSinhSequence WITH (UPDLOCK, HOLDLOCK) WHERE prefix = ?";
++                Long currentVal = null;
++                try (PreparedStatement psSeq = conn.prepareStatement(selectSeqSql)) {
++                    psSeq.setString(1, prefixKey);
++                    try (ResultSet rsSeq = psSeq.executeQuery()) {
++                        if (rsSeq.next()) {
++                            currentVal = rsSeq.getLong(1);
++                        }
++                    }
++                }
++
++                long next;
++                if (currentVal != null) {
++                    if (currentVal >= Integer.MAX_VALUE) throw new IllegalStateException("Đã hết miền số thứ tự mã " + prefixKey);
++                    next = currentVal + 1;
++                    String updateSql = "UPDATE dbo.MaTuSinhSequence SET giaTri = ? WHERE prefix = ?";
++                    try (PreparedStatement psUpd = conn.prepareStatement(updateSql)) {
++                        psUpd.setLong(1, next);
++                        psUpd.setString(2, prefixKey);
++                        psUpd.executeUpdate();
++                    }
++                } else {
++                    long initMax = 0;
++                    String maxSql = "SELECT MAX(TRY_CONVERT(BIGINT, SUBSTRING(" + columnName + ", ?, 20))) "
++                            + "FROM " + tableName + " WHERE " + columnName + " LIKE ?";
++                    try (PreparedStatement psMax = conn.prepareStatement(maxSql)) {
++                        psMax.setInt(1, codePrefix.length() + 1);
++                        psMax.setString(2, codePrefix + "%");
++                        try (ResultSet rsMax = psMax.executeQuery()) {
++                            if (rsMax.next()) {
++                                initMax = Math.max(0, rsMax.getLong(1));
++                            }
++                        }
++                    }
++                    if (initMax >= Integer.MAX_VALUE) throw new IllegalStateException("Đã hết miền số thứ tự mã " + prefixKey);
++                    next = initMax + 1;
++                    String insertSql = "INSERT INTO dbo.MaTuSinhSequence (prefix, giaTri) VALUES (?, ?)";
++                    try (PreparedStatement psIns = conn.prepareStatement(insertSql)) {
++                        psIns.setString(1, prefixKey);
++                        psIns.setLong(2, next);
++                        psIns.executeUpdate();
++                    }
++                }
++
++                if (next > Integer.MAX_VALUE) {
++                    throw new IllegalStateException("Tràn số thứ tự mã tự sinh vượt quá Integer.MAX_VALUE: " + next);
++                }
++
++                conn.commit();
++                return (int) next;
++            } catch (SQLException e) {
++                if (conn != null) {
++                    try { conn.rollback(); } catch (Exception ignored) {}
++                }
++                if (e.getErrorCode() == 208 || "42S02".equals(e.getSQLState())) {
++                    throw new IllegalStateException("Bảng dbo.MaTuSinhSequence chưa tồn tại. Vui lòng thực thi migration sql/20261108_MaTuSinhSequence.sql", e);
++                }
++                boolean isDeadlock = (e.getErrorCode() == 1205 || "40001".equals(e.getSQLState()));
++                if (isDeadlock && attempt < maxRetries) {
++                    try {
++                        Thread.sleep(20L * attempt);
++                    } catch (InterruptedException ie) {
++                        Thread.currentThread().interrupt();
++                        throw new IllegalStateException("Đã hủy chờ cấp mã", ie);
++                    }
++                    continue;
++                }
++                throw new IllegalStateException("Không thể sinh mã " + prefixKey + " qua CSDL: " + e.getMessage(), e);
++            } catch (RuntimeException e) {
++                if (conn != null) {
++                    try { conn.rollback(); } catch (SQLException rollbackEx) { e.addSuppressed(rollbackEx); }
++                }
++                throw e;
++            } finally {
++                if (conn != null) {
++                    try { conn.close(); } catch (Exception ignored) {}
++                }
+             }
+-        } catch (Exception e) {
+-            throw new IllegalStateException("Không thể sinh mã " + keyPrefix + " khi CSDL chưa sẵn sàng", e);
+         }
++        throw new IllegalStateException("Không thể sinh mã " + prefixKey + " sau " + maxRetries + " lần thử do xung đột");
++    }
+ 
+-        int next = max + 1;
+-        MAX_CACHE.put(keyPrefix, next);
+-        return next;
++    private static synchronized int laySoThuTuTiepTheo(String keyPrefix, String tableName,
++                                                        String columnName, String codePrefix) {
++        return reserveNextSequence(keyPrefix, tableName, columnName, codePrefix);
+     }
+ 
+     private static synchronized int laySoThuTuTheoNgay(String fullPrefix, String tableName, String columnName) {
+-        int max = MAX_CACHE.getOrDefault(fullPrefix, 0);
+-        String sql = "SELECT MAX(TRY_CONVERT(INT, SUBSTRING(" + columnName + ", ?, 20))) "
+-                + "FROM " + tableName + " WHERE " + columnName + " LIKE ?";
+-        try (Connection conn = DBConnection.getConnection();
+-             PreparedStatement ps = conn.prepareStatement(sql)) {
+-            ps.setInt(1, fullPrefix.length() + 1);
+-            ps.setString(2, fullPrefix + "%");
+-            try (ResultSet rs = ps.executeQuery()) {
+-                if (rs.next()) max = Math.max(max, rs.getInt(1));
+-            }
+-        } catch (Exception e) {
+-            throw new IllegalStateException("Không thể sinh mã " + fullPrefix + " khi CSDL chưa sẵn sàng", e);
+-        }
+-
+-        int next = max + 1;
+-        MAX_CACHE.put(fullPrefix, next);
+-        return next;
++        return reserveNextSequence(fullPrefix, tableName, columnName, fullPrefix);
+     }
+ 
+     /**
+@@ -214,22 +274,9 @@ public final class MaTuSinhHelper {
+             throw new IllegalArgumentException("Số điện thoại khách hàng là bắt buộc để sinh mã Spa Pass");
+         }
+         String cleanSdt = sdt.trim();
+-        String key = "PASS_" + cleanSdt;
+-        int seq = MAX_CACHE.getOrDefault(key, 0);
+-        String sql = "SELECT COUNT(*) FROM TheSpaPass WHERE sdtKhachHang = ?";
+-        try (Connection conn = DBConnection.getConnection();
+-             PreparedStatement ps = conn.prepareStatement(sql)) {
+-            ps.setString(1, cleanSdt);
+-            try (ResultSet rs = ps.executeQuery()) {
+-                if (rs.next()) {
+-                    seq = Math.max(seq, rs.getInt(1));
+-                }
+-            }
+-        } catch (Exception e) {
+-            System.err.println("[MaTuSinhHelper] Cảnh báo đọc mã Thẻ Spa Pass CSDL: " + e.getMessage());
+-        }
+-        seq++;
+-        MAX_CACHE.put(key, seq);
+-        return String.format("PASS-%s-%02d", cleanSdt, seq);
++        if (!cleanSdt.matches("[0-9]{8,15}")) throw new IllegalArgumentException("Số điện thoại Spa Pass phải gồm 8 đến 15 chữ số");
++        String prefix = "PASS-" + cleanSdt + "-";
++        int seq = reserveNextSequence(prefix, "TheSpaPass", "maThe", prefix);
++        return String.format("%s%02d", prefix, seq);
+     }
+ }
