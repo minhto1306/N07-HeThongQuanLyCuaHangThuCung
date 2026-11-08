@@ -3,6 +3,7 @@ package utils;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -29,8 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Mã Đơn Vị Tính: DVT{2 chữ số tự tăng} (Ví dụ: DVT03)
  * - Mã Thẻ Spa Pass: PASS-{SĐT}-{Số thứ tự 2 số} (Ví dụ: PASS-0988111222-01)
  *
- * Tích hợp bộ đệm an toàn (ConcurrentHashMap) và log ngoại lệ minh bạch,
- * chống phát sinh mã trùng lặp (NV001, SP001,...) khi đường truyền CSDL bị gián đoạn.
+ * Cấp phát số thứ tự qua transaction SQL dùng chung giữa các tiến trình.
+ * Mã đã cấp không tái sử dụng; giao dịch bị hủy có thể để lại khoảng trống.
  */
 public final class MaTuSinhHelper {
 
@@ -39,45 +40,104 @@ public final class MaTuSinhHelper {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyMMdd");
     private static final Map<String, Integer> MAX_CACHE = new ConcurrentHashMap<>();
 
+    private static int reserveNextSequence(String prefixKey, String tableName, String columnName, String codePrefix) {
+        int maxRetries = 3;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            Connection conn = null;
+            try {
+                conn = DBConnection.getConnection();
+                conn.setAutoCommit(false);
+                conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+
+                String selectSeqSql = "SELECT giaTri FROM dbo.MaTuSinhSequence WITH (UPDLOCK, HOLDLOCK) WHERE prefix = ?";
+                Long currentVal = null;
+                try (PreparedStatement psSeq = conn.prepareStatement(selectSeqSql)) {
+                    psSeq.setString(1, prefixKey);
+                    try (ResultSet rsSeq = psSeq.executeQuery()) {
+                        if (rsSeq.next()) {
+                            currentVal = rsSeq.getLong(1);
+                        }
+                    }
+                }
+
+                long next;
+                if (currentVal != null) {
+                    if (currentVal >= Integer.MAX_VALUE) throw new IllegalStateException("Đã hết miền số thứ tự mã " + prefixKey);
+                    next = currentVal + 1;
+                    String updateSql = "UPDATE dbo.MaTuSinhSequence SET giaTri = ? WHERE prefix = ?";
+                    try (PreparedStatement psUpd = conn.prepareStatement(updateSql)) {
+                        psUpd.setLong(1, next);
+                        psUpd.setString(2, prefixKey);
+                        psUpd.executeUpdate();
+                    }
+                } else {
+                    long initMax = 0;
+                    String maxSql = "SELECT MAX(TRY_CONVERT(BIGINT, SUBSTRING(" + columnName + ", ?, 20))) "
+                            + "FROM " + tableName + " WHERE " + columnName + " LIKE ?";
+                    try (PreparedStatement psMax = conn.prepareStatement(maxSql)) {
+                        psMax.setInt(1, codePrefix.length() + 1);
+                        psMax.setString(2, codePrefix + "%");
+                        try (ResultSet rsMax = psMax.executeQuery()) {
+                            if (rsMax.next()) {
+                                initMax = Math.max(0, rsMax.getLong(1));
+                            }
+                        }
+                    }
+                    if (initMax >= Integer.MAX_VALUE) throw new IllegalStateException("Đã hết miền số thứ tự mã " + prefixKey);
+                    next = initMax + 1;
+                    String insertSql = "INSERT INTO dbo.MaTuSinhSequence (prefix, giaTri) VALUES (?, ?)";
+                    try (PreparedStatement psIns = conn.prepareStatement(insertSql)) {
+                        psIns.setString(1, prefixKey);
+                        psIns.setLong(2, next);
+                        psIns.executeUpdate();
+                    }
+                }
+
+                if (next > Integer.MAX_VALUE) {
+                    throw new IllegalStateException("Tràn số thứ tự mã tự sinh vượt quá Integer.MAX_VALUE: " + next);
+                }
+
+                conn.commit();
+                return (int) next;
+            } catch (SQLException e) {
+                if (conn != null) {
+                    try { conn.rollback(); } catch (Exception ignored) {}
+                }
+                if (e.getErrorCode() == 208 || "42S02".equals(e.getSQLState())) {
+                    throw new IllegalStateException("Bảng dbo.MaTuSinhSequence chưa tồn tại. Vui lòng thực thi migration sql/20261108_MaTuSinhSequence.sql", e);
+                }
+                boolean isDeadlock = (e.getErrorCode() == 1205 || "40001".equals(e.getSQLState()));
+                if (isDeadlock && attempt < maxRetries) {
+                    try {
+                        Thread.sleep(20L * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("Đã hủy chờ cấp mã", ie);
+                    }
+                    continue;
+                }
+                throw new IllegalStateException("Không thể sinh mã " + prefixKey + " qua CSDL: " + e.getMessage(), e);
+            } catch (RuntimeException e) {
+                if (conn != null) {
+                    try { conn.rollback(); } catch (SQLException rollbackEx) { e.addSuppressed(rollbackEx); }
+                }
+                throw e;
+            } finally {
+                if (conn != null) {
+                    try { conn.close(); } catch (Exception ignored) {}
+                }
+            }
+        }
+        throw new IllegalStateException("Không thể sinh mã " + prefixKey + " sau " + maxRetries + " lần thử do xung đột");
+    }
+
     private static synchronized int laySoThuTuTiepTheo(String keyPrefix, String tableName,
                                                         String columnName, String codePrefix) {
-        int max = MAX_CACHE.getOrDefault(keyPrefix, 0);
-        String sql = "SELECT MAX(TRY_CONVERT(INT, SUBSTRING(" + columnName + ", ?, 20))) "
-                + "FROM " + tableName + " WHERE " + columnName + " LIKE ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, codePrefix.length() + 1);
-            ps.setString(2, codePrefix + "%");
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) max = Math.max(max, rs.getInt(1));
-            }
-        } catch (Exception e) {
-            throw new IllegalStateException("Không thể sinh mã " + keyPrefix + " khi CSDL chưa sẵn sàng", e);
-        }
-
-        int next = max + 1;
-        MAX_CACHE.put(keyPrefix, next);
-        return next;
+        return reserveNextSequence(keyPrefix, tableName, columnName, codePrefix);
     }
 
     private static synchronized int laySoThuTuTheoNgay(String fullPrefix, String tableName, String columnName) {
-        int max = MAX_CACHE.getOrDefault(fullPrefix, 0);
-        String sql = "SELECT MAX(TRY_CONVERT(INT, SUBSTRING(" + columnName + ", ?, 20))) "
-                + "FROM " + tableName + " WHERE " + columnName + " LIKE ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, fullPrefix.length() + 1);
-            ps.setString(2, fullPrefix + "%");
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) max = Math.max(max, rs.getInt(1));
-            }
-        } catch (Exception e) {
-            throw new IllegalStateException("Không thể sinh mã " + fullPrefix + " khi CSDL chưa sẵn sàng", e);
-        }
-
-        int next = max + 1;
-        MAX_CACHE.put(fullPrefix, next);
-        return next;
+        return reserveNextSequence(fullPrefix, tableName, columnName, fullPrefix);
     }
 
     /**
@@ -214,22 +274,9 @@ public final class MaTuSinhHelper {
             throw new IllegalArgumentException("Số điện thoại khách hàng là bắt buộc để sinh mã Spa Pass");
         }
         String cleanSdt = sdt.trim();
-        String key = "PASS_" + cleanSdt;
-        int seq = MAX_CACHE.getOrDefault(key, 0);
-        String sql = "SELECT COUNT(*) FROM TheSpaPass WHERE sdtKhachHang = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, cleanSdt);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    seq = Math.max(seq, rs.getInt(1));
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("[MaTuSinhHelper] Cảnh báo đọc mã Thẻ Spa Pass CSDL: " + e.getMessage());
-        }
-        seq++;
-        MAX_CACHE.put(key, seq);
-        return String.format("PASS-%s-%02d", cleanSdt, seq);
+        if (!cleanSdt.matches("[0-9]{8,15}")) throw new IllegalArgumentException("Số điện thoại Spa Pass phải gồm 8 đến 15 chữ số");
+        String prefix = "PASS-" + cleanSdt + "-";
+        int seq = reserveNextSequence(prefix, "TheSpaPass", "maThe", prefix);
+        return String.format("%s%02d", prefix, seq);
     }
 }

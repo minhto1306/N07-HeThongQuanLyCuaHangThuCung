@@ -33,7 +33,7 @@ public class ThongKeBus {
     }
 
     public List<DoanhThuRow> layBaoCaoDoanhThu(LocalDate tuNgay, LocalDate denNgay) {
-        return layBaoCaoDoanhThu(tuNgay.atStartOfDay(), denNgay.atTime(23, 59, 59));
+        return layBaoCaoDoanhThu(tuNgay.atStartOfDay(), denNgay.plusDays(1).atStartOfDay());
     }
 
     public List<TopBanChayRow> layTopBanChay(LocalDateTime tuNgay, LocalDateTime denNgay) {
@@ -46,7 +46,7 @@ public class ThongKeBus {
     }
 
     public List<TopBanChayRow> layTopBanChay(LocalDate tuNgay, LocalDate denNgay) {
-        return layTopBanChay(tuNgay.atStartOfDay(), denNgay.atTime(23, 59, 59));
+        return layTopBanChay(tuNgay.atStartOfDay(), denNgay.plusDays(1).atStartOfDay());
     }
 
     public List<HieuSuatNhanSuRow> layHieuSuatNhanSu(LocalDateTime tuNgay, LocalDateTime denNgay) {
@@ -59,7 +59,7 @@ public class ThongKeBus {
     }
 
     public List<HieuSuatNhanSuRow> layHieuSuatNhanSu(LocalDate tuNgay, LocalDate denNgay) {
-        return layHieuSuatNhanSu(tuNgay.atStartOfDay(), denNgay.atTime(23, 59, 59));
+        return layHieuSuatNhanSu(tuNgay.atStartOfDay(), denNgay.plusDays(1).atStartOfDay());
     }
 
     public List<KhachHangRow> layThongKeKhachHang() {
@@ -90,7 +90,7 @@ public class ThongKeBus {
     }
 
     public DoiTraSummary layDoiTraSummary(LocalDate tuNgay, LocalDate denNgay) {
-        return layDoiTraSummary(tuNgay.atStartOfDay(), denNgay.atTime(23, 59, 59));
+        return layDoiTraSummary(tuNgay.atStartOfDay(), denNgay.plusDays(1).atStartOfDay());
     }
 
     public List<LoHangFefoRow> layLoHangFefo() {
@@ -112,7 +112,7 @@ public class ThongKeBus {
     }
 
     public List<XuatNhapTonRow> layXuatNhapTon(LocalDate tuNgay, LocalDate denNgay) {
-        return layXuatNhapTon(tuNgay.atStartOfDay(), denNgay.atTime(23, 59, 59));
+        return layXuatNhapTon(tuNgay.atStartOfDay(), denNgay.plusDays(1).atStartOfDay());
     }
 
     /**
@@ -122,7 +122,7 @@ public class ThongKeBus {
         long[] result = new long[7];
         LocalDate today = LocalDate.now();
         LocalDateTime tuNgay = today.minusDays(6).atStartOfDay();
-        LocalDateTime denNgay = today.atTime(23, 59, 59);
+        LocalDateTime denNgay = today.plusDays(1).atStartOfDay();
         List<DoanhThuRow> rows = layBaoCaoDoanhThu(tuNgay, denNgay);
 
         Map<LocalDate, Long> mapNgayDoanhThu = new HashMap<>();
@@ -147,7 +147,7 @@ public class ThongKeBus {
         int[] result = new int[7];
         LocalDate today = LocalDate.now();
         LocalDateTime tuNgay = today.minusDays(6).atStartOfDay();
-        LocalDateTime denNgay = today.atTime(23, 59, 59);
+        LocalDateTime denNgay = today.plusDays(1).atStartOfDay();
         List<DoanhThuRow> rows = layBaoCaoDoanhThu(tuNgay, denNgay);
 
         Map<LocalDate, Integer> mapNgayDon = new HashMap<>();
