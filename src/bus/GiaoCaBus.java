@@ -44,7 +44,7 @@ public class GiaoCaBus {
             return bangGiaoCaDAO.tinhDoanhThuTienMatTuThoiDiem(mocThoiGian);
         } catch (Exception e) {
             System.err.println("[GiaoCaBus] Lỗi tinhDoanhThuTienMat: " + e.getMessage());
-            return 0L;
+            throw new IllegalStateException("Không thể đối soát doanh thu tiền mặt; dừng chốt ca", e);
         }
     }
 
@@ -56,7 +56,7 @@ public class GiaoCaBus {
             return bangGiaoCaDAO.tinhDoanhThuChuyenKhoanTuThoiDiem(mocThoiGian);
         } catch (Exception e) {
             System.err.println("[GiaoCaBus] Lỗi tinhDoanhThuChuyenKhoan: " + e.getMessage());
-            return 0L;
+            throw new IllegalStateException("Không thể đối soát doanh thu chuyển khoản; dừng chốt ca", e);
         }
     }
 
@@ -68,7 +68,7 @@ public class GiaoCaBus {
             return bangGiaoCaDAO.tinhTongTienHoanTraTuThoiDiem(mocThoiGian);
         } catch (Exception e) {
             System.err.println("[GiaoCaBus] Lỗi tinhTongTienHoanTra: " + e.getMessage());
-            return 0L;
+            throw new IllegalStateException("Không thể đối soát tiền hoàn trả; dừng chốt ca", e);
         }
     }
 
@@ -143,7 +143,12 @@ public class GiaoCaBus {
         if (!utils.UserSession.isQuanLy()) {
             throw new SecurityException("Chỉ Quản lý (NVQL) mới có quyền duyệt bàn giao ca!");
         }
-        return bangGiaoCaDAO.duyetGiaoCa(maGC, maQuanLy, thoiGianDuyet);
+        String nguoiDangNhap = utils.UserSession.getUserId();
+        if (nguoiDangNhap == null || nguoiDangNhap.isBlank()
+                || maQuanLy == null || !nguoiDangNhap.equalsIgnoreCase(maQuanLy.trim())) {
+            throw new SecurityException("Người duyệt phải đúng tài khoản Quản lý đang đăng nhập");
+        }
+        return bangGiaoCaDAO.duyetGiaoCa(maGC, nguoiDangNhap, thoiGianDuyet);
     }
 
     /**
@@ -175,6 +180,8 @@ public class GiaoCaBus {
                 "",
                 null
         );
+        this.caHienTai.setGioBatDauCa(LocalDateTime.now());
+        this.caHienTai.setTrangThai("DANG_MO");
 
         return bangGiaoCaDAO.moCaLamViec(this.caHienTai);
     }
@@ -189,11 +196,16 @@ public class GiaoCaBus {
         if (caHienTai == null) {
             throw new IllegalStateException("Chưa có ca làm việc nào đang mở!");
         }
+        if (tienHeThong == null || tienHeThong.compareTo(BigDecimal.ZERO) < 0
+                || tienThucTe == null || tienThucTe.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Tiền hệ thống và tiền kiểm đếm không được âm");
+        }
 
         caHienTai.setTienCuoiCaHeThong(tienHeThong);
         caHienTai.setTienCuoiCaThucTe(tienThucTe);
         caHienTai.capNhatTienChenhLech();
         caHienTai.setGioKetThucThucTe(LocalDateTime.now());
+        caHienTai.setTrangThai("CHO_DUYET");
 
         if (caHienTai.getTienChenhLech().compareTo(BigDecimal.ZERO) != 0) {
             if (lyDoChenhLech == null || lyDoChenhLech.trim().isEmpty()) {
@@ -207,5 +219,11 @@ public class GiaoCaBus {
 
     public BangGiaoCa getCaHienTai() {
         return caHienTai;
+    }
+
+    public static BigDecimal tinhTienMatLyThuyet(BigDecimal tienDauCa,
+                                                  BigDecimal thuTienMat,
+                                                  BigDecimal hoanTienMat) {
+        return TaiChinhHoaDonBus.tinhTienCuoiCa(tienDauCa, thuTienMat, hoanTienMat);
     }
 }

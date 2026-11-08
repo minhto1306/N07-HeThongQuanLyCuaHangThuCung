@@ -20,8 +20,10 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -553,17 +555,43 @@ public class KhoLoHangPanel extends JPanel {
         if (input != null && !input.trim().isEmpty()) {
             try {
                 int tonThucTe = Integer.parseInt(input.trim());
+                if (tonThucTe < 0) {
+                    JOptionPane.showMessageDialog(this,
+                            "Số lượng tồn kho thực tế kiểm kê không được là số âm (< 0)!\n" +
+                            "Hệ thống từ chối cập nhật số âm để bảo đảm tính toàn vẹn kho.",
+                            "Lỗi kiểm kê", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
                 bus.KhoLoHangBus khoBus = new bus.KhoLoHangBus();
                 for (LoHangRecord lo : DANH_SACH_LO_HANG) {
                     if (lo.soLo.equalsIgnoreCase(soLo)) {
-                        boolean ok = khoBus.capNhatSoLuongTon(soLo, Math.max(0, tonThucTe));
+                        boolean ok = khoBus.capNhatSoLuongTon(soLo, tonThucTe);
                         if (!ok) {
                             JOptionPane.showMessageDialog(this, "Không thể cập nhật số lượng tồn vào CSDL!", "Lỗi CSDL", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
-                        lo.soLuongTon = Math.max(0, tonThucTe);
+                        lo.soLuongTon = tonThucTe;
                         if (lo.soLuongTon == 0) {
                             lo.trangThaiFEFO = "ĐÃ HẾT TỒN LÔ";
+                        } else {
+                            // Tính lại trạng thái FEFO theo hạn sử dụng khi tăng/điều chỉnh tồn (BH06)
+                            try {
+                                DateTimeFormatter dfFefo = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                                LocalDate hsd = LocalDate.parse(lo.hanSD, dfFefo);
+                                long days = ChronoUnit.DAYS.between(LocalDate.now(), hsd);
+                                if (days < 0) {
+                                    lo.trangThaiFEFO = "ĐÃ HẾT HẠN";
+                                } else if (days <= 30) {
+                                    lo.trangThaiFEFO = "CẬN DATE (<= 30 NGÀY) - ƯU TIÊN";
+                                } else if (days <= 60) {
+                                    lo.trangThaiFEFO = "CẢNH BÁO (<= 60 NGÀY)";
+                                } else {
+                                    lo.trangThaiFEFO = "AN TOÀN (> 6 tháng)";
+                                }
+                            } catch (Exception ex) {
+                                lo.trangThaiFEFO = "ĐANG BÁN (FEFO)";
+                            }
                         }
                         break;
                     }

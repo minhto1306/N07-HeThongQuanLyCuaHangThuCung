@@ -456,7 +456,7 @@ public class BanHangBus {
     /**
      * Thêm sản phẩm vào giỏ hàng: Tự động tìm Lô hàng có hạn sử dụng gần nhất (FEFO)
      */
-    // Xuất kho theo chiến lược FEFO (First Expired, First Out): kiểm tra tồn kho và ưu tiên lô có hạn dùng gần nhất
+    // Xuất kho theo chiến lược FEFO (First Expired, First Out): kiểm tra tồn kho và phân bổ đa lô tự động (BH01)
     public boolean themSanPhamXuatLo(SanPham sp, QuyDoiDonVi qd, int soLuong) throws Exception {
         // kiểm tra dữ liệu truyền vào
         if (sp == null || qd == null || soLuong <= 0) {
@@ -466,40 +466,59 @@ public class BanHangBus {
         // đổi ra số lượng cơ sở
         int soLuongCoSoCanXuat = soLuong * qd.getTyLeQuyDoi();
 
-        // lấy mấy lô còn hạn theo thứ tự fefo
+        // lấy các lô còn hạn theo thứ tự FEFO (cận date nhất lên trước)
         List<LoHang> dsLoHang = loHangDAO.getAvailableLotsFEFO(sp.getMaSanPham());
         if (dsLoHang.isEmpty()) {
-            throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] hết hàng hoặc hết date rồi");
+            throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] đã hết hàng hoặc hết hạn sử dụng!");
         }
 
-        // chọn lô cận date nhất mà còn đủ hàng
-        LoHang loChon = null;
+        int tongTonKhaDung = dsLoHang.stream().mapToInt(LoHang::getSoLuongTon).sum();
+        if (tongTonKhaDung < soLuongCoSoCanXuat) {
+            throw new IllegalStateException("Sản phẩm [" + sp.getTenSanPham() + "] chỉ còn tổng tồn " + tongTonKhaDung
+                    + " đơn vị cơ sở, không đủ xuất số lượng yêu cầu (" + soLuongCoSoCanXuat + ")!");
+        }
+
+        // Phân bổ xuất hàng qua nhiều lô FEFO nếu một lô không đủ số lượng (BH01)
+        int conLaiCoSo = soLuongCoSoCanXuat;
+        int tyLe = (qd.getTyLeQuyDoi() > 0) ? qd.getTyLeQuyDoi() : 1;
         for (LoHang lo : dsLoHang) {
-            if (lo.getSoLuongTon() >= soLuongCoSoCanXuat) {
-                loChon = lo;
-                break;
+            if (lo.getSoLuongTon() <= 0) continue;
+            int xuatLoNayCoSo = Math.min(conLaiCoSo, lo.getSoLuongTon());
+
+            int slXuat;
+            BigDecimal donGiaXuat = qd.getGiaBan();
+            QuyDoiDonVi qdXuat = qd;
+
+            if (xuatLoNayCoSo == soLuongCoSoCanXuat) {
+                slXuat = soLuong;
+            } else if (tyLe > 1 && xuatLoNayCoSo % tyLe == 0) {
+                slXuat = xuatLoNayCoSo / tyLe;
+            } else if (tyLe > 1) {
+                // Xuất lẻ theo đơn vị cơ sở vì lô không đủ nguyên thùng/hộp
+                slXuat = xuatLoNayCoSo;
+                donGiaXuat = qd.getGiaBan().divide(BigDecimal.valueOf(tyLe), 0, java.math.RoundingMode.HALF_UP);
+                qdXuat = null;
+            } else {
+                slXuat = xuatLoNayCoSo;
             }
+
+            String maCT = hoaDonHienTai.getMaHoaDon() + "_SP" + (hoaDonHienTai.getDsChiTiet().size() + 1);
+            ChiTietXuatLo ctXuatLo = new ChiTietXuatLo(
+                    maCT,
+                    hoaDonHienTai,
+                    slXuat,
+                    donGiaXuat,
+                    lo,
+                    qdXuat
+            );
+            ctXuatLo.setSoLuongXuatCoSo(xuatLoNayCoSo);
+            ctXuatLo.setThanhTien(donGiaXuat.multiply(BigDecimal.valueOf(slXuat)));
+            hoaDonHienTai.addChiTiet(ctXuatLo);
+
+            conLaiCoSo -= xuatLoNayCoSo;
+            if (conLaiCoSo <= 0) break;
         }
 
-        if (loChon == null) {
-            loChon = dsLoHang.get(0);
-            if (loChon.getSoLuongTon() < soLuongCoSoCanXuat) {
-                throw new IllegalStateException("Lô [" + loChon.getSoLo() + "] còn có " + loChon.getSoLuongTon() + ", ko đủ xuất");
-            }
-        }
-
-        // tạo dòng chi tiết xuất lô
-        String maCT = hoaDonHienTai.getMaHoaDon() + "_SP" + (hoaDonHienTai.getDsChiTiet().size() + 1);
-        ChiTietXuatLo ctXuatLo = new ChiTietXuatLo(
-                maCT,
-                hoaDonHienTai,
-                soLuong,
-                qd.getGiaBan(),
-                loChon,
-                qd
-        );
-
-        hoaDonHienTai.addChiTiet(ctXuatLo);
         return true;
     }
 
@@ -605,7 +624,10 @@ public class BanHangBus {
 
     public static long tinhGiamGiaVIP(long tongTienHang, boolean isVIP) {
         if (!isVIP || tongTienHang <= 0) return 0L;
-        return Math.round(tongTienHang * 0.05);
+        return BigDecimal.valueOf(tongTienHang)
+                .multiply(new BigDecimal("0.05"))
+                .setScale(0, java.math.RoundingMode.HALF_UP)
+                .longValueExact();
     }
 
     public static long tinhTienGiamTuDiem(int soDiemMuonDung, int diemHienCo, long tongTienSauVIP) {
@@ -615,7 +637,10 @@ public class BanHangBus {
     }
 
     public static long tinhTongThanhToan(long tongTienHang, long tienGiamVIP, long tienDoiDiem, long tienKhauTruDoiTra) {
-        return Math.max(0L, tongTienHang - tienGiamVIP - tienDoiDiem - tienKhauTruDoiTra);
+        return TaiChinhHoaDonBus.tinhThanhToan(
+                BigDecimal.valueOf(tongTienHang), BigDecimal.valueOf(tienGiamVIP),
+                BigDecimal.valueOf(tienDoiDiem), BigDecimal.valueOf(tienKhauTruDoiTra))
+                .getTienPhaiThanhToan().longValueExact();
     }
 
     public static int tinhDiemThuongMoi(long tongThanhToan) {

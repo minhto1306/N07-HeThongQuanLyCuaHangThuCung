@@ -125,6 +125,11 @@ public class DoiTraTransferData implements Serializable {
     public String sdtKhach;
     public long tongTienTra;
     public int diemKhauTru;
+    public long giaTriHangTra;
+    public long giaTriHangDoi;
+    public long tienHoanThucTe;
+    public long tienKhachTraThem;
+    public String phuongThucHoanTien = "CHUA_XAC_DINH";
     public List<MonTraLai> dsMonTra = new ArrayList<>();
     public List<MonDoiMoi> dsMonMoi = new ArrayList<>();
 
@@ -163,6 +168,21 @@ public class DoiTraTransferData implements Serializable {
 
     public int getDiemKhauTru() { return diemKhauTru; }
     public void setDiemKhauTru(int diemKhauTru) { this.diemKhauTru = diemKhauTru; }
+
+    public long getGiaTriHangTra() { return giaTriHangTra; }
+    public void setGiaTriHangTra(long giaTriHangTra) { this.giaTriHangTra = giaTriHangTra; }
+
+    public long getGiaTriHangDoi() { return giaTriHangDoi; }
+    public void setGiaTriHangDoi(long giaTriHangDoi) { this.giaTriHangDoi = giaTriHangDoi; }
+
+    public long getTienHoanThucTe() { return tienHoanThucTe; }
+    public void setTienHoanThucTe(long tienHoanThucTe) { this.tienHoanThucTe = tienHoanThucTe; }
+
+    public long getTienKhachTraThem() { return tienKhachTraThem; }
+    public void setTienKhachTraThem(long tienKhachTraThem) { this.tienKhachTraThem = tienKhachTraThem; }
+
+    public String getPhuongThucHoanTien() { return phuongThucHoanTien; }
+    public void setPhuongThucHoanTien(String phuongThucHoanTien) { this.phuongThucHoanTien = phuongThucHoanTien; }
 
     public List<MonTraLai> getDsMonTra() { return dsMonTra; }
     public void setDsMonTra(List<MonTraLai> dsMonTra) { this.dsMonTra = dsMonTra; }

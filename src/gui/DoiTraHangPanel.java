@@ -53,6 +53,7 @@ public class DoiTraHangPanel extends JPanel {
     private JRadioButton radKichBanA;
     private JRadioButton radKichBanB;
     private JComboBox<BanHangPOSPanel.SanPhamDoiTra> cboSanPhamMoi;
+    private JComboBox<String> cboPhuongThucHoanTien;
     private JSpinner spnSoLuongMoi;
     private JLabel lblKetQuaHoanTien;
     private JLabel lblKetQuaDiemVIP;
@@ -357,7 +358,7 @@ public class DoiTraHangPanel extends JPanel {
         pnlDetails.setOpaque(false);
 
         // Khối trái: Kết quả hoàn tiền & Khấu trừ điểm VIP (Dùng cho cả A và B)
-        JPanel pnlSummary = new JPanel(new GridLayout(3, 1, 0, 6));
+        JPanel pnlSummary = new JPanel(new GridLayout(4, 1, 0, 6));
         pnlSummary.setOpaque(false);
         pnlSummary.setBorder(new CompoundBorder(
                 new LineBorder(ThemeColors.BORDER_LIGHT, 1, true),
@@ -376,9 +377,19 @@ public class DoiTraHangPanel extends JPanel {
         lblKetQuaKho.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblKetQuaKho.setForeground(ThemeColors.SUCCESS);
 
+        JPanel pnlPhuongThucHoan = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        pnlPhuongThucHoan.setOpaque(false);
+        JLabel lblPhuongThucHoan = new JLabel("Hoàn tiền qua:");
+        lblPhuongThucHoan.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        cboPhuongThucHoanTien = new JComboBox<>(new String[]{"Tiền mặt", "Chuyển khoản"});
+        cboPhuongThucHoanTien.setPreferredSize(new Dimension(140, 28));
+        pnlPhuongThucHoan.add(lblPhuongThucHoan);
+        pnlPhuongThucHoan.add(cboPhuongThucHoanTien);
+
         pnlSummary.add(lblKetQuaHoanTien);
         pnlSummary.add(lblKetQuaDiemVIP);
         pnlSummary.add(lblKetQuaKho);
+        pnlSummary.add(pnlPhuongThucHoan);
 
         // Khối phải: Cấu hình sản phẩm đổi mới (Dành cho Kịch bản B)
         pnlKichBanBDetails = new JPanel(new GridBagLayout());
@@ -511,6 +522,9 @@ public class DoiTraHangPanel extends JPanel {
         }
         if (spnSoLuongMoi != null) {
             spnSoLuongMoi.setValue(1);
+        }
+        if (cboPhuongThucHoanTien != null) {
+            cboPhuongThucHoanTien.setSelectedItem("Tiền mặt");
         }
     }
 
@@ -779,28 +793,53 @@ public class DoiTraHangPanel extends JPanel {
         long giaTriMonMoi = (!laKichBanA && spMoi != null) ? spMoi.donGia * slMoi : 0;
         long chenhLech = giaTriMonMoi - tongTienTra;
 
-        // Kiểm tra quy định thời hạn 7 ngày đổi trả kể từ ngày mua hóa đơn
-        try {
-            if (currentHoaDon.thoiGian != null && !currentHoaDon.thoiGian.trim().isEmpty()) {
-                LocalDateTime ngayMua = LocalDateTime.parse(currentHoaDon.thoiGian.trim(), dtf);
+        // Kiểm tra quy định thời hạn 7 ngày đổi trả kể từ ngày mua hóa đơn (TC08)
+        if (currentHoaDon.thoiGian != null && !currentHoaDon.thoiGian.trim().isEmpty()) {
+            LocalDateTime ngayMua = null;
+            DateTimeFormatter[] formatters = new DateTimeFormatter[]{
+                    dtf,
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.S"),
+                    DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
+                    DateTimeFormatter.ISO_LOCAL_DATE_TIME
+            };
+
+            for (DateTimeFormatter f : formatters) {
+                try {
+                    ngayMua = LocalDateTime.parse(currentHoaDon.thoiGian.trim(), f);
+                    break;
+                } catch (Exception ignored) {}
+            }
+
+            if (ngayMua != null) {
                 long soNgayDaQua = java.time.temporal.ChronoUnit.DAYS.between(ngayMua.toLocalDate(), java.time.LocalDate.now());
                 if (soNgayDaQua > 7) {
                     if (!utils.UserSession.isQuanLy()) {
                         JOptionPane.showMessageDialog(this,
-                                "Hóa đơn đã quá hạn đổi trả 07 ngày. Chỉ tài khoản Quản lý (NVQL)\n"
-                                + "mới được duyệt ngoại lệ; nhân viên hiện tại không thể tiếp tục.",
-                                "Cần Quản lý duyệt", JOptionPane.ERROR_MESSAGE);
+                                "Hóa đơn đã quá hạn đổi trả 07 ngày (đã qua " + soNgayDaQua + " ngày).\n"
+                                + "Chỉ tài khoản Quản lý (NVQL) mới có quyền duyệt ngoại lệ;\n"
+                                + "nhân viên hiện tại không thể tiếp tục thực hiện giao dịch.",
+                                "Cần Quản lý duyệt quá hạn", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
                     int cfQuaHan = JOptionPane.showConfirmDialog(this,
-                            "Bạn đang dùng quyền Quản lý để duyệt ngoại lệ cho hóa đơn đã qua "
-                            + soNgayDaQua + " ngày. Tiếp tục?",
+                            "Hóa đơn đã qua " + soNgayDaQua + " ngày (vượt quá hạn 7 ngày tiêu chuẩn).\n"
+                            + "Bạn đang sử dụng quyền Quản lý để duyệt ngoại lệ đổi trả. Tiếp tục?",
                             "Quản lý duyệt ngoại lệ quá hạn", JOptionPane.YES_NO_OPTION,
                             JOptionPane.WARNING_MESSAGE);
                     if (cfQuaHan != JOptionPane.YES_OPTION) return;
                 }
+            } else {
+                System.err.println("[DoiTraHangPanel] Cảnh báo: Không thể parse ngày hóa đơn: " + currentHoaDon.thoiGian);
+                if (!utils.UserSession.isQuanLy()) {
+                    JOptionPane.showMessageDialog(this,
+                            "Thời gian hóa đơn không xác định được để đối soát quy định 7 ngày đổi trả.\n"
+                            + "Vui lòng nhờ Quản lý (NVQL) kiểm tra và duyệt giao dịch.",
+                            "Cần Quản lý duyệt", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
             }
-        } catch (Exception ignored) {}
+        }
 
         // Nếu chọn Kịch bản B: Chuyển dữ liệu sang màn hình Bán hàng POS để thanh toán chênh lệch
         if (!laKichBanA) {
@@ -824,6 +863,13 @@ public class DoiTraHangPanel extends JPanel {
             data.setSdtKhach(currentHoaDon.sdt);
             data.setTongTienTra(tongTienTra);
             data.setDiemKhauTru((int) (tongTienTra / 100000L));
+            data.setGiaTriHangTra(tongTienTra);
+            data.setGiaTriHangDoi(giaTriMonMoi);
+            data.setTienHoanThucTe(Math.max(0L, -chenhLech));
+            data.setTienKhachTraThem(Math.max(0L, chenhLech));
+            data.setPhuongThucHoanTien(chenhLech < 0
+                    ? String.valueOf(cboPhuongThucHoanTien.getSelectedItem())
+                    : bus.TaiChinhHoaDonBus.KHONG_HOAN_TIEN);
 
             for (Object[] mon : dsMonTra) {
                 String maSP = (String) mon[0];
@@ -884,6 +930,11 @@ public class DoiTraHangPanel extends JPanel {
             pdt.setNgayDoiTra(LocalDateTime.now());
             pdt.setLyDoDoiTra(laKichBanA ? "Trả hàng - Hoàn tiền" : "Đổi sang sản phẩm khác");
             pdt.setTongTienHoan(java.math.BigDecimal.valueOf(tongTienTra));
+            pdt.setGiaTriHangTra(java.math.BigDecimal.valueOf(tongTienTra));
+            pdt.setGiaTriHangDoi(java.math.BigDecimal.ZERO);
+            pdt.setTienHoanThucTe(java.math.BigDecimal.valueOf(tongTienTra));
+            pdt.setTienKhachTraThem(java.math.BigDecimal.ZERO);
+            pdt.setPhuongThucHoanTien(String.valueOf(cboPhuongThucHoanTien.getSelectedItem()));
 
             int idx = 1;
             for (Object[] mon : dsMonTra) {
@@ -997,53 +1048,14 @@ public class DoiTraHangPanel extends JPanel {
     }
 
     /**
-     * Phương thức nghiệp vụ tự động phục vụ Unit Test & Integration Test (VerifyModulesTest).
+     * @deprecated Phương thức mock cũ vi phạm tính toàn vẹn transaction (không tạo PhieuDoiTra trong CSDL).
+     * Tất cả các luồng đổi trả bắt buộc phải thực hiện qua giao diện chuẩn hoặc HoaDonDAO.luuPhieuDoiTraTrongTransaction.
      */
+    @Deprecated
     public boolean xuLyDoiTraTuDong(String maHD, String maSP, int soLuongTra, boolean nguyenTem,
                                      boolean laDoiHang, String maSPMoi, int soLuongMoi) {
-        List<BanHangPOSPanel.HoaDonDaThanhToan> ds = BanHangPOSPanel.layDanhSachHoaDonDaThanhToan();
-        BanHangPOSPanel.HoaDonDaThanhToan target = null;
-        for (BanHangPOSPanel.HoaDonDaThanhToan hd : ds) {
-            if (hd.maHoaDon.equalsIgnoreCase(maHD) || (hd.sdt != null && hd.sdt.equalsIgnoreCase(maHD))) {
-                target = hd;
-                break;
-            }
-        }
-        if (target == null) return false;
-
-        // Tìm món trong HĐ
-        long donGia = 0;
-        for (Object[] mon : target.dsMon) {
-            String ma = mon.length > 1 && mon[1] != null ? mon[1].toString() : "";
-            if (ma.equalsIgnoreCase(maSP)) {
-                donGia = parseGia(mon.length > 5 ? mon[5] : "0");
-                break;
-            }
-        }
-        if (donGia <= 0) return false;
-
-        long tienHoan = donGia * soLuongTra;
-        if (nguyenTem) {
-            KhoLoHangPanel.congTonKho(maSP, soLuongTra);
-            BanHangPOSPanel.congTonKhoCatalog(maSP, soLuongTra);
-        }
-
-        if (laDoiHang && maSPMoi != null) {
-            KhoLoHangPanel.truTonKhoTheoFEFO(maSPMoi, soLuongMoi);
-            BanHangPOSPanel.truTonKhoCatalog(maSPMoi, soLuongMoi);
-        }
-
-        KhoLoHangPanel.dongBoLoHangTuDatabase();
-        BanHangPOSPanel.dongBoToanBoCatalogVaGiaoDien();
-
-        int diemKhauTru = (int) (tienHoan / 100000L);
-        KhachHang kh = new BanHangBus().timKhachHang(target.sdt);
-        int diemCu = kh != null ? kh.getDiemTichLuy() : 0;
-        int diemMoi = Math.max(0, diemCu - diemKhauTru);
-        if (target.sdt != null) {
-            BanHangBus.luuHoacCapNhatKhachHang(target.sdt, target.tenKhach, diemMoi);
-        }
-
-        return true;
+        throw new UnsupportedOperationException(
+                "Phương thức mock xuLyDoiTraTuDong đã bị bãi bỏ vì không bảo đảm tính toàn vẹn transaction CSDL. "
+                + "Vui lòng sử dụng quy trình Đổi trả chuẩn qua thucHienXacNhanDoiTra hoặc HoaDonDAO.luuPhieuDoiTra.");
     }
 }

@@ -2,9 +2,27 @@
 -- PETSHOP MIO - BỘ DỮ LIỆU MẪU ĐỒNG BỘ TOÀN HỆ THỐNG (745 BẢN GHI, 28 BẢNG VẬT LÝ)
 -- MỐC THỜI GIAN QUY CHIẾU: 2026-11-08
 -- KHỚP CHÍNH XÁC SCHEMA THỰC TẾ TRÊN DATABASE QuanLyCuaHangThuCung
+-- CẢNH BÁO BẢO VỆ: SCRIPT NÀY CHỈ DÀNH CHO MÔI TRƯỜNG PHÁT TRIỂN / KIỂM THỬ (DEV/TEST).
+-- TUYỆT ĐỐI KHÔNG CHẠY TRÊN DATABASE ĐÃ CÓ DỮ LIỆU SẢN XUẤT!
+-- HƯỚNG DẪN: Người dùng mở kết nối tới database Dev hoặc Test (ví dụ: QuanLyCuaHangThuCung_Dev) rồi chạy script.
 -- ==========================================================================================
 
-USE QuanLyCuaHangThuCung;
+-- BẢO VỆ DATABASE (KT02): Chặn thực thi nếu DB không phải Dev/Test hoặc các bảng lõi đã có dữ liệu
+IF DB_NAME() NOT LIKE '%Test%' AND DB_NAME() NOT LIKE '%Dev%'
+BEGIN
+    RAISERROR(N'[KT02 - SAFETY GUARD] Script SeedDuLieuMau chi duoc phep chay tren Database Dev/Test (ten DB phai chua "Test" hoac "Dev"). DB hien tai dang ket noi la: "%s". Lenh da bi dung lai an toan!', 16, 1, DB_NAME());
+    RETURN;
+END
+GO
+
+IF EXISTS (SELECT 1 FROM dbo.HoaDon)
+   OR EXISTS (SELECT 1 FROM dbo.ChiTietHoaDon)
+   OR EXISTS (SELECT 1 FROM dbo.PhieuDoiTra)
+   OR EXISTS (SELECT 1 FROM dbo.LoHang)
+BEGIN
+    RAISERROR(N'[KT02 - SAFETY GUARD] Co so du lieu da chua du lieu ban hang/lo hang/doi tra (HoaDon, ChiTietHoaDon, PhieuDoiTra, LoHang)! Khong the seed de tranh ghi de hoac trung khoa ngoai. Vui long kiem tra truoc khi tiep tuc.', 16, 1);
+    RETURN;
+END
 GO
 
 SET XACT_ABORT ON;

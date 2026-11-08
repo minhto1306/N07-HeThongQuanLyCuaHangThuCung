@@ -15,6 +15,7 @@ public class SpaPassBus {
 
     private static final List<TheSpaPass> DANH_SACH_THE = new ArrayList<>();
     private static final TheSpaPassDAO dao = new TheSpaPassDAO();
+    private final dao.GoiSpaPassDAO goiSpaPassDAO = new dao.GoiSpaPassDAO();
 
     static {
         dongBoDuLieuTuDatabase();
@@ -114,5 +115,24 @@ public class SpaPassBus {
     public boolean napThemBuoiChoThe(String maThe, int soBuoi, int soNgayGiaHan) {
         System.err.println("[SpaPassBus] Từ chối nạp thêm lượt ngoài giao dịch thanh toán");
         return false;
+    }
+
+    /**
+     * Lấy cấu hình gói Spa Pass chuẩn từ CSDL (DV14).
+     * Ném ngoại lệ cấu hình nếu không tìm thấy, không dùng regex hoặc đoán mò.
+     */
+    public entity.GoiSpaPass layCauHinhGoi(String maGoi) {
+        if (maGoi == null || maGoi.isBlank()) {
+            throw new IllegalArgumentException("Mã gói Spa Pass không được để trống!");
+        }
+        entity.GoiSpaPass goi = goiSpaPassDAO.findByMaGoi(maGoi);
+        if (goi == null) {
+            throw new IllegalStateException("Không tìm thấy cấu hình hợp lệ cho gói Spa Pass [" + maGoi + "] trong cơ sở dữ liệu! Vui lòng kiểm tra bảng GoiSpaPass.");
+        }
+        return goi;
+    }
+
+    public List<entity.GoiSpaPass> layDanhSachGoiKhaDung() {
+        return goiSpaPassDAO.getAllGoiSpaPass();
     }
 }

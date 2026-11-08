@@ -29,29 +29,61 @@ public class DBConnection {
 
     private DBConnection() {}
 
-    // đọc file database.properties trong thư mục config
+    // đọc file cấu hình database theo thứ tự ưu tiên:
+    // 1. config/database.properties (mẫu cơ bản)
+    // 2. config/database.local.properties (cấu hình máy cá nhân, không theo dõi Git)
+    // 3. Biến môi trường (Environment Variables - mức ưu tiên cao nhất)
     private static void loadConfig() {
-        File configFile = new File("config/database.properties");
-        if (configFile.exists()) {
-            try (InputStream input = new FileInputStream(configFile)) {
-                Properties prop = new Properties();
-                prop.load(input);
+        // 1. Nạp tệp cấu hình mẫu
+        File baseConfigFile = new File("config/database.properties");
+        if (baseConfigFile.exists()) {
+            applyPropertiesFile(baseConfigFile);
+        }
 
-                if (prop.getProperty("db.host") != null)
-                    host = prop.getProperty("db.host").trim();
-                if (prop.getProperty("db.port") != null)
-                    port = prop.getProperty("db.port").trim();
-                if (prop.getProperty("db.name") != null)
-                    databaseName = prop.getProperty("db.name").trim();
-                if (prop.getProperty("db.user") != null)
-                    user = prop.getProperty("db.user").trim();
-                if (prop.getProperty("db.password") != null)
-                    password = prop.getProperty("db.password").trim();
-                if (prop.getProperty("db.instance") != null)
-                    instance = prop.getProperty("db.instance").trim();
-            } catch (Exception e) {
-                System.err.println("ko doc dc file config db: " + e.getMessage());
+        // 2. Nạp tệp cấu hình máy cá nhân (nếu có) để ghi đè
+        File localConfigFile = new File("config/database.local.properties");
+        if (localConfigFile.exists()) {
+            applyPropertiesFile(localConfigFile);
+        }
+
+        // 3. Ưu tiên cao nhất từ biến môi trường (Environment Variables) nếu có
+        String envHost = System.getenv("DB_HOST");
+        String envPort = System.getenv("DB_PORT");
+        String envName = System.getenv("DB_NAME");
+        String envUser = System.getenv("DB_USER");
+        String envPass = System.getenv("DB_PASSWORD");
+        String envInst = System.getenv("DB_INSTANCE");
+
+        if (envHost != null && !envHost.isBlank()) host = envHost.trim();
+        if (envPort != null && !envPort.isBlank()) port = envPort.trim();
+        if (envName != null && !envName.isBlank()) databaseName = envName.trim();
+        if (envUser != null && !envUser.isBlank()) user = envUser.trim();
+        if (envPass != null && !envPass.isBlank()) password = envPass.trim();
+        if (envInst != null && !envInst.isBlank()) instance = envInst.trim();
+    }
+
+    private static void applyPropertiesFile(File file) {
+        try (InputStream input = new FileInputStream(file)) {
+            Properties prop = new Properties();
+            prop.load(input);
+
+            if (prop.getProperty("db.host") != null)
+                host = prop.getProperty("db.host").trim();
+            if (prop.getProperty("db.port") != null)
+                port = prop.getProperty("db.port").trim();
+            if (prop.getProperty("db.name") != null)
+                databaseName = prop.getProperty("db.name").trim();
+            if (prop.getProperty("db.user") != null)
+                user = prop.getProperty("db.user").trim();
+            if (prop.getProperty("db.password") != null)
+                password = prop.getProperty("db.password").trim();
+            if (prop.getProperty("db.instance") != null)
+                instance = prop.getProperty("db.instance").trim();
+            if (prop.getProperty("db.timeout") != null) {
+                try { loginTimeout = Integer.parseInt(prop.getProperty("db.timeout").trim()); } catch (NumberFormatException ignored) {}
             }
+        } catch (Exception e) {
+            System.err.println("[DBConnection] Không đọc được file config db [" + file.getName() + "]: " + e.getMessage());
         }
     }
 
@@ -78,44 +110,38 @@ public class DBConnection {
         return getNewConnection();
     }
 
-    // mở kết nối mới
+    // mở kết nối mới bằng thông tin đã được cấu hình minh bạch, không đoán mò mật khẩu
     public static Connection getNewConnection() throws SQLException {
-        if (user.isBlank()) {
-            user = "sa";
+        if (user == null || user.isBlank() || password == null || password.isBlank()
+                || password.startsWith("YOUR_") || password.contains("PLACEHOLDER")) {
+            dbAvailable = false;
+            throw new SQLException("Cơ sở dữ liệu chưa được cấu hình thông tin xác thực! Vui lòng cấu hình tài khoản và mật khẩu trong 'config/database.local.properties' (sao chép từ 'config/database.properties.example') hoặc đặt biến môi trường DB_USER và DB_PASSWORD.");
         }
         SQLException lastEx = null;
 
-        // Danh sách mật khẩu phổ biến phòng máy / máy cá nhân để tự động kết nối
-        String[] passCandidates = (password != null && !password.isBlank())
-                ? new String[]{password, "sapassword", "123456", "sa"}
-                : new String[]{"sapassword", "123456", "sa"};
+        // 1. Thử kết nối qua Port (chuẩn SQL Server TCP/IP)
+        try {
+            String url1 = buildUrl(true, password != null ? password : "");
+            Connection conn = DriverManager.getConnection(url1);
+            dbAvailable = true;
+            return conn;
+        } catch (SQLException e1) {
+            lastEx = e1;
+        }
 
-        for (String p : passCandidates) {
-            // 1. Thử qua port 1433
-            try {
-                String url1 = buildUrl(true, p);
-                Connection conn = DriverManager.getConnection(url1);
-                dbAvailable = true;
-                password = p;
-                return conn;
-            } catch (SQLException e1) {
-                lastEx = e1;
-            }
-
-            // 2. Thử qua instance SQLEXPRESS
-            try {
-                String url2 = buildUrl(false, p);
-                Connection conn = DriverManager.getConnection(url2);
-                dbAvailable = true;
-                password = p;
-                return conn;
-            } catch (SQLException e2) {
-                lastEx = e2;
-            }
+        // 2. Thử kết nối qua Named Instance (SQLEXPRESS)
+        try {
+            String url2 = buildUrl(false, password != null ? password : "");
+            Connection conn = DriverManager.getConnection(url2);
+            dbAvailable = true;
+            return conn;
+        } catch (SQLException e2) {
+            lastEx = e2;
         }
 
         dbAvailable = false;
-        throw new SQLException("Không kết nối được SQL Server (" + databaseName + "), kiểm tra lại db giùm", lastEx);
+        throw new SQLException("Không thể kết nối CSDL SQL Server [" + databaseName + "] trên host [" + host
+                + "]. Vui lòng kiểm tra lại cấu hình trong config/database.properties hoặc biến môi trường DB_PASSWORD.", lastEx);
     }
 
     // check xem có đang online ko

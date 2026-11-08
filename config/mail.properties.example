@@ -1,0 +1,20 @@
+# ==============================================================================
+# CẤU HÌNH GỬI EMAIL QUA GMAIL SMTP - PET SHOP MIO (MẪU CẤU HÌNH EXAMPLE)
+# ==============================================================================
+# Hướng dẫn:
+# 1. Sao chép file này thành 'config/mail.properties' hoặc 'config/mail.local.properties'
+# 2. Nhập email người gửi và Mật khẩu ứng dụng (Google App Password 16 ký tự).
+# Ngoài ra có thể cấu hình qua biến môi trường: MAIL_SMTP_USERNAME, MAIL_SMTP_PASSWORD
+# ==============================================================================
+
+mail.smtp.host=smtp.gmail.com
+mail.smtp.port=465
+
+# Địa chỉ Gmail người gửi
+mail.smtp.username=your_email@gmail.com
+
+# Mật khẩu ứng dụng 16 ký tự Google App Password
+mail.smtp.password=your_16_digit_app_password
+
+# Tên thương hiệu hiển thị trong hộp thư đến
+mail.smtp.senderName=Mio Pet Shop

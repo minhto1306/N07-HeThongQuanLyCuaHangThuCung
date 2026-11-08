@@ -79,6 +79,7 @@ public class TongQuanPanel extends JPanel {
     // KPI Chế độ Chiến Lược (Strategic)
     private JLabel lblStratDoanhThu;
     private JLabel lblStratLoiNhuan;
+    private JLabel lblStratLoiNhuanSub;
     private JLabel lblStratHangHoa;
     private JLabel lblStratDichVu;
     private DefaultTableModel modelTopSanPham;
@@ -353,9 +354,10 @@ public class TongQuanPanel extends JPanel {
         bus.ThongKeBus tkBus = new bus.ThongKeBus();
         if (lblStratDoanhThu != null) lblStratDoanhThu.setText(dfMoney.format(doanhThuHomNay));
         long loiNhuan = 0L;
+        long tongDT = 0L;
         try {
             var rowsDT = tkBus.layBaoCaoDoanhThu(LocalDate.now(), LocalDate.now());
-            long tongDT = 0L, tongGV = 0L;
+            long tongGV = 0L;
             for (var r : rowsDT) {
                 tongDT += r.doanhThuThuan;
                 tongGV += r.giaVon;
@@ -365,6 +367,14 @@ public class TongQuanPanel extends JPanel {
             loiNhuan = 0L;
         }
         if (lblStratLoiNhuan != null) lblStratLoiNhuan.setText(dfMoney.format(loiNhuan));
+        if (lblStratLoiNhuanSub != null) {
+            if (tongDT > 0) {
+                long margin = Math.round((double) loiNhuan * 100.0 / tongDT);
+                lblStratLoiNhuanSub.setText("Biên lợi nhuận gộp: " + margin + "%");
+            } else {
+                lblStratLoiNhuanSub.setText("Biên lợi nhuận gộp thực tế");
+            }
+        }
         if (lblStratHangHoa != null) lblStratHangHoa.setText(dfMoney.format(dtHangHoa));
         if (lblStratDichVu != null) lblStratDichVu.setText(dfMoney.format(dtSpa));
 
@@ -651,7 +661,7 @@ public class TongQuanPanel extends JPanel {
         pnlCards.setMaximumSize(new Dimension(Integer.MAX_VALUE, 115));
 
         lblStratDoanhThu = new JLabel("0 đ");
-        pnlCards.add(taoTheKpiDong("TỔNG DOANH THU THỰC TẾ", lblStratDoanhThu, new JLabel("+12.5% so với kỳ trước"),
+        pnlCards.add(taoTheKpiDong("TỔNG DOANH THU THỰC TẾ", lblStratDoanhThu, new JLabel("Tổng hợp theo hóa đơn thực tế"),
                 IconHelper.TRENDING_UP, ThemeColors.PRIMARY, ThemeColors.PRIMARY_SOFT,
                 () -> {
                     Frame topFrame = (Frame) SwingUtilities.getWindowAncestor(this);
@@ -659,7 +669,8 @@ public class TongQuanPanel extends JPanel {
                 }));
 
         lblStratLoiNhuan = new JLabel("0 đ");
-        pnlCards.add(taoTheKpiDong("LỢI NHUẬN GỘP ƯỚC TÍNH", lblStratLoiNhuan, new JLabel("Biên lợi nhuận ~42%"),
+        lblStratLoiNhuanSub = new JLabel("Biên lợi nhuận gộp thực tế");
+        pnlCards.add(taoTheKpiDong("LỢI NHUẬN GỘP ƯỚC TÍNH", lblStratLoiNhuan, lblStratLoiNhuanSub,
                 IconHelper.CHECK, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG,
                 () -> {
                     Frame topFrame = (Frame) SwingUtilities.getWindowAncestor(this);
@@ -743,19 +754,19 @@ public class TongQuanPanel extends JPanel {
         pnlCards.setPreferredSize(new Dimension(0, 110));
         pnlCards.setMaximumSize(new Dimension(Integer.MAX_VALUE, 115));
 
-        lblAnalytTongMa = new JLabel("48 mã");
+        lblAnalytTongMa = new JLabel("0 mã");
         pnlCards.add(taoTheKpiDong("TỔNG MÃ HÀNG TỒN KHO", lblAnalytTongMa, new JLabel("Tồn an toàn & Chu kỳ ROP"),
                 IconHelper.BOXES, ThemeColors.PRIMARY, ThemeColors.PRIMARY_SOFT));
 
-        lblAnalytHotel = new JLabel("6 / 8 phòng");
-        pnlCards.add(taoTheKpiDong("LƯU TRÚ PET HOTEL", lblAnalytHotel, new JLabel("Tỷ lệ lấp đầy 75.0%"),
+        lblAnalytHotel = new JLabel("0 / 0 phòng");
+        pnlCards.add(taoTheKpiDong("LƯU TRÚ PET HOTEL", lblAnalytHotel, new JLabel("Tỷ lệ lấp đầy phòng lưu trú"),
                 IconHelper.HOME, ThemeColors.INFO, ThemeColors.INFO_BG));
 
         lblAnalytFEFO = new JLabel("0 lô");
         pnlCards.add(taoTheKpiDong("LÔ HÀNG CẬN DATE (FEFO)", lblAnalytFEFO, new JLabel("Ưu tiên xả hàng trước"),
                 IconHelper.ALERT_TRIANGLE, ThemeColors.DANGER, ThemeColors.DANGER_BG));
 
-        lblAnalytVIP = new JLabel("68.5%");
+        lblAnalytVIP = new JLabel("0%");
         pnlCards.add(taoTheKpiDong("TỶ LỆ KHÁCH HÀNG VIP", lblAnalytVIP, new JLabel("Khách hàng thân thiết"),
                 IconHelper.USER_CHECK, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG));
 

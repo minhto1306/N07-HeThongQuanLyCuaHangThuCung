@@ -20,10 +20,15 @@ public class ThuCungBus {
 
     private final ThuCungDAO thuCungDAO;
     private final LichHenDAO lichHenDAO;
+    private String lastErrorMessage = "";
 
     public ThuCungBus() {
         this.thuCungDAO = new ThuCungDAO();
         this.lichHenDAO = new LichHenDAO();
+    }
+
+    public String getLastErrorMessage() {
+        return lastErrorMessage;
     }
 
     // Nạp toàn bộ hồ sơ thú cưng từ CSDL lên, nếu lỗi thì trả về danh sách rỗng để UI không bị NullPointerException
@@ -69,19 +74,19 @@ public class ThuCungBus {
         }
     }
 
-    // Tiếp nhận thú cưng mới kèm tra cứu/tạo khách hàng tự động theo SĐT & tên chủ nuôi
+    // Tiếp nhận thú cưng mới kèm tra cứu/tạo khách hàng tự động theo SĐT & tên chủ nuôi (DV03, DV04)
     public boolean themThuCungTheoSdtChu(ThuCung tc, String tenChu, String sdtChu, String soMicrochip) {
+        if (sdtChu == null || sdtChu.trim().isEmpty() || !sdtChu.trim().matches("^0\\d{9}$")) {
+            System.err.println("[ThuCungBus] Lỗi: Số điện thoại chủ nuôi không hợp lệ: " + sdtChu);
+            return false;
+        }
         try {
             dao.KhachHangDAO khDao = new dao.KhachHangDAO();
-            KhachHang kh = null;
-            if (sdtChu != null && !sdtChu.trim().isEmpty()) {
-                kh = khDao.findBySoDienThoai(sdtChu.trim());
-            }
+            KhachHang kh = khDao.findBySoDienThoai(sdtChu.trim());
             if (kh == null) {
                 String maKhMoi = utils.MaTuSinhHelper.sinhMaKhachHang();
                 String hoTen = (tenChu != null && !tenChu.trim().isEmpty()) ? tenChu.trim() : ("Khách hàng " + maKhMoi);
-                String sdt = (sdtChu != null && !sdtChu.trim().isEmpty()) ? sdtChu.trim() : ("0900000" + maKhMoi.replaceAll("\\D+", ""));
-                kh = new KhachHang(maKhMoi, hoTen, sdt, 0);
+                kh = new KhachHang(maKhMoi, hoTen, sdtChu.trim(), 0);
                 khDao.insert(kh);
             }
             return thuCungDAO.insertThuCung(tc, kh.getMaKhachHang(), soMicrochip);
@@ -129,6 +134,7 @@ public class ThuCungBus {
 
     // Đặt lịch hẹn mới: kiểm tra số điện thoại của chủ, nếu số đã có trong hệ thống thì liên kết ngay để tích điểm
     public boolean datLichHenMoi(LichHen lh) {
+        lastErrorMessage = "";
         try {
             dao.KhachHangDAO khDao = new dao.KhachHangDAO();
             KhachHang kh = lh.getKhachHang();
@@ -151,10 +157,20 @@ public class ThuCungBus {
                 for (ChiTietLichHen ct : lh.getDsChiTiet()) {
                     ThuCung tc = ct.getThuCung();
                     if (tc == null) continue;
-                    ThuCung daCo = thuCungCuaKhach.stream()
-                            .filter(x -> x.getTenThuCung() != null
-                                    && x.getTenThuCung().trim().equalsIgnoreCase(tc.getTenThuCung().trim()))
-                            .findFirst().orElse(null);
+                    // Ưu tiên khớp chính xác theo mã thú cưng trước (DV07)
+                    ThuCung daCo = null;
+                    if (tc.getMaThuCung() != null && !tc.getMaThuCung().isBlank()) {
+                        daCo = thuCungCuaKhach.stream()
+                                .filter(x -> tc.getMaThuCung().equalsIgnoreCase(x.getMaThuCung()))
+                                .findFirst().orElse(null);
+                    }
+                    if (daCo == null && tc.getTenThuCung() != null) {
+                        daCo = thuCungCuaKhach.stream()
+                                .filter(x -> x.getTenThuCung() != null
+                                        && x.getTenThuCung().trim().equalsIgnoreCase(tc.getTenThuCung().trim())
+                                        && (tc.getGiongLoai() == null || tc.getGiongLoai().trim().equalsIgnoreCase(String.valueOf(x.getGiongLoai()).trim())))
+                                .findFirst().orElse(null);
+                    }
                     if (daCo != null) {
                         // Dùng lại đúng mã hồ sơ để giữ bệnh án, dị ứng và lịch sử tiêm.
                         ct.setThuCung(daCo);
@@ -167,7 +183,11 @@ public class ThuCungBus {
             }
             return lichHenDAO.insertLichHen(lh);
         } catch (SQLException e) {
+            lastErrorMessage = e.getMessage();
             System.err.println("[ThuCungBus] Lỗi đặt lịch hẹn CSDL: " + e.getMessage());
+            return false;
+        } catch (Exception e) {
+            lastErrorMessage = e.getMessage();
             return false;
         }
     }

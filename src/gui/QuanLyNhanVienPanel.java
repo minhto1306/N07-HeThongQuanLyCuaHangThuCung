@@ -402,7 +402,7 @@ public class QuanLyNhanVienPanel extends JPanel {
         JTextField txtEmail = new JTextField(maTuDong.toLowerCase() + "@miopet.vn");
         txtEmail.putClientProperty("JTextField.placeholderText", "Hòm thư nhận OTP khôi phục mật khẩu...");
 
-        JPasswordField txtPass = new JPasswordField("123456");
+        JPasswordField txtPass = new JPasswordField();
         txtPass.putClientProperty("FlatLaf.style", "showRevealButton: true");
         JComboBox<String> cboRole = new JComboBox<>(new String[]{"NVCS", "NVBH", "NVTN", "NVQL"});
 
@@ -412,7 +412,7 @@ public class QuanLyNhanVienPanel extends JPanel {
                 "Chức vụ công việc:", txtChucVu,
                 "Số điện thoại (dùng để đăng nhập):", txtPhone,
                 "Email công việc (để nhận OTP):", txtEmail,
-                "Mật khẩu khởi tạo (mặc định 123456):", txtPass,
+                "Mật khẩu khởi tạo (tối thiểu 8 ký tự, có hoa/thường/số):", txtPass,
                 "Phân quyền vai trò:", cboRole
         };
 
@@ -463,20 +463,23 @@ public class QuanLyNhanVienPanel extends JPanel {
     }
 
     private void moDialogResetMatKhau(NhanVien nv) {
-        JPasswordField txtNewPass = new JPasswordField("123456");
+        JPasswordField txtNewPass = new JPasswordField();
         txtNewPass.putClientProperty("FlatLaf.style", "showRevealButton: true");
         int opt = JOptionPane.showConfirmDialog(this,
                 new Object[]{"Cấp lại mật khẩu cho nhân viên [" + nv.getHoTen() + " - " + nv.getSoDienThoai() + "]:", txtNewPass},
-                "CẤP LẠI MẬT KHẨU (BĂM SHA-256)", JOptionPane.OK_CANCEL_OPTION);
+                "CẤP LẠI MẬT KHẨU (PBKDF2)", JOptionPane.OK_CANCEL_OPTION);
 
         if (opt == JOptionPane.OK_OPTION) {
             String passMoi = new String(txtNewPass.getPassword()).trim();
-            if (passMoi.isEmpty()) passMoi = "123456";
+            if (passMoi.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Không được để trống hoặc sử dụng mật khẩu mặc định.", "Mật khẩu không hợp lệ", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
 
             boolean ok = controller.resetMatKhau(nv.getMaNhanVien(), passMoi);
             if (ok) {
                 JOptionPane.showMessageDialog(this,
-                        "Đã cấp lại mật khẩu thành công cho nhân viên [" + nv.getHoTen() + "]!\nMật khẩu mới đã được băm SHA-256 bảo mật.",
+                        "Đã cấp lại mật khẩu thành công cho nhân viên [" + nv.getHoTen() + "]!\nMật khẩu mới đã được băm PBKDF2.",
                         "Thành công", JOptionPane.INFORMATION_MESSAGE);
             }
         }

@@ -69,7 +69,8 @@ public class BangGiaoCaDAO {
      */
     public boolean chotKetCa(BangGiaoCa giaoCa) throws SQLException {
         String sql = "UPDATE BangGiaoCa SET tienCuoiCaHeThong=?, tienCuoiCaThucTe=?, tienChenhLech=?, tienThuTienMat=?, " +
-                     "tienChuyenKhoan=?, tienHoanTra=?, lyDoChenhLech=?, gioKetThucThucTe=?, trangThai=? WHERE maGiaoCa=?";
+                     "tienChuyenKhoan=?, tienHoanTra=?, lyDoChenhLech=?, gioKetThucThucTe=?, trangThai=? " +
+                     "WHERE maGiaoCa=? AND trangThai='DANG_MO' AND gioKetThucThucTe IS NULL";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setBigDecimal(1, giaoCa.getTienCuoiCaHeThong());
@@ -82,7 +83,7 @@ public class BangGiaoCaDAO {
             ps.setTimestamp(8, Timestamp.valueOf(giaoCa.getGioKetThucThucTe() != null ? giaoCa.getGioKetThucThucTe() : LocalDateTime.now()));
             ps.setString(9, giaoCa.getTrangThai() != null ? giaoCa.getTrangThai() : "CHO_DUYET");
             ps.setString(10, giaoCa.getMaGiaoCa());
-            return ps.executeUpdate() > 0;
+            return ps.executeUpdate() == 1;
         }
     }
 
@@ -190,8 +191,8 @@ public class BangGiaoCaDAO {
     public long tinhDoanhThuTienMatTuThoiDiem(LocalDateTime tuThoiDiem) {
         String sql = "SELECT ISNULL(SUM(thanhTien), 0) AS tongTienMat FROM HoaDon " +
                      "WHERE thoiGianThanhToan > ? " +
-                     "AND (trangThaiHoaDon = N'Đã thanh toán' OR trangThaiHoaDon IS NULL) " +
-                     "AND (phuongThucThanhToan LIKE N'%Tiền mặt%' OR phuongThucThanhToan IS NULL)";
+                     "AND trangThaiHoaDon = N'Đã thanh toán' " +
+                     "AND phuongThucThanhToan = N'Tiền mặt'";
         return tinhTongTheoThoiDiem(sql, "tongTienMat", tuThoiDiem, "doanh thu tiền mặt theo ca");
     }
 
@@ -199,7 +200,7 @@ public class BangGiaoCaDAO {
     public long tinhDoanhThuChuyenKhoanTuThoiDiem(LocalDateTime tuThoiDiem) {
         String sql = "SELECT ISNULL(SUM(thanhTien), 0) AS tongCK FROM HoaDon " +
                      "WHERE thoiGianThanhToan > ? " +
-                     "AND (trangThaiHoaDon = N'Đã thanh toán' OR trangThaiHoaDon IS NULL) " +
+                     "AND trangThaiHoaDon = N'Đã thanh toán' " +
                      "AND phuongThucThanhToan IS NOT NULL " +
                      "AND phuongThucThanhToan NOT LIKE N'%Tiền mặt%'";
         return tinhTongTheoThoiDiem(sql, "tongCK", tuThoiDiem, "doanh thu chuyển khoản theo ca");
@@ -207,7 +208,10 @@ public class BangGiaoCaDAO {
 
     /** Tổng tiền đổi/trả phát sinh sau lần bàn giao gần nhất. */
     public long tinhTongTienHoanTraTuThoiDiem(LocalDateTime tuThoiDiem) {
-        String sql = "SELECT ISNULL(SUM(tongTienHoan), 0) AS tongHoan FROM PhieuDoiTra " +
+        if (!hasPhuongThucHoanColumn()) {
+            throw new IllegalStateException("CSDL chưa có dữ liệu tiền hoàn thực tế Phase 1/2");
+        }
+        String sql = "SELECT ISNULL(SUM(tienHoanThucTe), 0) AS tongHoan FROM PhieuDoiTra " +
                      "WHERE ngayDoiTra > ?";
         return tinhTongTheoThoiDiem(sql, "tongHoan", tuThoiDiem, "tiền hoàn trả theo ca");
     }
@@ -223,11 +227,29 @@ public class BangGiaoCaDAO {
         return tinhTongTrongKhoang(sql, batDau, ketThuc, maNhanVien);
     }
 
+    private static Boolean hasNewDoiTraCols = null;
+
+    private static synchronized boolean hasPhuongThucHoanColumn() {
+        if (hasNewDoiTraCols != null) return hasNewDoiTraCols;
+        String sql = "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='PhieuDoiTra' AND COLUMN_NAME='phuongThucHoanTien'";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            hasNewDoiTraCols = rs.next();
+        } catch (Exception e) {
+            hasNewDoiTraCols = false;
+        }
+        return hasNewDoiTraCols != null && hasNewDoiTraCols;
+    }
+
     public long tinhHoanTraTrongCa(LocalDateTime batDau, LocalDateTime ketThuc, String maNhanVien) {
-        String sql = "SELECT ISNULL(SUM(p.tongTienHoan),0) tong FROM PhieuDoiTra p "
-                + "LEFT JOIN HoaDon hd ON p.maHoaDonGoc = hd.maHoaDon "
-                + "WHERE p.ngayDoiTra>=? AND p.ngayDoiTra<=? AND p.maNhanVienTiepNhan=? "
-                + "AND (hd.phuongThucThanhToan LIKE N'%Tiền mặt%' OR hd.phuongThucThanhToan IS NULL)";
+        if (!hasPhuongThucHoanColumn()) {
+            throw new IllegalStateException("CSDL chưa có cột phương thức hoàn tiền Phase 1/2; "
+                    + "không thể suy đoán toàn bộ tiền hoàn là tiền mặt. Hãy dùng sql/HeThongQuanLyThuCung.sql.");
+        }
+        String sql = "SELECT ISNULL(SUM(tienHoanThucTe), 0) tong FROM PhieuDoiTra "
+                + "WHERE ngayDoiTra>=? AND ngayDoiTra<=? AND maNhanVienTiepNhan=? "
+                + "AND phuongThucHoanTien=N'Tiền mặt'";
         return tinhTongTrongKhoang(sql, batDau, ketThuc, maNhanVien);
     }
 
@@ -257,7 +279,7 @@ public class BangGiaoCaDAO {
             }
         } catch (Exception e) {
             System.err.println("[BangGiaoCaDAO] Lỗi tính " + logName + ": " + e.getMessage());
-            return 0L;
+            throw new IllegalStateException("Không thể đối soát " + logName + "; dừng chốt ca để tránh sai tiền", e);
         }
     }
 
@@ -311,9 +333,9 @@ public class BangGiaoCaDAO {
     public long tinhDoanhThuTienMatTrongNgay() {
         String sql = "SELECT ISNULL(SUM(thanhTien), 0) AS tongTienMat " +
                      "FROM HoaDon " +
-                     "WHERE CAST(ngayLap AS DATE) = CAST(GETDATE() AS DATE) " +
-                     "  AND (trangThaiHoaDon = N'Đã thanh toán' OR trangThaiHoaDon IS NULL) " +
-                     "  AND (phuongThucThanhToan LIKE N'%Tiền mặt%' OR phuongThucThanhToan IS NULL)";
+                     "WHERE CAST(thoiGianThanhToan AS DATE) = CAST(GETDATE() AS DATE) " +
+                     "  AND trangThaiHoaDon = N'Đã thanh toán' " +
+                     "  AND phuongThucThanhToan = N'Tiền mặt'";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -322,8 +344,9 @@ public class BangGiaoCaDAO {
             }
         } catch (Exception e) {
             System.err.println("[BangGiaoCaDAO] Lỗi tính doanh thu tiền mặt: " + e.getMessage());
+            throw new IllegalStateException("Không thể đối soát doanh thu tiền mặt", e);
         }
-        return 0L;
+        throw new IllegalStateException("Truy vấn doanh thu tiền mặt không trả về dòng kết quả");
     }
 
     /**
@@ -332,8 +355,8 @@ public class BangGiaoCaDAO {
     public long tinhDoanhThuChuyenKhoanTrongNgay() {
         String sql = "SELECT ISNULL(SUM(thanhTien), 0) AS tongCK " +
                      "FROM HoaDon " +
-                     "WHERE CAST(ngayLap AS DATE) = CAST(GETDATE() AS DATE) " +
-                     "  AND (trangThaiHoaDon = N'Đã thanh toán' OR trangThaiHoaDon IS NULL) " +
+                     "WHERE CAST(thoiGianThanhToan AS DATE) = CAST(GETDATE() AS DATE) " +
+                     "  AND trangThaiHoaDon = N'Đã thanh toán' " +
                      "  AND phuongThucThanhToan IS NOT NULL " +
                      "  AND phuongThucThanhToan NOT LIKE N'%Tiền mặt%'";
         try (Connection conn = DBConnection.getConnection();
@@ -344,15 +367,19 @@ public class BangGiaoCaDAO {
             }
         } catch (Exception e) {
             System.err.println("[BangGiaoCaDAO] Lỗi tính doanh thu chuyển khoản: " + e.getMessage());
+            throw new IllegalStateException("Không thể đối soát doanh thu chuyển khoản", e);
         }
-        return 0L;
+        throw new IllegalStateException("Truy vấn doanh thu chuyển khoản không trả về dòng kết quả");
     }
 
     /**
      * Tính tổng tiền hoàn trả khách (Đổi / Trả hàng) trong ngày hôm nay từ bảng PhieuDoiTra
      */
     public long tinhTongTienHoanTraTrongNgay() {
-        String sql = "SELECT ISNULL(SUM(tongTienHoan), 0) AS tongHoan " +
+        if (!hasPhuongThucHoanColumn()) {
+            throw new IllegalStateException("CSDL chưa có dữ liệu phương thức hoàn tiền; không thể tính két chính xác");
+        }
+        String sql = "SELECT ISNULL(SUM(tienHoanThucTe), 0) AS tongHoan " +
                      "FROM PhieuDoiTra " +
                      "WHERE CAST(ngayDoiTra AS DATE) = CAST(GETDATE() AS DATE)";
         try (Connection conn = DBConnection.getConnection();
@@ -363,8 +390,9 @@ public class BangGiaoCaDAO {
             }
         } catch (Exception e) {
             System.err.println("[BangGiaoCaDAO] Lỗi tính tiền hoàn trả: " + e.getMessage());
+            throw new IllegalStateException("Không thể đối soát tiền hoàn trả", e);
         }
-        return 0L;
+        throw new IllegalStateException("Truy vấn tiền hoàn trả không trả về dòng kết quả");
     }
 
     /**
@@ -391,7 +419,9 @@ public class BangGiaoCaDAO {
         if (maQuanLy == null || !utils.UserSession.isQuanLy()) {
             throw new SecurityException("Chỉ Quản lý đang đăng nhập mới được duyệt ca");
         }
-        duyetGiaoCa(maGiaoCa, maQuanLy, LocalDateTime.now());
+        if (!duyetGiaoCa(maGiaoCa, maQuanLy, LocalDateTime.now())) {
+            return false;
+        }
         String sql = "UPDATE BangGiaoCa SET lyDoChenhLech = ? WHERE maGiaoCa = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

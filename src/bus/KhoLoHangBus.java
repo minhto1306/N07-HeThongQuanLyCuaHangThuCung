@@ -182,6 +182,12 @@ public class KhoLoHangBus {
      * Cộng trả tồn kho lô hàng theo mã số lô (đổi trả hoàn hàng vào kho).
      */
     public boolean congTonKho(String soLo, int soLuong) {
+        if (!utils.UserSession.isQuanLy() && !utils.UserSession.isThuNgan()) {
+            throw new SecurityException("Người dùng hiện tại không có quyền cập nhật tồn kho!");
+        }
+        if (soLuong <= 0) {
+            throw new IllegalArgumentException("Số lượng cộng tồn kho phải lớn hơn 0!");
+        }
         try {
             return loHangDAO.congTonKho(soLo, soLuong);
         } catch (SQLException e) {

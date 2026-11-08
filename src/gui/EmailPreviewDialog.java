@@ -94,21 +94,40 @@ public class EmailPreviewDialog extends JDialog {
         JButton btnGuiMail = ThemeColors.createPrimaryButton("Gửi Email Ngay", IconHelper.getIcon(IconHelper.CHECK, 14, ThemeColors.TEXT_PRIMARY));
         btnGuiMail.addActionListener(e -> {
             String recipient = txtNguoiNhan.getText().trim();
-            if (recipient.isEmpty() || !recipient.contains("@")) {
+            if (recipient.isEmpty() || !recipient.contains("@") || !recipient.contains(".")) {
                 JOptionPane.showMessageDialog(this, "Vui lòng nhập địa chỉ email hợp lệ của khách hàng!", "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
                 txtNguoiNhan.requestFocus();
                 return;
             }
 
-            // Gọi hàm gửi email nền
-            daGuiThanhCong = true;
-            JOptionPane.showMessageDialog(this,
-                    "ĐÃ GỬI THƯ THÀNH CÔNG!\n\n" +
-                    "- Người nhận: " + recipient + "\n" +
-                    "- Tiêu đề: " + txtTieuDe.getText() + "\n" +
-                    "- Trạng thái: 250 OK (Đã bàn giao cho hàng đợi máy chủ SMTP)",
-                    "Thông Báo Gửi Email", JOptionPane.INFORMATION_MESSAGE);
-            dispose();
+            if (utils.EmailThongBaoHelper.isSmtpConfigured()) {
+                try {
+                    utils.EmailThongBaoHelper.guiEmail(recipient, txtTieuDe.getText(), epNoiDungHtml.getText());
+                    daGuiThanhCong = true;
+                    JOptionPane.showMessageDialog(this,
+                            "ĐÃ GỬI THƯ THÀNH CÔNG!\n\n" +
+                            "- Người nhận: " + recipient + "\n" +
+                            "- Tiêu đề: " + txtTieuDe.getText() + "\n" +
+                            "- Trạng thái: 250 OK (Đã bàn giao cho máy chủ SMTP thành công)",
+                            "Thông Báo Gửi Email", JOptionPane.INFORMATION_MESSAGE);
+                    dispose();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this,
+                            "Lỗi gửi email qua máy chủ SMTP:\n" + ex.getMessage(),
+                            "Lỗi Gửi Email", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                // Chế độ mô phỏng minh bạch khi chưa cấu hình SMTP (DV10)
+                daGuiThanhCong = true;
+                JOptionPane.showMessageDialog(this,
+                        "[CHẾ ĐỘ MÔ PHỎNG / DEMO]:\n" +
+                        "Thư điện tử đã được tạo và định dạng HTML thành công!\n\n" +
+                        "• Người nhận: " + recipient + "\n" +
+                        "• Tiêu đề: " + txtTieuDe.getText() + "\n" +
+                        "• Lưu ý: Chưa cấu hình thông tin SMTP trong config/mail.properties hoặc biến môi trường MAIL_SMTP_USERNAME, nên hệ thống không gửi email ra Internet.",
+                        "Mô phỏng gửi email", JOptionPane.INFORMATION_MESSAGE);
+                dispose();
+            }
         });
 
         pnlButtons.add(btnDong);

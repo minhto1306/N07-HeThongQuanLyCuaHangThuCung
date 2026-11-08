@@ -1,5 +1,6 @@
 package entity;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -7,7 +8,9 @@ import java.time.LocalDateTime;
  * Giữ nguyên số ngày và giá trị thanh toán, chống tính lại số ngày (DATEDIFF / GETDATE)
  * khi hóa đơn POS thanh toán qua ngày mới (Lỗi B03).
  */
-public class HotelCheckoutSnapshot {
+public class HotelCheckoutSnapshot implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String maPhong;
     private String loaiPhong;
     private String tenThuCung;

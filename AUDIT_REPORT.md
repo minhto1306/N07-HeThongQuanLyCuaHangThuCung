@@ -781,10 +781,7 @@ Khi được người dùng phê duyệt bước sang Giai đoạn 2, các bư�
 1. Mở Eclipse IDE ➔ Chọn workspace `D:\HK1 - 2026\Application Development\N07-HeThongQuanLyCuaHangThuCung-main\N07-HeThongQuanLyCuaHangThuCung-main`.
 2. Kiểm tra `config/database.properties` đã cấu hình đúng tài khoản kết nối SQL Server máy cá nhân.
 3. Chạy ứng dụng từ class `Main.java` (hoặc `gui.MainDashboard.java`).
-4. Đăng nhập hệ thống với tài khoản quản trị:
-   - **Tên đăng nhập / Số điện thoại:** `0901234567` (hoặc `NV001`)
-   - **Mật khẩu:** `admin123` (vai trò: Quản lý cửa hàng `NVQL`).
-   - Tài khoản thu ngân: `0912345678` / Mật khẩu: `nv123` (vai trò `NVTN`).
+4. Nếu database chưa có quản lý, chạy `utils.BootstrapAdminAccount` để tạo NV001 bằng mật khẩu riêng. Repository không cung cấp thông tin đăng nhập dùng chung. Với tài khoản mẫu đang khóa, quản lý phải đặt mật khẩu riêng trước khi kích hoạt.
 
 ---
 
@@ -870,7 +867,7 @@ Khi được người dùng phê duyệt bước sang Giai đoạn 2, các bư�
 ### 3. Kiểm tra An toàn & Bảo mật Mã Nguồn (Security & Hygiene Audit)
 
 - **Thông tin xác thực (Credentials):**
-  - `config/database.properties`: Cấu hình tài khoản phát triển cục bộ tiêu chuẩn (`localhost`, `sa / sapassword`).
+  - `config/database.properties`: Cấu hình tài khoản phát triển cục bộ tiêu chuẩn (`localhost`, `sa / [REDACTED]`).
   - `config/mail.properties`: `mail.smtp.username` và `mail.smtp.password` đều để trống (không lộ thông tin cá nhân).
   - `config/vietqr.properties`: Thông tin mẫu tài khoản nhận tiền chuyển khoản demo.
   - `config/vnpay.properties`: Thông tin môi trường Sandbox thử nghiệm công khai của VNPay.

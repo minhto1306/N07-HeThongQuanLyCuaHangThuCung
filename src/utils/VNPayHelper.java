@@ -33,7 +33,8 @@ public final class VNPayHelper {
     private VNPayHelper() {}
 
     public static void napCauHinh() {
-        File f = new File("config/vnpay.properties");
+        File fLocal = new File("config/vnpay.local.properties");
+        File f = fLocal.exists() ? fLocal : new File("config/vnpay.properties");
         if (f.exists()) {
             try (InputStream in = new FileInputStream(f)) {
                 Properties p = new Properties();
@@ -44,9 +45,13 @@ public final class VNPayHelper {
                 if (p.getProperty("vnpay.returnPort") != null) returnPort = Integer.parseInt(p.getProperty("vnpay.returnPort").trim());
                 if (p.getProperty("vnpay.returnPath") != null) returnPath = p.getProperty("vnpay.returnPath").trim();
             } catch (Exception ex) {
-                System.err.println("[VNPayHelper] Lỗi đọc config/vnpay.properties: " + ex.getMessage());
+                System.err.println("[VNPayHelper] Lỗi đọc config vnpay: " + ex.getMessage());
             }
         }
+        String envTmn = System.getenv("VNPAY_TMN_CODE");
+        String envSecret = System.getenv("VNPAY_HASH_SECRET");
+        if (envTmn != null && !envTmn.isBlank()) tmnCode = envTmn.trim();
+        if (envSecret != null && !envSecret.isBlank()) hashSecret = envSecret.trim();
     }
 
     public static String getTmnCode() { return tmnCode; }

@@ -288,7 +288,7 @@ public class PetHotelPanel extends JPanel {
         int donDep = 0;
 
         for (PhongLuuTru p : DANH_SACH_PHONG) {
-            if ("ĐANG CÓ KHÁCH".equalsIgnoreCase(p.trangThai)) dangCoKhach++;
+            if ("ĐANG CÓ KHÁCH".equalsIgnoreCase(p.trangThai) || "ĐANG LƯU TRÚ".equalsIgnoreCase(p.trangThai)) dangCoKhach++;
             else if ("TRỐNG".equalsIgnoreCase(p.trangThai)) trong++;
             else if ("ĐANG DỌN DẸP".equalsIgnoreCase(p.trangThai)) donDep++;
         }

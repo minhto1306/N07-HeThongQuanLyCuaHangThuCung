@@ -16,11 +16,21 @@ public class PhieuDoiTra {
     private String lyDoDoiTra;
     private BigDecimal tongTienHoan;
     private String trangThaiDoiTra;
+    private BigDecimal giaTriHangTra;
+    private BigDecimal giaTriHangDoi;
+    private BigDecimal tienHoanThucTe;
+    private BigDecimal tienKhachTraThem;
+    private String phuongThucHoanTien;
     private List<ChiTietDoiTra> dsChiTietDoiTra;
 
     public PhieuDoiTra() {
         this.ngayDoiTra = LocalDateTime.now();
         this.tongTienHoan = BigDecimal.ZERO;
+        this.giaTriHangTra = BigDecimal.ZERO;
+        this.giaTriHangDoi = BigDecimal.ZERO;
+        this.tienHoanThucTe = BigDecimal.ZERO;
+        this.tienKhachTraThem = BigDecimal.ZERO;
+        this.phuongThucHoanTien = "CHUA_XAC_DINH";
         this.trangThaiDoiTra = "Hoàn thành";
         this.dsChiTietDoiTra = new ArrayList<>();
     }
@@ -100,6 +110,46 @@ public class PhieuDoiTra {
     public void setDsChiTietDoiTra(List<ChiTietDoiTra> dsChiTietDoiTra) {
         this.dsChiTietDoiTra = dsChiTietDoiTra;
         capNhatTongTienHoan();
+    }
+
+    public BigDecimal getGiaTriHangTra() {
+        return giaTriHangTra;
+    }
+
+    public void setGiaTriHangTra(BigDecimal giaTriHangTra) {
+        this.giaTriHangTra = giaTriHangTra;
+    }
+
+    public BigDecimal getGiaTriHangDoi() {
+        return giaTriHangDoi;
+    }
+
+    public void setGiaTriHangDoi(BigDecimal giaTriHangDoi) {
+        this.giaTriHangDoi = giaTriHangDoi;
+    }
+
+    public BigDecimal getTienHoanThucTe() {
+        return tienHoanThucTe;
+    }
+
+    public void setTienHoanThucTe(BigDecimal tienHoanThucTe) {
+        this.tienHoanThucTe = tienHoanThucTe;
+    }
+
+    public BigDecimal getTienKhachTraThem() {
+        return tienKhachTraThem;
+    }
+
+    public void setTienKhachTraThem(BigDecimal tienKhachTraThem) {
+        this.tienKhachTraThem = tienKhachTraThem;
+    }
+
+    public String getPhuongThucHoanTien() {
+        return phuongThucHoanTien;
+    }
+
+    public void setPhuongThucHoanTien(String phuongThucHoanTien) {
+        this.phuongThucHoanTien = phuongThucHoanTien;
     }
 
     public void addChiTietDoiTra(ChiTietDoiTra chiTiet) {

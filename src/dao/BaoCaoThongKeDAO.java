@@ -120,8 +120,9 @@ public class BaoCaoThongKeDAO {
                 ")" +
                 " SELECT h.maHoaDon, COALESCE(h.thoiGianThanhToan,h.ngayLap) thoiGian," +
                 " COALESCE(kh.hoTen,N'Khách vãng lai') khachHang, COALESCE(nv.hoTen,N'Không xác định') thuNgan," +
-                " CAST(COALESCE(h.thanhTien,0)+COALESCE(h.giamGia,0) AS BIGINT) tienHang," +
-                " CAST(COALESCE(h.giamGia,0) AS BIGINT) giamGia, CAST(COALESCE(h.thanhTien,0) AS BIGINT) doanhThuThuan," +
+                " CAST(COALESCE(rev.doanhThuHang,0)+COALESCE(rev.doanhThuDV,0) AS BIGINT) tienHang," +
+                " CAST(COALESCE(h.giamGia,0)+COALESCE(h.tienDoiDiem,0) AS BIGINT) giamGia," +
+                " CAST(COALESCE(h.thanhTien,0) AS BIGINT) doanhThuThuan," +
                 " CAST(COALESCE(rev.doanhThuHang,0) AS BIGINT) doanhThuHang," +
                 " CAST(COALESCE(rev.doanhThuDV,0) AS BIGINT) doanhThuDV," +
                 " CAST(COALESCE(cost.giaVonHang,0) + COALESCE(cost.giaVonDV,0) AS BIGINT) giaVon," +
@@ -281,7 +282,7 @@ public class BaoCaoThongKeDAO {
     public DoiTraSummary getDoiTraSummary(LocalDateTime tu, LocalDateTime den) throws SQLException {
         String sql =
                 "WITH P AS (" +
-                " SELECT p.maPhieuDoiTra, p.tongTienHoan" +
+                " SELECT p.maPhieuDoiTra, p.tienHoanThucTe" +
                 " FROM PhieuDoiTra p" +
                 " WHERE p.ngayDoiTra>=? AND p.ngayDoiTra<?" +
                 ")," +
@@ -293,7 +294,7 @@ public class BaoCaoThongKeDAO {
                 ")" +
                 " SELECT COUNT(p.maPhieuDoiTra) soPhieu," +
                 " COALESCE(SUM(ct.soLuong),0) soLuong," +
-                " COALESCE(SUM(CAST(p.tongTienHoan AS BIGINT)),0) tongHoan" +
+                " COALESCE(SUM(CAST(p.tienHoanThucTe AS BIGINT)),0) tongHoan" +
                 " FROM P p" +
                 " LEFT JOIN CT ct ON ct.maPhieuDoiTra=p.maPhieuDoiTra";
         DoiTraSummary r = new DoiTraSummary();

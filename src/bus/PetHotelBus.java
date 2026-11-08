@@ -77,7 +77,7 @@ public class PetHotelBus {
     public int demSoPhongDangLuuTru() {
         int count = 0;
         for (PhongLuuTru p : layDanhSachPhong()) {
-            if (p != null && "ĐANG LƯU TRÚ".equalsIgnoreCase(p.trangThai)) {
+            if (p != null && ("ĐANG CÓ KHÁCH".equalsIgnoreCase(p.trangThai) || "ĐANG LƯU TRÚ".equalsIgnoreCase(p.trangThai))) {
                 count++;
             }
         }

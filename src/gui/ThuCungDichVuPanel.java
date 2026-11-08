@@ -39,6 +39,7 @@ public class ThuCungDichVuPanel extends JPanel {
 
     private final SpaPassBus SpaPassBus = new SpaPassBus();
     private DefaultTableModel modelHoSo;
+    private JTable tblHoSoThuCung;
     private DefaultTableModel modelSucKhoe;
     private DefaultTableModel modelKhachHang;
     private JTable tblKhachHang;
@@ -146,11 +147,11 @@ public class ThuCungDichVuPanel extends JPanel {
             public boolean isCellEditable(int row, int col) { return false; }
         };
 
-        JTable tbl = taoBangChuan(modelHoSo);
+        tblHoSoThuCung = taoBangChuan(modelHoSo);
         napDuLieuHoSoThuCung("");
 
         pnl.add(pnlToolbar, BorderLayout.NORTH);
-        pnl.add(new JScrollPane(tbl), BorderLayout.CENTER);
+        pnl.add(new JScrollPane(tblHoSoThuCung), BorderLayout.CENTER);
         return pnl;
     }
 
@@ -198,25 +199,57 @@ public class ThuCungDichVuPanel extends JPanel {
         JTextField txtTen = new JTextField();
         JTextField txtGiong = new JTextField("Mèo Anh Lông Ngắn");
         JComboBox<String> cboSex = new JComboBox<>(new String[]{"Đực", "Cái"});
-        JTextField txtChu = new JTextField("Nguyễn Văn An");
+        JTextField txtNgaySinh = new JTextField(LocalDate.now().minusMonths(6).format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        JTextField txtChu = new JTextField();
         JTextField txtSdt = new JTextField();
         JTextField txtChip = new JTextField("MC-982" + maTC.replace("TC", "") + "-VN");
 
         Object[] msg = {
                 "Mã thú cưng (Hệ thống tự sinh):", txtMaTC,
-                "Tên thú cưng:", txtTen,
-                "Giống loài:", txtGiong,
+                "Tên thú cưng (*):", txtTen,
+                "Giống loài (*):", txtGiong,
                 "Giới tính:", cboSex,
-                "Chủ sở hữu:", txtChu,
-                "Số điện thoại chủ:", txtSdt,
+                "Ngày sinh thú cưng (dd/MM/yyyy - để trống nếu chưa rõ):", txtNgaySinh,
+                "Họ tên chủ sở hữu (*):", txtChu,
+                "Số điện thoại chủ (10 số) (*):", txtSdt,
                 "Số Microchip gắn kèm:", txtChip
         };
 
         int opt = JOptionPane.showConfirmDialog(this, msg, "ĐĂNG KÝ HỒ SƠ THÚ CƯNG MỚI", JOptionPane.OK_CANCEL_OPTION);
-        if (opt == JOptionPane.OK_OPTION && !txtTen.getText().trim().isEmpty()) {
-            ThuCung tc = new ThuCung(maTC, txtTen.getText().trim(),
-                    txtGiong.getText().trim(), LocalDate.now().minusMonths(6), (String) cboSex.getSelectedItem());
-            boolean ok = controller.themThuCungTheoSdtChu(tc, txtChu.getText().trim(), txtSdt.getText().trim(), txtChip.getText().trim());
+        if (opt == JOptionPane.OK_OPTION) {
+            String ten = txtTen.getText().trim();
+            String sdt = txtSdt.getText().trim();
+            String chu = txtChu.getText().trim();
+            if (ten.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập tên thú cưng!", "Thiếu thông tin", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (chu.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập họ tên chủ sở hữu!", "Thiếu thông tin", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (!sdt.matches("^0\\d{9}$")) {
+                JOptionPane.showMessageDialog(this, "Số điện thoại chủ nuôi không hợp lệ! Vui lòng nhập đúng 10 chữ số bắt đầu bằng 0.", "Lỗi số điện thoại", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            LocalDate ngaySinh = null;
+            String nsStr = txtNgaySinh.getText().trim();
+            if (!nsStr.isEmpty()) {
+                try {
+                    ngaySinh = LocalDate.parse(nsStr, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                    if (ngaySinh.isAfter(LocalDate.now())) {
+                        JOptionPane.showMessageDialog(this, "Ngày sinh không được ở tương lai!", "Lỗi ngày sinh", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Ngày sinh phải đúng định dạng dd/MM/yyyy (ví dụ: 15/05/2023)!", "Lỗi ngày sinh", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            }
+
+            ThuCung tc = new ThuCung(maTC, ten, txtGiong.getText().trim(), ngaySinh, (String) cboSex.getSelectedItem());
+            boolean ok = controller.themThuCungTheoSdtChu(tc, chu, sdt, txtChip.getText().trim());
             if (ok) {
                 napDuLieuHoSoThuCung();
                 napDuLieuKhachHang();
@@ -342,12 +375,32 @@ public class ThuCungDichVuPanel extends JPanel {
             }
             entity.NhanVien nvKiemTra = cur;
 
+            BigDecimal canNang;
+            BigDecimal nhietDo;
+            try {
+                String cnStr = txtCanNang.getText().trim().replace(',', '.');
+                String ndStr = txtNhietDo.getText().trim().replace(',', '.');
+                canNang = new BigDecimal(cnStr);
+                nhietDo = new BigDecimal(ndStr);
+                if (canNang.compareTo(BigDecimal.ZERO) <= 0 || canNang.compareTo(new BigDecimal("200")) > 0) {
+                    JOptionPane.showMessageDialog(this, "Cân nặng phải là số dương hợp lệ (0 < cân nặng <= 200 kg)!", "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (nhietDo.compareTo(new BigDecimal("30")) < 0 || nhietDo.compareTo(new BigDecimal("45")) > 0) {
+                    JOptionPane.showMessageDialog(this, "Nhiệt độ thể trạng bất thường (phải nằm trong khoảng 30°C - 45°C)!", "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Cân nặng và nhiệt độ phải là số hợp lệ (ví dụ: 4.5 kg, 38.6 °C)!", "Lỗi định dạng số", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
             HoSoSucKhoe sk = new HoSoSucKhoe(
                     maSK,
                     selectedTC, // Truyền đúng thú cưng đã chọn (mang mã và tên thật)
                     nvKiemTra,
-                    new BigDecimal(txtCanNang.getText().trim()),
-                    new BigDecimal(txtNhietDo.getText().trim()),
+                    canNang,
+                    nhietDo,
                     txtVeRan.getText().trim(),
                     chkTiemPhong.isSelected(),
                     txtGhiChu.getText().trim(),
@@ -501,6 +554,7 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogThemKhachHang() {
+        boolean isManager = utils.UserSession.isQuanLy();
         JTextField txtMa = new JTextField(BanHangBus.sinhMaKhachHangMoi());
         txtMa.setEditable(false);
         txtMa.setFocusable(false);
@@ -508,6 +562,10 @@ public class ThuCungDichVuPanel extends JPanel {
         JTextField txtHoTen = new JTextField();
         JTextField txtSdt = new JTextField();
         JTextField txtDiem = new JTextField("0");
+        txtDiem.setEditable(isManager);
+        if (!isManager) {
+            txtDiem.setToolTipText("Chỉ Quản lý (NVQL) mới có quyền khởi tạo điểm khác 0");
+        }
         JTextField txtEmail = new JTextField(); // thêm ô nhập email để gửi thông báo lịch hẹn
         JTextField txtDiaChi = new JTextField();
 
@@ -517,7 +575,7 @@ public class ThuCungDichVuPanel extends JPanel {
                 "Số điện thoại (10 số) (*):", txtSdt,
                 "Email nhận thông báo lịch & tiêm phòng:", txtEmail,
                 "Địa chỉ liên hệ nhà khách:", txtDiaChi,
-                "Điểm tích lũy khởi tạo:", txtDiem
+                "Điểm tích lũy khởi tạo" + (isManager ? ":" : " (Chỉ xem - Quyền Quản lý mới được chỉnh):"), txtDiem
         };
 
         int opt = JOptionPane.showConfirmDialog(this, msg, "THÊM KHÁCH HÀNG THÀNH VIÊN MỚI", JOptionPane.OK_CANCEL_OPTION);
@@ -530,16 +588,22 @@ public class ThuCungDichVuPanel extends JPanel {
                 return;
             }
             int diem = 0;
-            try {
-                diem = Math.max(0, Integer.parseInt(txtDiem.getText().trim()));
-            } catch (NumberFormatException ignored) {
+            if (isManager) {
+                try {
+                    diem = Math.max(0, Integer.parseInt(txtDiem.getText().trim()));
+                } catch (NumberFormatException ignored) {}
             }
             String email = txtEmail.getText().trim();
             String diaChi = txtDiaChi.getText().trim();
-            BanHangBus.luuHoacCapNhatKhachHang(sdt, ten, diem, email, diaChi);
-            napDuLieuKhachHang();
-            JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ khách hàng [" + ten + " - " + sdt + "] thành công!",
-                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            KhachHang khSaved = BanHangBus.luuHoacCapNhatKhachHang(sdt, ten, diem, email, diaChi);
+            if (khSaved != null) {
+                napDuLieuKhachHang();
+                JOptionPane.showMessageDialog(this, "Đã lưu hồ sơ khách hàng [" + ten + " - " + sdt + "] thành công!",
+                        "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Không thể lưu hồ sơ khách hàng vào CSDL! Vui lòng kiểm tra lại kết nối.",
+                        "Lỗi lưu trữ", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -550,6 +614,7 @@ public class ThuCungDichVuPanel extends JPanel {
                     "Chưa chọn khách hàng", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        boolean isManager = utils.UserSession.isQuanLy();
         String maKH = modelKhachHang.getValueAt(row, 0).toString();
         String tenCu = modelKhachHang.getValueAt(row, 1).toString();
         String sdtCu = modelKhachHang.getValueAt(row, 2).toString();
@@ -562,6 +627,10 @@ public class ThuCungDichVuPanel extends JPanel {
         JTextField txtEmail = new JTextField(emailCu);
         JTextField txtDiaChi = new JTextField(diaChiCu);
         JTextField txtDiem = new JTextField(diemCuStr.isEmpty() ? "0" : diemCuStr);
+        txtDiem.setEditable(isManager);
+        if (!isManager) {
+            txtDiem.setToolTipText("Chỉ Quản lý (NVQL) mới có quyền điều chỉnh điểm tích lũy");
+        }
 
         Object[] msg = {
                 "Mã khách hàng: " + maKH,
@@ -569,7 +638,7 @@ public class ThuCungDichVuPanel extends JPanel {
                 "Số điện thoại (10 số) (*):", txtSdt,
                 "Email nhận thông báo (*):", txtEmail,
                 "Địa chỉ nhà khách:", txtDiaChi,
-                "Điểm tích lũy hiện có:", txtDiem
+                "Điểm tích lũy hiện có" + (isManager ? ":" : " (Chỉ xem - Quyền Quản lý mới được sửa):"), txtDiem
         };
 
         int opt = JOptionPane.showConfirmDialog(this, msg, "CẬP NHẬT THÔNG TIN KHÁCH HÀNG " + maKH, JOptionPane.OK_CANCEL_OPTION);
@@ -583,8 +652,12 @@ public class ThuCungDichVuPanel extends JPanel {
             }
             int diemMoi = 0;
             try {
-                diemMoi = Math.max(0, Integer.parseInt(txtDiem.getText().trim()));
-            } catch (NumberFormatException ignored) {
+                diemMoi = Math.max(0, Integer.parseInt(diemCuStr.isEmpty() ? "0" : diemCuStr));
+            } catch (NumberFormatException ignored) {}
+            if (isManager) {
+                try {
+                    diemMoi = Math.max(0, Integer.parseInt(txtDiem.getText().trim()));
+                } catch (NumberFormatException ignored) {}
             }
             String emailMoi = txtEmail.getText().trim();
             String diaChiMoi = txtDiaChi.getText().trim();
@@ -592,6 +665,9 @@ public class ThuCungDichVuPanel extends JPanel {
                 napDuLieuKhachHang();
                 JOptionPane.showMessageDialog(this, "Đã cập nhật thông tin khách hàng " + maKH + " thành công!",
                         "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Không thể cập nhật thông tin khách hàng vào CSDL!",
+                        "Lỗi cập nhật", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -862,7 +938,7 @@ public class ThuCungDichVuPanel extends JPanel {
         */
     }
 
-    // hàm gửi email nhắc lịch tiêm phòng dại hoặc tái chủng 7 bệnh cho chủ thú cưng
+    // hàm gửi email nhắc lịch tiêm phòng dại hoặc tái chủng 7 bệnh cho chủ thú cưng (DV11, DV12)
     private void guiEmailNhacTiemPhongThuCung() {
         List<HoSoThuCung> ds = controller.layDanhSachHoSoThuCung();
         if (ds == null || ds.isEmpty()) {
@@ -870,16 +946,32 @@ public class ThuCungDichVuPanel extends JPanel {
             return;
         }
 
-        HoSoThuCung hsChon = ds.get(0);
+        HoSoThuCung hsChon = null;
+        int row = tblHoSoThuCung != null ? tblHoSoThuCung.getSelectedRow() : -1;
+        if (row >= 0 && row < tblHoSoThuCung.getRowCount()) {
+            String maHoSo = String.valueOf(tblHoSoThuCung.getValueAt(row, 0));
+            for (HoSoThuCung h : ds) {
+                if (maHoSo.equalsIgnoreCase(h.getMaHoSo())) {
+                    hsChon = h;
+                    break;
+                }
+            }
+        }
+
+        if (hsChon == null) {
+            hsChon = ds.get(0);
+        }
+
         String tenBe = hsChon.getThuCung() != null ? hsChon.getThuCung().getTenThuCung() : "Bé cưng";
         String tenChu = hsChon.getKhachHang() != null ? hsChon.getKhachHang().getHoTen() : "Quý khách";
         String emailChu = (hsChon.getKhachHang() != null && hsChon.getKhachHang().getEmail() != null && !hsChon.getKhachHang().getEmail().isEmpty())
-                ? hsChon.getKhachHang().getEmail() : "khachhang.an@gmail.com";
+                ? hsChon.getKhachHang().getEmail() : "";
 
         String hanTaiChung = LocalDate.now().plusDays(7).format(df);
         String tieuDe = "[Mio Pet Clinic] Nhắc Lịch Tái Chủng Vaccine Định Kỳ Cho Bé " + tenBe;
+        // Bỏ mã voucher unredeemable MIOHEALTH10 (DV12)
         String html = utils.EmailThongBaoHelper.taoEmailNhacTiemPhong(
-                tenChu, tenBe, "Vaccine Phòng Dại & Mũi 7 Bệnh Tổng Hợp", hanTaiChung, "MIOHEALTH10");
+                tenChu, tenBe, "Vaccine Phòng Dại & Mũi 7 Bệnh Tổng Hợp", hanTaiChung, null);
 
         utils.EmailThongBaoHelper.moHopThoaiGuiEmail(SwingUtilities.getWindowAncestor(this), emailChu, tieuDe, html);
     }

@@ -1,11 +1,17 @@
 -- ==========================================================================================
 -- DỰ ÁN: PETSHOP MIO - HỆ THỐNG QUẢN LÝ CỬA HÀNG THÚ CƯNG (NHÓM 07)
--- SCRIPT: CleanupDuLieuMau.sql (Dọn dẹp an toàn toàn bộ dữ liệu mẫu / Seed Data)
--- THỰC THI: Đã được Người dùng xác nhận phê duyệt tại Điểm dừng 2 & 3.
--- NGUYÊN TẮC: Xóa theo đúng thứ tự phụ thuộc ngược (Reverse Foreign Key Dependency)
+-- SCRIPT: CleanupDuLieuMau.sql (Dọn dẹp an toàn dữ liệu mẫu / Seed Data - DEV/TEST ONLY)
+-- CẢNH BÁO BẢO VỆ: SCRIPT NÀY CHỈ DÀNH CHO MÔI TRƯỜNG PHÁT TRIỂN / KIỂM THỬ (DEV/TEST).
+-- TUYỆT ĐỐI KHÔNG CHẠY TRÊN DATABASE SẢN XUẤT (PRODUCTION)!
+-- HƯỚNG DẪN: Người dùng mở kết nối tới database Dev hoặc Test (ví dụ: QuanLyCuaHangThuCung_Dev) rồi chạy script.
 -- ==========================================================================================
 
-USE QuanLyCuaHangThuCung;
+-- BẢO VỆ DATABASE (KT01): Chặn thực thi nếu DB hiện tại không chứa tên Test hoặc Dev
+IF DB_NAME() NOT LIKE '%Test%' AND DB_NAME() NOT LIKE '%Dev%'
+BEGIN
+    RAISERROR(N'[KT01 - SAFETY GUARD] Script CleanupDuLieuMau chi duoc phep chay tren Database Dev/Test (ten DB phai chua "Test" hoac "Dev"). DB hien tai dang ket noi la: "%s". Lenh da bi dung lai an toan de bao ve du lieu!', 16, 1, DB_NAME());
+    RETURN;
+END
 GO
 
 SET XACT_ABORT ON;

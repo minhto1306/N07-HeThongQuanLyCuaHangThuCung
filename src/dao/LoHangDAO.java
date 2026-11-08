@@ -59,14 +59,16 @@ public class LoHangDAO {
     }
 
     /**
-     * Lấy lô hàng khả dụng theo quy tắc FEFO (Hạn sử dụng gần nhất, còn tồn kho)
+     * Lấy lô hàng khả dụng theo quy tắc FEFO (Hạn sử dụng gần nhất, còn tồn kho, chưa hết hạn).
+     * @deprecated Ưu tiên sử dụng getAvailableLotsFEFO(maSanPham) để hỗ trợ phân bổ đa lô đầy đủ.
      */
+    @Deprecated
     public LoHang getLoHangFEFOBySanPham(String maSanPham) throws SQLException {
         String sql = "SELECT TOP 1 l.*, s.tenSanPham, n.tenNhaCungCap " +
                 "FROM LoHang l " +
                 "JOIN SanPham s ON l.maSanPham = s.maSanPham " +
                 "JOIN NhaCungCap n ON l.maNhaCungCap = n.maNhaCungCap " +
-                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 " +
+                "WHERE l.maSanPham = ? AND l.soLuongTon > 0 AND l.hanSuDung >= CAST(GETDATE() AS DATE) " +
                 "ORDER BY l.hanSuDung ASC";
 
         try (Connection conn = DBConnection.getConnection();

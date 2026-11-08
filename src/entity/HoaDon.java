@@ -16,6 +16,8 @@ public class HoaDon {
     private LocalDateTime ngayLap;
     private LocalDateTime thoiGianThanhToan;
     private BigDecimal giamGia;
+    private BigDecimal tienDoiDiem;
+    private BigDecimal tienBuTruDoiTra;
     private BigDecimal thanhTien;
     private String phuongThucThanhToan; // Tiền mặt, Chuyển khoản, Thẻ
     private String trangThaiHoaDon;     // Chờ thanh toán, Đã thanh toán, Đã hủy
@@ -24,6 +26,8 @@ public class HoaDon {
     public HoaDon() {
         this.ngayLap = LocalDateTime.now();
         this.giamGia = BigDecimal.ZERO;
+        this.tienDoiDiem = BigDecimal.ZERO;
+        this.tienBuTruDoiTra = BigDecimal.ZERO;
         this.thanhTien = BigDecimal.ZERO;
         this.trangThaiHoaDon = "Chờ thanh toán";
         this.dsChiTiet = new ArrayList<>();
@@ -36,6 +40,8 @@ public class HoaDon {
         this.nhanVien = nhanVien;
         this.ngayLap = ngayLap != null ? ngayLap : LocalDateTime.now();
         this.giamGia = giamGia != null ? giamGia : BigDecimal.ZERO;
+        this.tienDoiDiem = BigDecimal.ZERO;
+        this.tienBuTruDoiTra = BigDecimal.ZERO;
         this.phuongThucThanhToan = phuongThucThanhToan;
         this.trangThaiHoaDon = trangThaiHoaDon != null ? trangThaiHoaDon : "Chờ thanh toán";
         this.dsChiTiet = new ArrayList<>();
@@ -88,6 +94,24 @@ public class HoaDon {
 
     public void setGiamGia(BigDecimal giamGia) {
         this.giamGia = giamGia != null ? giamGia : BigDecimal.ZERO;
+        capNhatTongTien();
+    }
+
+    public BigDecimal getTienDoiDiem() {
+        return tienDoiDiem;
+    }
+
+    public void setTienDoiDiem(BigDecimal tienDoiDiem) {
+        this.tienDoiDiem = tienDoiDiem != null ? tienDoiDiem : BigDecimal.ZERO;
+        capNhatTongTien();
+    }
+
+    public BigDecimal getTienBuTruDoiTra() {
+        return tienBuTruDoiTra;
+    }
+
+    public void setTienBuTruDoiTra(BigDecimal tienBuTruDoiTra) {
+        this.tienBuTruDoiTra = tienBuTruDoiTra != null ? tienBuTruDoiTra : BigDecimal.ZERO;
         capNhatTongTien();
     }
 
@@ -152,6 +176,12 @@ public class HoaDon {
         }
         if (this.giamGia != null) {
             tong = tong.subtract(this.giamGia);
+        }
+        if (this.tienDoiDiem != null) {
+            tong = tong.subtract(this.tienDoiDiem);
+        }
+        if (this.tienBuTruDoiTra != null) {
+            tong = tong.subtract(this.tienBuTruDoiTra);
         }
         // Đảm bảo không âm
         this.thanhTien = tong.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : tong;

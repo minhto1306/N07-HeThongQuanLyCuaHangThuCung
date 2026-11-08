@@ -714,7 +714,11 @@ public class DatLichHenDialog extends JDialog {
             }
             dispose();
         } else {
-            JOptionPane.showMessageDialog(this, "Có lỗi xảy ra khi lưu lịch hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            String errMsg = controller.getLastErrorMessage();
+            if (errMsg == null || errMsg.isBlank()) {
+                errMsg = "Có lỗi xảy ra khi lưu lịch hẹn!";
+            }
+            JOptionPane.showMessageDialog(this, errMsg, "Lỗi đặt lịch hẹn", JOptionPane.ERROR_MESSAGE);
         }
     }
 

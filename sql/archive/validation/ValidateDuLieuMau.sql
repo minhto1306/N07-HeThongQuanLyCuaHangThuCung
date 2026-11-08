@@ -585,11 +585,14 @@ BEGIN TRY
     SELECT @ErrCount = COUNT(*)
     FROM BangGiaoCa bgc
     LEFT JOIN NhanVien nv ON bgc.maQuanLyDuyet = nv.maNhanVien
+    LEFT JOIN TaiKhoan tk ON nv.maTaiKhoan = tk.maTaiKhoan
     WHERE bgc.trangThai = 'DA_DUYET'
       AND (
           bgc.maQuanLyDuyet IS NULL
           OR bgc.maQuanLyDuyet = bgc.maNhanVien -- Không được tự duyệt ca của mình
           OR bgc.thoiGianDuyet IS NULL
+          OR tk.vaiTro IS NULL
+          OR tk.vaiTro NOT IN (N'Quản lý', N'NVQL')
       );
 
     IF @ErrCount > 0
@@ -608,14 +611,15 @@ BEGIN TRY
     DECLARE @TongDoanhThuHoaDon BIGINT;
     DECLARE @TongDoanhThuChiTiet BIGINT;
 
+    -- Đồng bộ công thức Dashboard: Chỉ tính các hóa đơn đã thanh toán thành công
     SELECT @TongDoanhThuHoaDon = ISNULL(SUM(thanhTien), 0)
     FROM HoaDon
-    WHERE trangThaiHoaDon <> N'Đã hủy';
+    WHERE trangThaiHoaDon = N'Đã thanh toán';
 
-    SELECT @TongDoanhThuChiTiet = ISNULL(SUM(ct.thanhTien), 0) - ISNULL((SELECT SUM(giamGia) FROM HoaDon WHERE trangThaiHoaDon <> N'Đã hủy'), 0)
+    SELECT @TongDoanhThuChiTiet = ISNULL(SUM(ct.thanhTien), 0) - ISNULL((SELECT SUM(giamGia) FROM HoaDon WHERE trangThaiHoaDon = N'Đã thanh toán'), 0)
     FROM ChiTietHoaDon ct
     JOIN HoaDon hd ON ct.maHoaDon = hd.maHoaDon
-    WHERE hd.trangThaiHoaDon <> N'Đã hủy';
+    WHERE hd.trangThaiHoaDon = N'Đã thanh toán';
 
     IF @TongDoanhThuHoaDon <> @TongDoanhThuChiTiet
     BEGIN

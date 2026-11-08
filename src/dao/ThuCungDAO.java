@@ -191,46 +191,34 @@ public class ThuCungDAO {
     }
 
     /**
-     * Xóa thú cưng kèm hồ sơ sức khỏe và hồ sơ nuôi (Transaction)
+     * Ngừng theo dõi thú cưng (Soft Delete) để bảo toàn lịch sử tiêm phòng, khám sức khỏe và hóa đơn dịch vụ (DV06)
      */
     public boolean deleteThuCung(String maThuCung) throws SQLException {
-        String sqlSK = "DELETE FROM HoSoSucKhoe WHERE maThuCung = ?";
-        String sqlHS = "DELETE FROM HoSoThuCung WHERE maThuCung = ?";
+        String sqlSoftDelete = "UPDATE HoSoThuCung SET trangThaiNuoi = N'NGỪNG THEO DÕI' WHERE maThuCung = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sqlSoftDelete)) {
+            ps.setString(1, maThuCung);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                return true;
+            }
+        }
+        // Trường hợp thú cưng chưa có HoSoThuCung, kiểm tra xem có ràng buộc FK trong dịch vụ/lịch hẹn không
+        String sqlCheckFK = "SELECT COUNT(*) FROM ChiTietDichVu WHERE maThuCung = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement psCheck = conn.prepareStatement(sqlCheckFK)) {
+            psCheck.setString(1, maThuCung);
+            try (ResultSet rs = psCheck.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    throw new SQLException("Thú cưng [" + maThuCung + "] đã có lịch sử dịch vụ hóa đơn, không thể xóa để bảo toàn dữ liệu tài chính!");
+                }
+            }
+        }
         String sqlTC = "DELETE FROM ThuCung WHERE maThuCung = ?";
-
-        Connection conn = null;
-        try {
-            conn = DBConnection.getConnection();
-            conn.setAutoCommit(false);
-
-            try (PreparedStatement ps1 = conn.prepareStatement(sqlSK)) {
-                ps1.setString(1, maThuCung);
-                ps1.executeUpdate();
-            }
-
-            try (PreparedStatement ps2 = conn.prepareStatement(sqlHS)) {
-                ps2.setString(1, maThuCung);
-                ps2.executeUpdate();
-            }
-
-            int rows;
-            try (PreparedStatement ps3 = conn.prepareStatement(sqlTC)) {
-                ps3.setString(1, maThuCung);
-                rows = ps3.executeUpdate();
-            }
-
-            conn.commit();
-            return rows > 0;
-        } catch (SQLException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ignored) {}
-            }
-            throw e;
-        } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
-                try { conn.close(); } catch (SQLException ignored) {}
-            }
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sqlTC)) {
+            ps.setString(1, maThuCung);
+            return ps.executeUpdate() > 0;
         }
     }
 

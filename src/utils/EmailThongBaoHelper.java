@@ -25,15 +25,14 @@ public class EmailThongBaoHelper {
     private static String smtpPassword = "";
     private static String senderDisplayName = "Mio Pet Shop";
 
-    private static final String DEFAULT_USER_B64 = "bGUxNDIwNDQ1QGdtYWlsLmNvbQ==";
-    private static final String DEFAULT_PASS_B64 = "ampqbW10Zm12YXhoamlyZA==";
-
     static {
         napCauHinh();
     }
 
     public static synchronized void napCauHinh() {
-        File f = new File("config/mail.properties");
+        // 1. Đọc từ file local nếu có (bị gitignore), nếu không đọc từ config/mail.properties
+        File fLocal = new File("config/mail.local.properties");
+        File f = fLocal.exists() ? fLocal : new File("config/mail.properties");
         if (f.exists()) {
             try (InputStream in = new FileInputStream(f)) {
                 Properties p = new Properties();
@@ -41,34 +40,43 @@ public class EmailThongBaoHelper {
                 if (p.getProperty("mail.smtp.host") != null) smtpHost = p.getProperty("mail.smtp.host").trim();
                 if (p.getProperty("mail.smtp.port") != null) smtpPort = Integer.parseInt(p.getProperty("mail.smtp.port").trim());
                 if (p.getProperty("mail.smtp.username") != null && !p.getProperty("mail.smtp.username").isBlank()) {
-                    smtpUsername = p.getProperty("mail.smtp.username").trim();
+                    String u = p.getProperty("mail.smtp.username").trim();
+                    if (!u.contains("your_email") && !u.equalsIgnoreCase("placeholder")) {
+                        smtpUsername = u;
+                    }
                 }
                 if (p.getProperty("mail.smtp.password") != null && !p.getProperty("mail.smtp.password").isBlank()) {
-                    smtpPassword = p.getProperty("mail.smtp.password").trim().replaceAll("\\s+", "");
+                    String pwd = p.getProperty("mail.smtp.password").trim().replaceAll("\\s+", "");
+                    if (!pwd.contains("your_") && !pwd.equalsIgnoreCase("placeholder")) {
+                        smtpPassword = pwd;
+                    }
                 }
                 if (p.getProperty("mail.smtp.senderName") != null) senderDisplayName = p.getProperty("mail.smtp.senderName").trim();
             } catch (Exception ex) {
-                System.err.println("[EmailThongBaoHelper] Lỗi đọc config/mail.properties: " + ex.getMessage());
+                System.err.println("[EmailThongBaoHelper] Lỗi đọc config mail: " + ex.getMessage());
             }
         }
-        // Dự phòng mặc định: Nếu chưa điền cấu hình riêng, tự động dùng tài khoản đã kích hoạt
-        if (smtpUsername == null || smtpUsername.isBlank()) {
-            try {
-                smtpUsername = new String(Base64.getDecoder().decode(DEFAULT_USER_B64), StandardCharsets.UTF_8);
-            } catch (Exception ignored) {}
-        }
-        if (smtpPassword == null || smtpPassword.isBlank()) {
-            try {
-                smtpPassword = new String(Base64.getDecoder().decode(DEFAULT_PASS_B64), StandardCharsets.UTF_8);
-            } catch (Exception ignored) {}
+
+        // 2. Cho phép ghi đè từ biến môi trường (Environment Variables) an toàn
+        String envUser = System.getenv("MAIL_SMTP_USERNAME");
+        String envPass = System.getenv("MAIL_SMTP_PASSWORD");
+        String envHost = System.getenv("MAIL_SMTP_HOST");
+        String envPort = System.getenv("MAIL_SMTP_PORT");
+        if (envUser != null && !envUser.isBlank()) smtpUsername = envUser.trim();
+        if (envPass != null && !envPass.isBlank()) smtpPassword = envPass.trim().replaceAll("\\s+", "");
+        if (envHost != null && !envHost.isBlank()) smtpHost = envHost.trim();
+        if (envPort != null && !envPort.isBlank()) {
+            try { smtpPort = Integer.parseInt(envPort.trim()); } catch (NumberFormatException ignored) {}
         }
     }
 
-    /** Kiểm tra xem đã có tài khoản gửi email trong config/mail.properties chưa. */
+    /** Kiểm tra xem đã có tài khoản gửi email trong config/mail.properties hoặc biến môi trường chưa. */
     public static boolean isSmtpConfigured() {
         napCauHinh();
         return smtpUsername != null && !smtpUsername.isBlank()
-                && smtpPassword != null && !smtpPassword.isBlank();
+                && !smtpUsername.contains("your_")
+                && smtpPassword != null && !smtpPassword.isBlank()
+                && !smtpPassword.contains("your_");
     }
 
     /** Gửi email thật qua giao thức SMTP SSL. */
@@ -267,6 +275,13 @@ public class EmailThongBaoHelper {
     // 4. Mẫu Email Cảnh báo Tái chủng Vaccine & Sổ giun (kèm Mã Giảm Giá 10%)
     public static String taoEmailNhacTiemPhong(String tenKhach, String tenThuCung, String tenMuiTiem,
                                               String ngayHetHan, String maVoucher) {
+        String voucherHtml = (maVoucher != null && !maVoucher.isBlank())
+                ? ("  <div style='background-color: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 6px; padding: 12px; text-align: center; margin: 15px 0;'>"
+                + "    <span style='font-size: 12px; color: #2e7d32; font-weight: bold;'>🎁 TẶNG BẠN VOUCHER ƯU ĐÃI:</span><br/>"
+                + "    <span style='display: inline-block; margin-top: 6px; padding: 6px 14px; background-color: #2e7d32; color: #fff; font-weight: bold; font-size: 15px; border-radius: 4px; letter-spacing: 1px;'>" + maVoucher + "</span>"
+                + "  </div>")
+                : "";
+
         return "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ffcc80; border-radius: 8px; overflow: hidden;'>"
                 + "<div style='background-color: #ef6c00; color: #ffffff; padding: 18px 20px; text-align: center;'>"
                 + "  <h2 style='margin: 0; font-size: 19px;'>💉 THÔNG BÁO TÁI CHỦNG VACCINE ĐỊNH KỲ</h2>"
@@ -280,10 +295,7 @@ public class EmailThongBaoHelper {
                 + "    <p style='margin: 0; font-size: 14px;'>📅 <b>Hạn tái chủng đề xuất:</b> <span style='font-weight: bold;'>" + ngayHetHan + "</span></p>"
                 + "  </div>"
                 + "  <p style='font-size: 13px;'>Việc tiêm phòng đúng hạn giúp bé duy trì kháng thể bảo vệ tối ưu trước các bệnh truyền nhiễm nguy hiểm (như Care, Parvo, Dại). Đừng để trễ hạn bạn nhé!</p>"
-                + "  <div style='background-color: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 6px; padding: 12px; text-align: center; margin: 15px 0;'>"
-                + "    <span style='font-size: 12px; color: #2e7d32; font-weight: bold;'>🎁 TẶNG BẠN VOUCHER ƯU ĐÃI 10% DỊCH VỤ VACCINE & SPA:</span><br/>"
-                + "    <span style='display: inline-block; margin-top: 6px; padding: 6px 14px; background-color: #2e7d32; color: #fff; font-weight: bold; font-size: 15px; border-radius: 4px; letter-spacing: 1px;'>" + maVoucher + "</span>"
-                + "  </div>"
+                + voucherHtml
                 + "  <p style='font-size: 13px;'>Đưa bé ghé Mio ngay hoặc gọi <b>0988.111.222</b> để đặt lịch trước và giữ phòng tiêm cho bé nhé!</p>"
                 + "</div>"
                 + "<div style='background-color: #fafafa; padding: 12px; text-align: center; font-size: 11px; color: #888; border-top: 1px solid #eee;'>"
