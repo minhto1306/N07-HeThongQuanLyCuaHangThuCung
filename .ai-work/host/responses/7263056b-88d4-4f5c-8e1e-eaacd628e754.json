@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "result": {
+    "id": "setup-context-probe",
+    "planId": "setup-smoke-v1",
+    "planDigest": "4b06c1603d74a6a9949993f68a122f7b3b9cd712eba30622fac9c82781125e46",
+    "attempt": 1,
+    "repairs": 0,
+    "createdAt": "2026-11-07T17:50:36.741Z",
+    "status": "running",
+    "ownerPid": 38212,
+    "startedAt": "2026-11-07T17:50:36.742Z",
+    "model": "gemini-3.8-flash-medium",
+    "error": null,
+    "updatedAt": "2026-11-07T17:50:37.013Z"
+  }
+}

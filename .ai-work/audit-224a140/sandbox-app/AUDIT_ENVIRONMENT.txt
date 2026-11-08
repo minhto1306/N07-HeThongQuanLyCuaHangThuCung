@@ -1,0 +1,3 @@
+SYNTHETIC TEST ONLY
+Database=MioAudit_224a140_20261108
+Email/payment configuration absent.

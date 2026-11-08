@@ -1,4 +1,4 @@
-﻿-- ======================================================================================
+-- ======================================================================================
 -- ĐỒ ÁN: HỆ THỐNG QUẢN LÝ CỬA HÀNG THÚ CƯNG MIO (PET SHOP MANAGEMENT SYSTEM)
 -- MÔN HỌC: PHÁT TRIỂN PHẦN MỀM / CÔNG NGHỆ JAVA
 -- ĐƠN VỊ: KHOA CÔNG NGHỆ THÔNG TIN - ĐẠI HỌC CÔNG NGHIỆP TP.HCM (IUH) - NHÓM 07
@@ -348,6 +348,7 @@ CREATE TABLE ChiTietDoiTra (
     soLuongDoiTra INT NOT NULL DEFAULT 1,
     tienHoanLai DECIMAL(18,2) NOT NULL DEFAULT 0,
     soLo NVARCHAR(50) NULL,
+    soLuongCoSoTra INT NULL,
     soLuongCoSoHoan INT NOT NULL DEFAULT 0,
     soLuong INT NULL,
     donGiaHoan DECIMAL(18,2) NULL,
@@ -406,6 +407,7 @@ CREATE TABLE LichSuSuDungSpaPass (
     maHoaDon NVARCHAR(20) NOT NULL,
     maNhanVien NVARCHAR(20) NOT NULL,
     thoiGianSuDung DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    soLuot INT NOT NULL DEFAULT 1,
     ghiChu NVARCHAR(255),
     CONSTRAINT FK_LSSpaPass_The FOREIGN KEY (maThe) REFERENCES TheSpaPass(maThe),
     CONSTRAINT FK_LSSpaPass_HoaDon FOREIGN KEY (maHoaDon) REFERENCES HoaDon(maHoaDon),
@@ -436,7 +438,7 @@ CREATE TABLE LichSuLuuTru (
 GO
 
 CREATE UNIQUE INDEX UQ_LichSuLuuTru_HoaDon
-ON LichSuLuuTru(maHoaDon) WHERE maHoaDon IS NOT NULL;
+ON LichSuLuuTru(maHoaDon, maPhong) WHERE maHoaDon IS NOT NULL;
 GO
 
 PRINT N'-> Hoàn thành tạo cấu trúc bảng (Schema) thành công!';

@@ -363,7 +363,7 @@ public class SanPhamDAO {
     public List<Object[]> layDanhSachSanPhamCatalogPOS() throws SQLException {
         List<Object[]> list = new ArrayList<>();
         String sqlSP = "SELECT sp.maSanPham, sp.tenSanPham, sp.moTa, ISNULL(sp.maVach, '') AS maVach, qd.maQuyDoi, qd.giaBan, dvt.tenDonVi, qd.tyLeQuyDoi AS tyLe, " +
-                "       ISNULL((SELECT SUM(soLuongTon) FROM LoHang WHERE maSanPham = sp.maSanPham AND soLuongTon > 0), 0) AS tonKhoCoSo " +
+                "       ISNULL((SELECT SUM(soLuongTon) FROM LoHang WHERE maSanPham = sp.maSanPham AND soLuongTon > 0 AND hanSuDung >= CAST(GETDATE() AS DATE)), 0) AS tonKhoCoSo " +
                 "FROM SanPham sp " +
                 "INNER JOIN QuyDoiDonVi qd ON sp.maSanPham = qd.maSanPham " +
                 "INNER JOIN DonViTinh dvt ON qd.maDonVi = dvt.maDonVi " +

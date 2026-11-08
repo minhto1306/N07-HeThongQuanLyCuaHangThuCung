@@ -1,0 +1,9 @@
+COUNTS products=5054 lots=15055 customers=5051 invoices=20459
+products ms=363 rows=5054
+lots ms=457 rows=15055
+customers ms=280 rows=5051
+invoice_history ms=1047 rows=20459
+report_revenue ms=587 rows=20456
+report_top ms=378 rows=5052
+report_inventory ms=573 rows=5054
+POS_static_history_authenticated ms=1570

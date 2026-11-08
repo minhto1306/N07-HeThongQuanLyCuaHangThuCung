@@ -1,0 +1,28 @@
+{
+  "id": "setup-document-smoke",
+  "planId": "setup-smoke-v1",
+  "planDigest": "4b06c1603d74a6a9949993f68a122f7b3b9cd712eba30622fac9c82781125e46",
+  "attempt": 1,
+  "repairs": 0,
+  "createdAt": "2026-11-07T17:59:33.225Z",
+  "status": "accepted",
+  "ownerPid": 33248,
+  "startedAt": "2026-11-07T17:59:33.226Z",
+  "model": "gemini-3.8-flash-medium",
+  "error": null,
+  "updatedAt": "2026-11-07T18:01:32.617Z",
+  "sourceChanges": [],
+  "proposalDigest": "58cfb3483f774988ed22ba917e009e0f7af970b2d8daeb6799b67961ee5a0d76",
+  "checks": [
+    {
+      "kind": "contains",
+      "path": "docs/ai-context/worker-smoke.md",
+      "text": "MIO_WORKER_SMOKE_OK",
+      "passed": true
+    }
+  ],
+  "conversationId": "cdf0ce4a-2ff2-4c45-a536-7aaf13ebbf6c",
+  "finishedAt": "2026-11-07T18:00:32.728Z",
+  "reviewEvidence": "Codex read the complete proposed file and generated diff. Exactly one permitted documentation file is proposed, with exact content '# Worker smoke\\n\\nMIO_WORKER_SMOKE_OK\\n'; delete=false; no blockers; no source changes during run. The independent contains check passed on candidate. This is a smoke marker only, not an application change or an assertion of DB/UI test success. Reviewed proposal digest matches current state.",
+  "acceptedAt": "2026-11-07T18:01:32.617Z"
+}

@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "result": {
+    "id": "repair-20261108-compact-v1",
+    "digest": "fea0ce91aae719815f3f33a3748a40209cd32364f8b6c79b8cf31e335f18f8a2",
+    "taskIds": [
+      "agy-patch-jdbc-close-20261108",
+      "agy-patch-reports-20261108",
+      "agy-patch-warehouse-validation-20261108",
+      "agy-patch-id-reservation-20261108",
+      "agy-patch-pos-integrity-20261108",
+      "agy-patch-hotel-spa-20261108",
+      "agy-patch-profile-points-20261108"
+    ]
+  }
+}

@@ -64,8 +64,16 @@ IF COL_LENGTH(N'dbo.LichSuLuuTru', N'trangThaiThanhToan') IS NULL
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_LichSuLuuTru_HoaDon')
     EXEC(N'ALTER TABLE dbo.LichSuLuuTru ADD CONSTRAINT FK_LichSuLuuTru_HoaDon FOREIGN KEY (maHoaDon) REFERENCES dbo.HoaDon(maHoaDon);');
 
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.LichSuLuuTru') AND name=N'UQ_LichSuLuuTru_HoaDon')
+   AND NOT EXISTS (
+       SELECT 1 FROM sys.indexes i
+       JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id
+       JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id
+       WHERE i.object_id=OBJECT_ID(N'dbo.LichSuLuuTru') AND i.name=N'UQ_LichSuLuuTru_HoaDon'
+         AND ic.key_ordinal=2 AND c.name=N'maPhong')
+    EXEC(N'DROP INDEX UQ_LichSuLuuTru_HoaDon ON dbo.LichSuLuuTru;');
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.LichSuLuuTru') AND name=N'UQ_LichSuLuuTru_HoaDon')
-    EXEC(N'CREATE UNIQUE INDEX UQ_LichSuLuuTru_HoaDon ON dbo.LichSuLuuTru(maHoaDon) WHERE maHoaDon IS NOT NULL;');
+    EXEC(N'CREATE UNIQUE INDEX UQ_LichSuLuuTru_HoaDon ON dbo.LichSuLuuTru(maHoaDon, maPhong) WHERE maHoaDon IS NOT NULL;');
 
 IF COL_LENGTH(N'dbo.TheSpaPass', N'maHoaDonKichHoat') IS NULL
     EXEC(N'ALTER TABLE dbo.TheSpaPass ADD maHoaDonKichHoat NVARCHAR(20) NULL;');

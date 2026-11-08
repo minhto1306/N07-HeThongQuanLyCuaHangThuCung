@@ -1,0 +1,55 @@
+{
+  "id": "agy-patch-simple-batch-20261108",
+  "readOnly": false,
+  "sqlApproved": true,
+  "goal": "Provide compact minimal patches for four independent audit repair packages: reports, warehouse validation, shared ID reservation and customer profile points.",
+  "design": "Correct top-selling base quantities, damaged-return XNT and inclusive calendar-day report boundaries.\nIn getTopBanChay aggregate ChiTietXuatLo by maChiTiet once and use SUM of that base quantity for product lines, ct.soLuong for services; avoid multiplying money by joins, retain ct.maSanPham/dichVu mapping and output DTO. XNT must use COALESCE(ct.soLuongCoSoHoan,0) for physical returned stock, not NULLIF fallback; 0 means damaged/no restock and is valid. ThongKeBus LocalDate overloads use denNgay.plusDays(1).atStartOfDay with existing exclusive DAO end. Also daily internal report methods use tomorrow start. This fixes DATE staff shift filter automatically. Do not silently change LocalDateTime overload end semantics.\nOUTPUT EFFICIENCY: Do not return replacement source files. Return ONE allowed JSON artifact containing exact compact edit proposals. Codex will review, accept the artifact, then separately apply edits and compile/test. Artifact format {\"version\":1,\"changes\":[{\"path\":\"src/...\",\"baseSha256\":\"...\",\"edits\":[{\"before\":\"EXACT UNIQUE existing text\",\"after\":\"replacement\",\"expectedCount\":1}]}]}. New files use {\"path\":\"sql/...\",\"baseSha256\":null,\"content\":\"complete new file\"}. Existing file matching is normalized LF, exact original substrings; include enough context for uniqueness. All edits in a file are applied in order. Only target the original allowed source paths below. No commands or executable patch tools. No claims of compilation or testing. Keep prose short.\nOriginal target hashes (raw bytes):\nsrc/dao/BaoCaoThongKeDAO.java: 44645a8cfb3199a9af25d6fc7bc3816d8abe9ff4a5c8e73d148d929c439d72d1\nsrc/bus/ThongKeBus.java: 52292e026afbd43ec78e71e236f0d4a8b376138d2382987a6d3172470cfaf169\n\nReject invalid stock adjustments and prevent successful UI notices after failed unit/pack persistence.\nLoHangDAO.truTonKho and congTonKho reject nonpositive quantities before opening DB; capNhatSoLuongTon rejects negative new quantity. getLoHangFEFOBySanPham must not return expired/out-of-stock fallback as available sale stock; use HSD>=today in available selection and return null if no available lot. In ThietLapQuyDoiDialog check boolean results of khoBus.themDonViTinh and themQuyDoi, throw/display existing error path and do not add RAM row or success message on false. Keep APIs, current unit creation flow and all UI layout.\nOUTPUT EFFICIENCY: Do not return replacement source files. Return ONE allowed JSON artifact containing exact compact edit proposals. Codex will review, accept the artifact, then separately apply edits and compile/test. Artifact format {\"version\":1,\"changes\":[{\"path\":\"src/...\",\"baseSha256\":\"...\",\"edits\":[{\"before\":\"EXACT UNIQUE existing text\",\"after\":\"replacement\",\"expectedCount\":1}]}]}. New files use {\"path\":\"sql/...\",\"baseSha256\":null,\"content\":\"complete new file\"}. Existing file matching is normalized LF, exact original substrings; include enough context for uniqueness. All edits in a file are applied in order. Only target the original allowed source paths below. No commands or executable patch tools. No claims of compilation or testing. Keep prose short.\nOriginal target hashes (raw bytes):\nsrc/dao/LoHangDAO.java: 598638308a6a14ad3480ef9710a23ee2ed59c0c2944151877e743dcd8ab8b722\nsrc/gui/ThietLapQuyDoiDialog.java: 1327210197f804f1cf6e1b2338021ddae42e34f222012c6c5453b76def0d0151\n\nReserve incrementing business IDs safely across separate Java processes, not only within a JVM.\nAdd idempotent migration sql/20261108_MaTuSinhSequence.sql: dbo.MaTuSinhSequence(prefix NVARCHAR(80) PK,giaTri BIGINT NOT NULL CHECK>=0). No USE, DROP DATABASE, seed deletion or credentials. In MaTuSinhHelper replace numeric MAX/cache allocation for both generic and daily IDs with same-connection JDBC transaction SERIALIZABLE: SELECT giaTri with UPDLOCK,HOLDLOCK by prefix; if absent initialize by MAX TRY_CONVERT existing entity suffix on that same connection; next=max+1; insert/update reserved value and commit before return. Rollback and close on any failure; if table absent throw clear IllegalStateException requesting migration, never silently fall back. Retry a SQL deadlock at most 3 times. Existing prefix/format/public signatures remain; gaps are acceptable and never reused. No int overflow: validate next<=Integer.MAX_VALUE. sinhMaTheSpaPass must use same reservation mechanism with PASS-phone- prefix and actual max suffix, replacing COUNT and silent error fallback. sinhMaPhanCong may keep temporary cache because actual DAO uses IDENTITY. DBConnection stays unchanged. Prefix/table/column are private internal constants, SQL values bound, not arbitrary user SQL.\nOUTPUT EFFICIENCY: Do not return replacement source files. Return ONE allowed JSON artifact containing exact compact edit proposals. Codex will review, accept the artifact, then separately apply edits and compile/test. Artifact format {\"version\":1,\"changes\":[{\"path\":\"src/...\",\"baseSha256\":\"...\",\"edits\":[{\"before\":\"EXACT UNIQUE existing text\",\"after\":\"replacement\",\"expectedCount\":1}]}]}. New files use {\"path\":\"sql/...\",\"baseSha256\":null,\"content\":\"complete new file\"}. Existing file matching is normalized LF, exact original substrings; include enough context for uniqueness. All edits in a file are applied in order. Only target the original allowed source paths below. No commands or executable patch tools. No claims of compilation or testing. Keep prose short.\nOriginal target hashes (raw bytes):\nsrc/utils/MaTuSinhHelper.java: 3d765ed6f706799a01304b4d7ef2cdd91924723597126d6bb395b61e0d30615a\nsql/20261108_MaTuSinhSequence.sql: NEW FILE\n\nSaving customer contact/profile must not overwrite loyalty points, even with stale client data or cashier role.\nAdd KhachHangDAO.updateProfile(KhachHang) which updates name/phone/email/address ONLY, preserving SQL diemTichLuy (include fallback legacy columns if existing DAO already supports). Generic BanHangBus.luuHoacCapNhatKhachHang overloads always use updateProfile for existing customer, ignore diemMoi; new profile starts at 0 points. Explicit capNhatThongTinKhachHang methods permit point edits ONLY when UserSession.isQuanLy; nonmanager profile saves use updateProfile and do not mutate cached points. KhachHangDAO.update (legacy method that writes points) must itself preserve points via updateProfile for nonmanagers, to prevent callers bypassing BUS. Update RAM only after SQL success; re-fetch persisted points or retain authoritative DB value, no stale write-back. Do not alter atomic increment/decrement used by POS. Preserve public signatures and manager manual adjustment capability.\nOUTPUT EFFICIENCY: Do not return replacement source files. Return ONE allowed JSON artifact containing exact compact edit proposals. Codex will review, accept the artifact, then separately apply edits and compile/test. Artifact format {\"version\":1,\"changes\":[{\"path\":\"src/...\",\"baseSha256\":\"...\",\"edits\":[{\"before\":\"EXACT UNIQUE existing text\",\"after\":\"replacement\",\"expectedCount\":1}]}]}. New files use {\"path\":\"sql/...\",\"baseSha256\":null,\"content\":\"complete new file\"}. Existing file matching is normalized LF, exact original substrings; include enough context for uniqueness. All edits in a file are applied in order. Only target the original allowed source paths below. No commands or executable patch tools. No claims of compilation or testing. Keep prose short.\nOriginal target hashes (raw bytes):\nsrc/dao/KhachHangDAO.java: 9594a90538f33e85b2544d84535c058e2e50005c67e730d7870933a03fb4a6dc\nsrc/bus/BanHangBus.java: cbf8f64df574998c0c32b2d96e4f673d7fd1d87745fddf71385a298d9e10b1da\nReturn all four packages in ONE artifact docs/ai-context/patches/agy-patch-simple-batch-20261108.json. Existing target paths and raw hashes are specified per package. Do not return four different artifact files. Limit output to changed methods/expressions using exact short before/after edits; no full-file source copies.",
+  "askWhen": "Return blockers for genuinely missing context. No commands, DB, web, Git or external tools.",
+  "steps": [
+    "Read all four independent designs and selected code",
+    "Return only the one compact patch artifact"
+  ],
+  "acceptance": [
+    "One 10-base-unit pack reports quantity 10",
+    "Damaged return amount 0 adds no stock in XNT",
+    "Day reports include last fractional second and staff shifts on end day",
+    "No revenue multiplication",
+    "Negative/nonpositive stock increments cannot change stock",
+    "No expired/unavailable fallback presented as FEFO sale lot",
+    "False persistence result never updates RAM or shows success",
+    "Compiles Java 17 with existing APIs",
+    "Preserves rollback on validation/SQL failure",
+    "Matches the described regression scenarios",
+    "Compiles Java 17 with existing APIs",
+    "Preserves rollback on validation/SQL failure",
+    "Matches the described regression scenarios"
+  ],
+  "allowedFiles": [
+    "docs/ai-context/patches/agy-patch-simple-batch-20261108.json"
+  ],
+  "contextFiles": [
+    "src/dao/BaoCaoThongKeDAO.java",
+    "src/bus/ThongKeBus.java",
+    "docs/ai-context/REPAIR_AUTHORIZATION_20261108.md",
+    "sql/HeThongQuanLyCuaHangThuCung.sql",
+    "src/dao/LoHangDAO.java",
+    "src/gui/ThietLapQuyDoiDialog.java",
+    "src/bus/KhoLoHangBus.java",
+    "src/utils/MaTuSinhHelper.java",
+    "src/dao/KhachHangDAO.java",
+    "src/bus/BanHangBus.java",
+    "src/entity/KhachHang.java",
+    "src/utils/UserSession.java"
+  ],
+  "dependencies": [],
+  "checks": [
+    {
+      "kind": "json-parse",
+      "path": "docs/ai-context/patches/agy-patch-simple-batch-20261108.json"
+    },
+    {
+      "kind": "manual",
+      "description": "Codex checks each exact edit and hash before accepting artifact, then applies, compiles and regression-tests separately."
+    }
+  ]
+}

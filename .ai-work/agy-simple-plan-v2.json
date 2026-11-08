@@ -1,0 +1,150 @@
+{
+  "id": "repair-20261108-simple-v2",
+  "summary": "User-requested verified audit corrections: AGY handles mechanical auth, JDBC cleanup, report expressions and warehouse guards; Codex reviews and integrates module commits.",
+  "approval": "Direct user instruction on 2026-11-08 authorizes real AGY reading/simple implementation followed by correcting verified audit defects and pushing per existing member plan. These scoped tasks implement that requested repair; production DB migration is excluded.",
+  "tasks": [
+    {
+      "readOnly": false,
+      "askWhen": "If source context is insufficient or changing public APIs/architecture seems necessary, return blockers instead of inventing code. No Git, shell, databases, email or web.",
+      "dependencies": [],
+      "checks": [
+        {
+          "kind": "java-compile"
+        },
+        {
+          "kind": "manual",
+          "description": "Codex reads diff and runs targeted regression against isolated test DB"
+        }
+      ],
+      "id": "agy-fix-auth-20261108",
+      "goal": "Reject recovery with wrong email; send OTP only to registered address; require 6-character password consistently.",
+      "design": "Remove phone-only fallback in DangNhapBus.xacThucQuenMatKhau. Require nonblank normalized phone/email, exact registered phone+email match and active account linked employee. Codex will separately update LoginForm destination; it is read-only context here because the source redactor flags variable names as credential-like. Do not propose LoginForm. Preserve existing expiry and SecureRandom OTP. Change password minimum from 4 to 6 in BUS and MainDashboard and matching messages; do not touch unrelated layout or login behavior.",
+      "steps": [
+        "Apply minimal recovery/password changes in three allowed files",
+        "Return only changed full files, concise observations and no execution claims"
+      ],
+      "acceptance": [
+        "Wrong email/blank email rejected; active exact match still works",
+        "OTP destination comes from linked account",
+        "Password minimum consistent 6"
+      ],
+      "allowedFiles": [
+        "src/bus/DangNhapBus.java",
+        "src/gui/MainDashboard.java"
+      ],
+      "contextFiles": [
+        "docs/ai-context/REPAIR_AUTHORIZATION_20261108.md",
+        "src/dao/TaiKhoanDAO.java",
+        "src/entity/TaiKhoan.java",
+        "src/gui/LoginForm.java"
+      ]
+    },
+    {
+      "readOnly": false,
+      "askWhen": "If source context is insufficient or changing public APIs/architecture seems necessary, return blockers instead of inventing code. No Git, shell, databases, email or web.",
+      "dependencies": [],
+      "checks": [
+        {
+          "kind": "java-compile"
+        },
+        {
+          "kind": "manual",
+          "description": "Codex reads diff and runs targeted regression against isolated test DB"
+        }
+      ],
+      "id": "agy-fix-jdbc-close-20261108",
+      "goal": "Close all JDBC connections in seven manual transaction DAO mutations without changing business behavior.",
+      "design": "Target ThuCungDAO insert/delete, NhanVienDAO insert/update/delete, SanPhamDAO delete, LichHenDAO delete. In finally reset autocommit guarded separately, then always close connection guarded independently even if reset throws. Preserve rollback and exception propagation. Check all manual connection finally blocks in these four allowed files for same cleanup hazard and fix without redesigning APIs.",
+      "steps": [
+        "Inspect transaction cleanup in four DAOs",
+        "Add independent close in finally blocks; preserve existing SQL and return values",
+        "Return minimal full-file replacements"
+      ],
+      "acceptance": [
+        "No manually opened Connection in these transaction methods escapes cleanup",
+        "close still occurs if setAutoCommit throws",
+        "No business logic changes"
+      ],
+      "allowedFiles": [
+        "src/dao/ThuCungDAO.java",
+        "src/dao/NhanVienDAO.java",
+        "src/dao/SanPhamDAO.java",
+        "src/dao/LichHenDAO.java"
+      ],
+      "contextFiles": [
+        "docs/ai-context/REPAIR_AUTHORIZATION_20261108.md"
+      ]
+    },
+    {
+      "readOnly": false,
+      "askWhen": "If source context is insufficient or changing public APIs/architecture seems necessary, return blockers instead of inventing code. No Git, shell, databases, email or web.",
+      "dependencies": [],
+      "checks": [
+        {
+          "kind": "java-compile"
+        },
+        {
+          "kind": "manual",
+          "description": "Codex reads diff and runs targeted regression against isolated test DB"
+        }
+      ],
+      "id": "agy-fix-reports-20261108",
+      "goal": "Correct top-selling base quantities, damaged-return XNT and inclusive calendar-day report boundaries.",
+      "design": "In getTopBanChay aggregate ChiTietXuatLo by maChiTiet once and use SUM of that base quantity for product lines, ct.soLuong for services; avoid multiplying money by joins, retain ct.maSanPham/dichVu mapping and output DTO. XNT must use COALESCE(ct.soLuongCoSoHoan,0) for physical returned stock, not NULLIF fallback; 0 means damaged/no restock and is valid. ThongKeBus LocalDate overloads use denNgay.plusDays(1).atStartOfDay with existing exclusive DAO end. Also daily internal report methods use tomorrow start. This fixes DATE staff shift filter automatically. Do not silently change LocalDateTime overload end semantics.",
+      "steps": [
+        "Patch only report SQL aggregates and LocalDate day endpoints",
+        "Preserve existing DTO/public signatures and monetary query structure",
+        "Return concise explanation of changed expressions"
+      ],
+      "acceptance": [
+        "One 10-base-unit pack reports quantity 10",
+        "Damaged return amount 0 adds no stock in XNT",
+        "Day reports include last fractional second and staff shifts on end day",
+        "No revenue multiplication"
+      ],
+      "allowedFiles": [
+        "src/dao/BaoCaoThongKeDAO.java",
+        "src/bus/ThongKeBus.java"
+      ],
+      "contextFiles": [
+        "docs/ai-context/REPAIR_AUTHORIZATION_20261108.md",
+        "sql/HeThongQuanLyCuaHangThuCung.sql"
+      ]
+    },
+    {
+      "readOnly": false,
+      "askWhen": "If source context is insufficient or changing public APIs/architecture seems necessary, return blockers instead of inventing code. No Git, shell, databases, email or web.",
+      "dependencies": [],
+      "checks": [
+        {
+          "kind": "java-compile"
+        },
+        {
+          "kind": "manual",
+          "description": "Codex reads diff and runs targeted regression against isolated test DB"
+        }
+      ],
+      "id": "agy-fix-warehouse-validation-20261108",
+      "goal": "Reject invalid stock adjustments and prevent successful UI notices after failed unit/pack persistence.",
+      "design": "LoHangDAO.truTonKho and congTonKho reject nonpositive quantities before opening DB; capNhatSoLuongTon rejects negative new quantity. getLoHangFEFOBySanPham must not return expired/out-of-stock fallback as available sale stock; use HSD>=today in available selection and return null if no available lot. In ThietLapQuyDoiDialog check boolean results of khoBus.themDonViTinh and themQuyDoi, throw/display existing error path and do not add RAM row or success message on false. Keep APIs, current unit creation flow and all UI layout.",
+      "steps": [
+        "Apply stock argument guards and FEFO eligibility",
+        "Check BUS boolean results before marking UI saved",
+        "Return only scoped full replacements"
+      ],
+      "acceptance": [
+        "Negative/nonpositive stock increments cannot change stock",
+        "No expired/unavailable fallback presented as FEFO sale lot",
+        "False persistence result never updates RAM or shows success"
+      ],
+      "allowedFiles": [
+        "src/dao/LoHangDAO.java",
+        "src/gui/ThietLapQuyDoiDialog.java"
+      ],
+      "contextFiles": [
+        "docs/ai-context/REPAIR_AUTHORIZATION_20261108.md",
+        "src/bus/KhoLoHangBus.java"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "result": [
+    {
+      "id": "setup-context-probe",
+      "planId": "setup-smoke-v1",
+      "planDigest": "4b06c1603d74a6a9949993f68a122f7b3b9cd712eba30622fac9c82781125e46",
+      "attempt": 4,
+      "repairs": 0,
+      "createdAt": "2026-11-07T17:50:36.741Z",
+      "status": "accepted",
+      "ownerPid": 33248,
+      "startedAt": "2026-11-07T17:57:29.480Z",
+      "model": "gemini-3.8-flash-medium",
+      "error": null,
+      "updatedAt": "2026-11-07T17:59:31.831Z",
+      "finishedAt": "2026-11-07T17:58:50.552Z",
+      "sourceChanges": [],
+      "proposalDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "checks": [
+        {
+          "kind": "manual",
+          "description": "Codex checks all observations against original source; no invented executed tests",
+          "passed": null,
+          "message": "Codex must supply actual review evidence"
+        }
+      ],
+      "conversationId": "87f91127-ede4-40c2-9c38-fa093e720757",
+      "reviewEvidence": "Codex read the complete returned observations and empty diff. Verified JavaSE-17 in .classpath; entity/dao/bus/gui/utils directories exist; DangNhapBus imports DAO and Entity; UserSession implements RBAC; the earlier targeted GUI import scan found no DAO/DBConnection imports. Confirmed actual setup compilation of all 87 Java files succeeded. The worker's 'offline' phrase is accepted only as a historical AUDIT_FIX_PROGRESS claim, NOT current DB status: current database connectivity and UI remain unverified. No worker assertion of newly executed DB/UI tests is accepted. Current user no-Git policy matches AGENTS and DECISIONS. No proposed files, blockers, or source changes. Read-only probe acceptance criteria met with these reviewer qualifications.",
+      "acceptedAt": "2026-11-07T17:59:31.831Z"
+    },
+    {
+      "id": "setup-document-smoke",
+      "planId": "setup-smoke-v1",
+      "planDigest": "4b06c1603d74a6a9949993f68a122f7b3b9cd712eba30622fac9c82781125e46",
+      "attempt": 1,
+      "repairs": 0,
+      "createdAt": "2026-11-07T17:59:33.225Z",
+      "status": "accepted",
+      "ownerPid": 33248,
+      "startedAt": "2026-11-07T17:59:33.226Z",
+      "model": "gemini-3.8-flash-medium",
+      "error": null,
+      "updatedAt": "2026-11-07T18:01:32.617Z",
+      "sourceChanges": [],
+      "proposalDigest": "58cfb3483f774988ed22ba917e009e0f7af970b2d8daeb6799b67961ee5a0d76",
+      "checks": [
+        {
+          "kind": "contains",
+          "path": "docs/ai-context/worker-smoke.md",
+          "text": "MIO_WORKER_SMOKE_OK",
+          "passed": true
+        }
+      ],
+      "conversationId": "cdf0ce4a-2ff2-4c45-a536-7aaf13ebbf6c",
+      "finishedAt": "2026-11-07T18:00:32.728Z",
+      "reviewEvidence": "Codex read the complete proposed file and generated diff. Exactly one permitted documentation file is proposed, with exact content '# Worker smoke\\n\\nMIO_WORKER_SMOKE_OK\\n'; delete=false; no blockers; no source changes during run. The independent contains check passed on candidate. This is a smoke marker only, not an application change or an assertion of DB/UI test success. Reviewed proposal digest matches current state.",
+      "acceptedAt": "2026-11-07T18:01:32.617Z"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "ok": false,
+  "error": "Context budget exceeded; split task or select smaller files; nothing was truncated"
+}

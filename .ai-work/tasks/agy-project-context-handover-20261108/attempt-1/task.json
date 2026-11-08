@@ -1,0 +1,64 @@
+{
+  "id": "agy-project-context-handover-20261108",
+  "readOnly": false,
+  "goal": "Create a concise Vietnamese handover for Codex from all supplied AGY/Eclipse project context. First check whether the worker session can retrieve relevant prior AGY Project Eclipse conversations beyond the supplied artifacts. Clearly disclose what conversation history was available.",
+  "design": "Write ONLY docs/ai-context/AGY_HANDOVER_20261108.md. Synthesize project goals and constraints; accepted business rules; architecture/DB mappings; prior findings and fixes; pending work; four member module assignments/branches; test instructions; unresolved/conflicting decisions; source file path for every substantive statement. Prefer newest user-authored decisions over old plans, and distinguish actual conversation excerpts, stored project documents, and inference. Do not repeat source artifacts verbatim. Do not invent conversation access. The local SOURCES index states the provided message excerpts are partial, not a complete chat transcript: explicitly say if the worker cannot access further history. No code edits, SQL scripts, shell, Git, database, network or credentials. Aim for 2,000-3,500 Vietnamese words maximum, with an executive snapshot and a compact first-pass whole-program audit matrix spanning GUI, Java logic, SQL/data integrity, concurrency, scale, cashier usability, services/appointments, reporting and security. Cite project-relative paths and dates from source metadata where available. Surface missing files or contradictory history as blockers/open questions. Keep within source facts; do not claim all defects are known or tested.",
+  "askWhen": "If prior AGY Project Eclipse conversation retrieval is unavailable, state that limitation and still compile the complete supplied project artifacts.",
+  "steps": [
+    "Inspect supplied AGY artifacts, selected prior-context excerpts and MIO test plans",
+    "Extract latest accepted requirements, ownership, known evidence and contradictions",
+    "Write a single concise linked handover file"
+  ],
+  "acceptance": [
+    "Exactly the allowed handover file is proposed",
+    "Conversation-access limit is stated honestly",
+    "Facts have traceable source paths",
+    "Open decisions are separated from confirmed findings",
+    "The audit matrix covers the complete system and is useful for splitting later AGY tasks"
+  ],
+  "allowedFiles": [
+    "docs/ai-context/AGY_HANDOVER_20261108.md"
+  ],
+  "contextFiles": [
+    "docs/ai-context/INDEX.md",
+    "docs/ai-context/ARCHITECTURE.md",
+    "docs/ai-context/STATUS.md",
+    "docs/ai-context/DECISIONS.md",
+    "docs/ai-context/WORKFLOW.md",
+    "docs/ai-context/SOURCES.json",
+    "docs/ai-context/REPAIR_AUTHORIZATION_20261108.md",
+    "docs/test_plan/README.md",
+    "docs/test_plan/POST_PULL_CASHIER_AUDIT_224a140.md",
+    "docs/test_plan/RE_AUDIT_2026-11-08.md",
+    "docs/test_plan/DEFECT_CATALOG.md",
+    "docs/test_plan/TC_POS_BAN_HANG_DOI_TRA.md",
+    "docs/test_plan/TC_KHO_SAN_PHAM_LO_HANG.md",
+    "docs/test_plan/TC_KHACH_HANG_THU_CUNG_DICH_VU.md",
+    "docs/test_plan/TC_NHAN_SU_GIAO_CA.md",
+    "docs/test_plan/TC_BAO_CAO_THONG_KE.md",
+    "docs/test_plan/TC_BAO_MAT_DANG_NHAP.md",
+    "docs/ai-context/sources/2c6fd9a7-handover_state.md",
+    "docs/ai-context/sources/2c6fd9a7-PROJECT_CHECKPOINT_MIO_PETSHOP.md",
+    "docs/ai-context/sources/2c6fd9a7-implementation_plan.md",
+    "docs/ai-context/sources/2c6fd9a7-message-excerpts.json",
+    "docs/ai-context/sources/115a9c0a-ke_hoach_nang_cap_he_thong.md",
+    "docs/ai-context/sources/c9294613-bao_cao_ket_qua_kiem_thu_toan_dien.md",
+    "docs/ai-context/sources/c9294613-prompt_kiem_thu_toan_dien_cua_hang_thu_cung.md",
+    "docs/ai-context/sources/agy-KIEN_TRUC_REPO_VA_KE_HOACH_BAM_NHO_CODE_NHOM07.md",
+    "docs/ai-context/sources/agy-KE_HOACH_PHAN_CHIA_GITHUB_NHOM07.md",
+    "docs/ai-context/sources/agy-KE_HOACH_14_NGAY_PUSH_CODE_NHOM07.md",
+    "docs/ai-context/sources/agy-HUONG_DAN_GIT_PULL_REQUEST_CHO_THANH_VIEN_NHOM07.md"
+  ],
+  "dependencies": [],
+  "checks": [
+    {
+      "kind": "contains",
+      "path": "docs/ai-context/AGY_HANDOVER_20261108.md",
+      "text": "conversation"
+    },
+    {
+      "kind": "manual",
+      "description": "Codex reviews source traceability, conversation access claims, and conflicts before accepting the handover."
+    }
+  ]
+}
