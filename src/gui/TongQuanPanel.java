@@ -8,8 +8,6 @@ import entity.NhanVien;
 import entity.ThuCung;
 import utils.IconHelper;
 import utils.ThemeColors;
-import gui.charts.BarChartPanel;
-import gui.charts.DonutChartPanel;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -79,7 +77,6 @@ public class TongQuanPanel extends JPanel {
     // KPI Chế độ Chiến Lược (Strategic)
     private JLabel lblStratDoanhThu;
     private JLabel lblStratLoiNhuan;
-    private JLabel lblBienLoiNhuan;
     private JLabel lblStratHangHoa;
     private JLabel lblStratDichVu;
     private DefaultTableModel modelTopSanPham;
@@ -366,7 +363,6 @@ public class TongQuanPanel extends JPanel {
             loiNhuan = 0L;
         }
         if (lblStratLoiNhuan != null) lblStratLoiNhuan.setText(dfMoney.format(loiNhuan));
-        if (lblBienLoiNhuan != null) { double bien = doanhThuHomNay > 0 ? (loiNhuan * 100.0 / doanhThuHomNay) : 0.0; lblBienLoiNhuan.setText(String.format("Biên lợi nhuận ~%.1f%%", bien)); }
         if (lblStratHangHoa != null) lblStratHangHoa.setText(dfMoney.format(dtHangHoa));
         if (lblStratDichVu != null) lblStratDichVu.setText(dfMoney.format(dtSpa));
 
@@ -432,10 +428,10 @@ public class TongQuanPanel extends JPanel {
         int tongSoLo = dsLo.size();
         if (lblAnalytTongMa != null) lblAnalytTongMa.setText(tongSoLo + " lô kho");
         try {
-            List<gui.PetHotelPanel.PhongLuuTru> dsPhong = new bus.PetHotelBus().layDanhSachPhong();
+            List<entity.PhongLuuTru> dsPhong = new bus.PetHotelBus().layDanhSachPhong();
             int phongCoKhach = 0;
-            for (gui.PetHotelPanel.PhongLuuTru p : dsPhong) {
-                if (p.trangThai != null && p.trangThai.contains("CÓ KHÁCH")) phongCoKhach++;
+            for (entity.PhongLuuTru p : dsPhong) {
+                if (p.getTrangThai() != null && p.getTrangThai().contains("CÓ KHÁCH")) phongCoKhach++;
             }
             int pct = dsPhong.isEmpty() ? 0 : (phongCoKhach * 100 / dsPhong.size());
             if (lblAnalytHotel != null) lblAnalytHotel.setText(phongCoKhach + " / " + dsPhong.size() + " phòng (" + pct + "%)");
@@ -489,9 +485,7 @@ public class TongQuanPanel extends JPanel {
         repaint();
     }
 
-    // ==========================================
     // 3 CHẾ ĐỘ DASHBOARD (STRATEGIC / OPERATIONAL / ANALYTICAL)
-    // ==========================================
 
     private JPanel taoViewOperational() {
         JPanel view = new JPanel();
@@ -661,8 +655,7 @@ public class TongQuanPanel extends JPanel {
                 }));
 
         lblStratLoiNhuan = new JLabel("0 đ");
-        lblBienLoiNhuan = new JLabel("Biên lợi nhuận 0.0%");
-        pnlCards.add(taoTheKpiDong("LỢI NHUẬN GỘP ƯỚC TÍNH", lblStratLoiNhuan, lblBienLoiNhuan,
+        pnlCards.add(taoTheKpiDong("LỢI NHUẬN GỘP ƯỚC TÍNH", lblStratLoiNhuan, new JLabel("Biên lợi nhuận ~42%"),
                 IconHelper.CHECK, ThemeColors.SUCCESS, ThemeColors.SUCCESS_BG,
                 () -> {
                     Frame topFrame = (Frame) SwingUtilities.getWindowAncestor(this);

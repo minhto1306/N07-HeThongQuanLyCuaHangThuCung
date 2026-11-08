@@ -78,47 +78,54 @@ public class DangNhapBus {
 
         String inputUser = soDienThoaiHoacMa.trim();
         String sdt = chuanHoaSoDienThoai(inputUser);
-        String passHash = PasswordHasher.hashSHA256(matKhau.trim());
 
         try {
-            // 1. Thử xác thực theo số điện thoại
-            TaiKhoan tk = taiKhoanDAO.kiemTraDangNhap(sdt, passHash);
-
-            // 2. Nếu không tìm thấy bằng SĐT, thử xác thực bằng mã tài khoản (NVxxx) cho tương thích
+            // 1. Tìm tài khoản theo SĐT hoặc mã nhân viên
+            TaiKhoan tk = taiKhoanDAO.findBySoDienThoai(sdt);
             if (tk == null && inputUser.toUpperCase().startsWith("NV")) {
-                TaiKhoan tkMa = taiKhoanDAO.findByMaTaiKhoan(inputUser.toUpperCase());
-                if (tkMa != null && tkMa.isTrangThaiHoatDong() && passHash.equalsIgnoreCase(tkMa.getMatKhau())) {
-                    tk = tkMa;
+                tk = taiKhoanDAO.findByMaTaiKhoan(inputUser.toUpperCase());
+            }
+
+            if (tk == null) {
+                return new KetQuaDangNhap(false, "Số điện thoại / Mã nhân viên hoặc mật khẩu không chính xác!", null);
+            }
+
+            if (!tk.isTrangThaiHoatDong()) {
+                return new KetQuaDangNhap(false, "Tài khoản của nhân viên này đang bị khóa hoặc ngừng hoạt động!", null);
+            }
+
+            // 2. Xác thực mật khẩu bằng constant-time verify (hỗ trợ cả PBKDF2 và SHA-256 cũ)
+            boolean hopLe = PasswordHasher.verifyPassword(matKhau.trim(), tk.getMatKhau());
+            if (!hopLe) {
+                return new KetQuaDangNhap(false, "Mật khẩu không chính xác! Vui lòng thử lại hoặc sử dụng 'Quên mật khẩu'.", null);
+            }
+
+            // 3. Nếu mật khẩu khớp và còn là hash cũ (SHA-256), tự động nâng cấp sang PBKDF2 (khi CSDL cho phép)
+            if (PasswordHasher.needsUpgrade(tk.getMatKhau())) {
+                try {
+                    String newPbkdf2 = PasswordHasher.hashPBKDF2(matKhau.trim());
+                    boolean updated = taiKhoanDAO.doiMatKhau(tk.getMaTaiKhoan(), newPbkdf2);
+                    if (updated) {
+                        tk.setMatKhau(newPbkdf2);
+                    }
+                } catch (Exception ex) {
+                    // Nếu cột matKhau trong CSDL chưa chạy migration mở rộng độ dài (<= 64 ký tự),
+                    // ghi nhận log cảnh báo và không làm gián đoạn đăng nhập của người dùng
+                    System.err.println("[DangNhapBus] Chưa thể tự nâng cấp hash lên PBKDF2 (cần chạy migration SQL mở rộng cột matKhau): " + ex.getMessage());
                 }
             }
 
-            if (tk != null) {
-                NhanVien nv = nhanVienDAO.findByMaNhanVien(tk.getMaTaiKhoan());
-                if (nv == null) {
-                    nv = nhanVienDAO.findBySoDienThoai(tk.getSoDienThoai());
-                }
-                if (nv != null) {
-                    nv.setTaiKhoan(tk);
-                    currentUser = nv;
-                    utils.UserSession.initSession(nv);
-                    return new KetQuaDangNhap(true, "Đăng nhập thành công!", nv);
-                } else {
-                    return new KetQuaDangNhap(false, "Tài khoản [" + tk.getMaTaiKhoan() + "] chưa được liên kết thông tin Nhân viên!", null);
-                }
+            NhanVien nv = nhanVienDAO.findByMaNhanVien(tk.getMaTaiKhoan());
+            if (nv == null) {
+                nv = nhanVienDAO.findBySoDienThoai(tk.getSoDienThoai());
+            }
+            if (nv != null) {
+                nv.setTaiKhoan(tk);
+                currentUser = nv;
+                utils.UserSession.initSession(nv);
+                return new KetQuaDangNhap(true, "Đăng nhập thành công!", nv);
             } else {
-                // Kiểm tra lý do chi tiết để hỗ trợ người dùng
-                TaiKhoan tonTai = taiKhoanDAO.findBySoDienThoai(sdt);
-                if (tonTai == null && inputUser.toUpperCase().startsWith("NV")) {
-                    tonTai = taiKhoanDAO.findByMaTaiKhoan(inputUser.toUpperCase());
-                }
-
-                if (tonTai == null) {
-                    return new KetQuaDangNhap(false, "Số điện thoại / Mã nhân viên hoặc mật khẩu không chính xác!", null);
-                } else if (!tonTai.isTrangThaiHoatDong()) {
-                    return new KetQuaDangNhap(false, "Tài khoản của nhân viên này đang bị khóa hoặc ngừng hoạt động!", null);
-                } else {
-                    return new KetQuaDangNhap(false, "Mật khẩu không chính xác! Vui lòng thử lại hoặc sử dụng 'Quên mật khẩu'.", null);
-                }
+                return new KetQuaDangNhap(false, "Tài khoản [" + tk.getMaTaiKhoan() + "] chưa được liên kết thông tin Nhân viên!", null);
             }
         } catch (SQLException e) {
             System.err.println("[DangNhapBus] Lỗi SQL khi xác thực: " + e.getMessage());
@@ -133,15 +140,13 @@ public class DangNhapBus {
         if (soDienThoai == null || email == null) return null;
         String sdt = chuanHoaSoDienThoai(soDienThoai);
         String mail = email.trim();
-        if (sdt.isEmpty() || mail.isEmpty()) return null;
 
         try {
+            // Bảo mật nghiêm ngặt: Phải khớp đồng thời cả Số điện thoại và Email chính thức trong CSDL
+            // Tuyệt đối không cho phép fallback gửi OTP về email lạ khi chỉ biết SĐT
             TaiKhoan tk = taiKhoanDAO.findBySoDienThoaiVaEmail(sdt, mail);
             if (tk != null && tk.isTrangThaiHoatDong()) {
                 NhanVien nv = nhanVienDAO.findByMaNhanVien(tk.getMaTaiKhoan());
-                if (nv == null) {
-                    nv = nhanVienDAO.findBySoDienThoai(tk.getSoDienThoai());
-                }
                 if (nv != null) {
                     nv.setTaiKhoan(tk);
                     return nv;
@@ -165,11 +170,11 @@ public class DangNhapBus {
      * Đặt lại mật khẩu mới sau khi xác thực OTP thành công.
      */
     public boolean datLaiMatKhau(String soDienThoai, String matKhauMoi) {
-        if (soDienThoai == null || matKhauMoi == null || matKhauMoi.trim().length() < 6) {
+        if (soDienThoai == null || !matKhauDuManh(matKhauMoi)) {
             return false;
         }
         String sdt = chuanHoaSoDienThoai(soDienThoai);
-        String hash = PasswordHasher.hashSHA256(matKhauMoi.trim());
+        String hash = PasswordHasher.hashPBKDF2(matKhauMoi.trim());
         try {
             return taiKhoanDAO.doiMatKhauTheoSoDienThoai(sdt, hash);
         } catch (SQLException e) {
@@ -183,17 +188,15 @@ public class DangNhapBus {
      */
     public boolean doiMatKhau(String maHoacSdt, String matKhauCu, String matKhauMoi) {
         if (maHoacSdt == null || matKhauCu == null || matKhauMoi == null) return false;
-        if (matKhauMoi.trim().length() < 6) return false;
-
-        String oldHash = PasswordHasher.hashSHA256(matKhauCu.trim());
-        String newHash = PasswordHasher.hashSHA256(matKhauMoi.trim());
+        if (!matKhauDuManh(matKhauMoi)) return false;
 
         try {
             TaiKhoan tk = taiKhoanDAO.findBySoDienThoai(maHoacSdt);
             if (tk == null) {
                 tk = taiKhoanDAO.findByMaTaiKhoan(maHoacSdt);
             }
-            if (tk != null && oldHash.equalsIgnoreCase(tk.getMatKhau())) {
+            if (tk != null && PasswordHasher.verifyPassword(matKhauCu.trim(), tk.getMatKhau())) {
+                String newHash = PasswordHasher.hashPBKDF2(matKhauMoi.trim());
                 boolean ok = taiKhoanDAO.doiMatKhau(tk.getMaTaiKhoan(), newHash);
                 if (ok && currentUser != null && currentUser.getTaiKhoan() != null) {
                     currentUser.getTaiKhoan().setMatKhau(newHash);
@@ -205,6 +208,17 @@ public class DangNhapBus {
             System.err.println("[DangNhapBus] Lỗi đổi mật khẩu SQL: " + e.getMessage());
             return false;
         }
+    }
+
+    private boolean matKhauDuManh(String value) {
+        if (value == null || value.length() < 8) return false;
+        boolean hoa = false, thuong = false, so = false;
+        for (char c : value.toCharArray()) {
+            hoa |= Character.isUpperCase(c);
+            thuong |= Character.isLowerCase(c);
+            so |= Character.isDigit(c);
+        }
+        return hoa && thuong && so;
     }
 
     /**

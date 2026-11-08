@@ -435,9 +435,7 @@ public class LichPhanCaPanel extends JPanel {
         }
     }
 
-    // ==========================================
     // MENU CHUỘT PHẢI (JPOPUPMENU) & DOUBLE CLICK
-    // ==========================================
     private void hienThiPopupMenu(MouseEvent e, int row, int col) {
         if (row < 0 || row >= THONG_TIN_4_CA.length || col < 1 || col > 7) return;
 
@@ -535,9 +533,7 @@ public class LichPhanCaPanel extends JPanel {
         moDialogThemNhanVienVaoCa(maCa, date);
     }
 
-    // ==========================================
     // DIALOG ĐIỀU PHỐI & PHÂN CÔNG CA LÀM VIỆC
-    // ==========================================
     private boolean xuLyLuuPhanCong(NhanVien nv, CaLamViec ca, LocalDate targetDate, String nhiemVuMoi) {
         if (!UserSession.isQuanLy()) {
             JOptionPane.showMessageDialog(this,
@@ -949,9 +945,7 @@ public class LichPhanCaPanel extends JPanel {
         return dayIndex == 6 ? "Chủ Nhật" : "Thứ " + (dayIndex + 2);
     }
 
-    // ==========================================
     // RENDERER CỘT 0: THÔNG TIN 4 CA CỐ ĐỊNH
-    // ==========================================
     private static class ShiftInfoColumnRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
@@ -982,9 +976,7 @@ public class LichPhanCaPanel extends JPanel {
         }
     }
 
-    // ==========================================
     // RENDERER CÁC CỘT NGÀY: SHIFT CARDS BO TRÒN THEO VAI TRÒ
-    // ==========================================
     private static class TimetableCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {

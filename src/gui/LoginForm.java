@@ -389,7 +389,7 @@ public class LoginForm extends JFrame {
             String htmlOtp = utils.EmailThongBaoHelper.taoEmailKhoiPhucMatKhau(nv.getHoTen(), sdt, maTK, otp);
             boolean guiThanhCong = utils.EmailThongBaoHelper.moHopThoaiGuiEmail(
                     dlg,
-                    nv.getTaiKhoan().getEmail(),
+                    mail,
                     "[Mio Pet Shop] Mã OTP khôi phục mật khẩu tài khoản " + maTK,
                     htmlOtp
             );

@@ -181,9 +181,7 @@ public final class UserSession {
         return canAccess("CARD_DOI_TRA");
     }
 
-    // ==========================================
     // KIỂM TRA QUYỀN THEO 6 NHÓM CHỨC NĂNG SLIDE 17
-    // ==========================================
     public static boolean canAccessNhom1HeThongPhanQuyen() {
         return isQuanLy();
     }

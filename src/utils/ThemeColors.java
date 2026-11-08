@@ -15,9 +15,7 @@ public final class ThemeColors {
 
     private ThemeColors() {}
 
-    // ==========================================
     // 1. PRIMARY ACCENT (LUXURY EMERALD & MINT SAGE)
-    // ==========================================
     /** Nút bấm chính / Điểm nhấn chủ đạo (Xanh Ngọc Lục Bảo sang trọng #059669) */
     public static final Color PRIMARY = new Color(0x05, 0x96, 0x69);
 
@@ -39,9 +37,7 @@ public final class ThemeColors {
     /** Nền tint mint thanh khiết (#ECFDF5) - Cho header bảng, pill tag */
     public static final Color PRIMARY_TINT = new Color(0xEC, 0xFD, 0xF5);
 
-    // ==========================================
     // 2. BACKGROUND & SURFACES (MODERN CLEAN RETINA)
-    // ==========================================
     /** Nền ứng dụng chính (Trắng xám Slate siêu êm mắt #F8FAFC - chống mỏi mắt) */
     public static final Color BACKGROUND = new Color(0xF8, 0xFA, 0xFC);
 
@@ -57,9 +53,7 @@ public final class ThemeColors {
     /** Nền Top Header & Top Navigation (Trắng sứ #FFFFFF) */
     public static final Color HEADER_BG = new Color(0xFF, 0xFF, 0xFF);
 
-    // ==========================================
     // 3. VIỀN & PHÂN CÁCH (BORDERS & DIVIDERS)
-    // ==========================================
     /** Viền card mỏng siêu nét tone Slate thanh lịch (#E2E8F0) */
     public static final Color BORDER = new Color(0xE2, 0xE8, 0xF0);
 
@@ -69,9 +63,7 @@ public final class ThemeColors {
     /** Viền nhấn ngọc lục bảo (#059669) */
     public static final Color BORDER_ACCENT = new Color(0x05, 0x96, 0x69);
 
-    // ==========================================
     // 4. MÀU CHỮ (TYPOGRAPHY - HIGH CONTRAST SLATE NAVY)
-    // ==========================================
     /** Chữ chính / Tiêu đề / Nút bấm (Đen than Slate sang trọng #0F172A - tương phản WCAG AAA) */
     public static final Color TEXT_PRIMARY = new Color(0x0F, 0x17, 0x2A);
 
@@ -84,9 +76,7 @@ public final class ThemeColors {
     /** Chữ điểm nhấn ngọc lục bảo (#059669) */
     public static final Color TEXT_ACCENT = new Color(0x05, 0x96, 0x69);
 
-    // ==========================================
     // 5. MÀU TRẠNG THÁI (STATUS COLORS)
-    // ==========================================
     /** Thành công / Hoàn tất (Xanh mint tươi #10B981) */
     public static final Color SUCCESS = new Color(0x10, 0xB9, 0x81);
     public static final Color SUCCESS_BG = new Color(0xEC, 0xFD, 0xF5);
@@ -125,9 +115,7 @@ public final class ThemeColors {
     public static final Color APPOINTMENT_CANCEL_BG = new Color(0xFE, 0xF2, 0xF2);
     public static final Color APPOINTMENT_CANCEL_TEXT = new Color(0x99, 0x1B, 0x1B);
 
-    // ==========================================
     // 6. TIỆN ÍCH TẠO BORDER & COMPONENT STYLING (BO GÓC MỀM MẠI 16PX - 20PX)
-    // ==========================================
 
     /**
      * Lớp Border bo tròn chống răng cưa (Anti-Aliased Curved Border).
