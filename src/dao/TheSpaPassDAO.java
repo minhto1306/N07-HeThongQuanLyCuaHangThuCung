@@ -130,7 +130,7 @@ public class TheSpaPassDAO {
             if (conn != null) try { conn.rollback(); } catch (SQLException ignored) {}
             throw e;
         } finally {
-            if (conn != null) try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+            if (conn != null) { try { conn.setAutoCommit(true); } catch (SQLException ignored) {} try { conn.close(); } catch (SQLException ignored) {} }
         }
     }
 }
