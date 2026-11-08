@@ -1,6 +1,0 @@
-{
-  "agy": "C:\\Users\\lekha\\AppData\\Local\\agy\\bin\\agy.exe",
-  "model": "gemini-3.8-flash-medium",
-  "timeoutMs": 600000,
-  "maxContextBytes": 500000
-}

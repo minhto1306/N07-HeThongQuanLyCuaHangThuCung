@@ -1,5 +1,0 @@
-BULK_INSERT ms=1533
-COUNTS products=5054 lots=15055 customers=5051 invoices=20459
-products ms=360 rows=5054
-lots ms=473 rows=15055
-customers ms=266 rows=5051

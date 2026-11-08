@@ -1,7 +1,0 @@
---- /dev/null
-+++ b/docs/ai-context/worker-smoke.md
-@@ -0,0 +1,4 @@
-+# Worker smoke
-+
-+MIO_WORKER_SMOKE_OK
-+

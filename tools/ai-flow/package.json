@@ -1,9 +1,0 @@
-{
-  "name": "mio-ai-flow",
-  "version": "1.0.0",
-  "private": true,
-  "type": "module",
-  "description": "Local Codex to Antigravity account worker bridge; no API keys, no Git",
-  "scripts": { "test": "node --test test/*.test.mjs" },
-  "engines": { "node": ">=22" }
-}

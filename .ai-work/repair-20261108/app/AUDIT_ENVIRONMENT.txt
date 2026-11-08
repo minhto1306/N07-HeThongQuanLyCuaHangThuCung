@@ -1,3 +1,0 @@
-SYNTHETIC TEST ONLY
-Database=MioRepair_20261108
-Email/payment configuration absent.

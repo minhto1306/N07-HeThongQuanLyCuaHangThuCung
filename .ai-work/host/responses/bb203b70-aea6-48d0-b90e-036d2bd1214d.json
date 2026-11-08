@@ -1,4 +1,0 @@
-{
-  "ok": false,
-  "error": "Editable file contains credential-like text; sanitize explicitly first: src/gui/LoginForm.java"
-}

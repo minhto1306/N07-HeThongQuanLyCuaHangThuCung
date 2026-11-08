@@ -1,6 +1,0 @@
-FAIL cashier_profile_save_cannot_overwrite_points | role=NVTN before=80 after=100
-PASS barcode_lookup_large_catalog | barcode resolved expected product
-FAIL separate_cashier_processes_get_unique_invoice_codes | both generated same ID=true
-PASS top_sales_base_quantity_matches_exports | topQty=3 exportedBaseQty=3
-FAIL invoice_read_preserves_stored_total | sql=1 entity=10000; deliberately mismatched test invoice
-TOTAL pass=2 fail=3

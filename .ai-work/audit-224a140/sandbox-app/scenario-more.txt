@@ -1,9 +1,0 @@
-FAIL hotel_two_day_stay_persists_two_days | storedDays=1 for 2-day room at 300000/day billed 600000
-FAIL two_rooms_one_invoice_supported | SQL error=2601
-PASS multiroom_failure_rolls_back | room states and header preserved
-FAIL two_spa_units_deduct_two_sessions | used=1 for service qty=2
-FAIL DAO_rejects_negative_export | accepted=true stockDelta=2
-FAIL DAO_rejects_wrong_invoice_total | accepted=true header=1 line=10000
-PASS 400_sales_8_workers | completed=400 errors=0 stockDelta=400 seconds=54.16
-FAIL employee_updates_close_connections | openSessionDelta=19 after 20 updates
-TOTAL pass=2 fail=6; all writes confined to MioAudit_224a140_20261108
