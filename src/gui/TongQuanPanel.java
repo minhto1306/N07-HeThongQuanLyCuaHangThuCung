@@ -8,8 +8,6 @@ import entity.NhanVien;
 import entity.ThuCung;
 import utils.IconHelper;
 import utils.ThemeColors;
-import gui.charts.BarChartPanel;
-import gui.charts.DonutChartPanel;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -430,10 +428,10 @@ public class TongQuanPanel extends JPanel {
         int tongSoLo = dsLo.size();
         if (lblAnalytTongMa != null) lblAnalytTongMa.setText(tongSoLo + " lô kho");
         try {
-            List<gui.PetHotelPanel.PhongLuuTru> dsPhong = new bus.PetHotelBus().layDanhSachPhong();
+            List<entity.PhongLuuTru> dsPhong = new bus.PetHotelBus().layDanhSachPhong();
             int phongCoKhach = 0;
-            for (gui.PetHotelPanel.PhongLuuTru p : dsPhong) {
-                if (p.trangThai != null && p.trangThai.contains("CÓ KHÁCH")) phongCoKhach++;
+            for (entity.PhongLuuTru p : dsPhong) {
+                if (p.getTrangThai() != null && p.getTrangThai().contains("CÓ KHÁCH")) phongCoKhach++;
             }
             int pct = dsPhong.isEmpty() ? 0 : (phongCoKhach * 100 / dsPhong.size());
             if (lblAnalytHotel != null) lblAnalytHotel.setText(phongCoKhach + " / " + dsPhong.size() + " phòng (" + pct + "%)");
@@ -487,9 +485,7 @@ public class TongQuanPanel extends JPanel {
         repaint();
     }
 
-    // ==========================================
     // 3 CHẾ ĐỘ DASHBOARD (STRATEGIC / OPERATIONAL / ANALYTICAL)
-    // ==========================================
 
     private JPanel taoViewOperational() {
         JPanel view = new JPanel();

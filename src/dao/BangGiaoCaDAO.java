@@ -207,8 +207,8 @@ public class BangGiaoCaDAO {
 
     /** Tổng tiền đổi/trả phát sinh sau lần bàn giao gần nhất. */
     public long tinhTongTienHoanTraTuThoiDiem(LocalDateTime tuThoiDiem) {
-        String sql = "SELECT ISNULL(SUM(tongTienHoan), 0) AS tongHoan FROM PhieuDoiTra " +
-                     "WHERE ngayDoiTra > ?";
+        String sql = "SELECT ISNULL(SUM(tienHoanThucTe), 0) AS tongHoan FROM PhieuDoiTra " +
+                     "WHERE ngayDoiTra > ? AND (phuongThucHoanTien = 'TIEN_MAT' OR phuongThucHoanTien IS NULL)";
         return tinhTongTheoThoiDiem(sql, "tongHoan", tuThoiDiem, "tiền hoàn trả theo ca");
     }
 

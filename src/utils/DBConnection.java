@@ -31,7 +31,11 @@ public class DBConnection {
 
     // đọc file database.properties trong thư mục config
     private static void loadConfig() {
-        File configFile = new File("config/database.properties");
+        String configPath = System.getProperty("petshop.db.config", "config/database.properties");
+        File configFile = new File(configPath);
+        if (!configFile.isFile() && System.getProperty("petshop.db.config") != null) {
+            throw new IllegalStateException("Không tìm thấy cấu hình CSDL: " + configFile.getAbsolutePath());
+        }
         if (configFile.exists()) {
             try (InputStream input = new FileInputStream(configFile)) {
                 Properties prop = new Properties();
@@ -52,6 +56,15 @@ public class DBConnection {
             } catch (Exception e) {
                 System.err.println("ko doc dc file config db: " + e.getMessage());
             }
+        }
+        // Đọc dự phòng biến môi trường hệ thống nếu chưa có trong file (null-safe check)
+        if (user == null || user.isBlank()) {
+            String envUser = System.getenv("DB_USER");
+            if (envUser != null && !envUser.isBlank()) user = envUser.trim();
+        }
+        if (password == null || password.isBlank()) {
+            String envPass = System.getenv("DB_PASSWORD");
+            if (envPass != null && !envPass.isBlank()) password = envPass.trim();
         }
     }
 
@@ -78,44 +91,38 @@ public class DBConnection {
         return getNewConnection();
     }
 
-    // mở kết nối mới
+    // mở kết nối mới (chỉ dùng tài khoản và mật khẩu được cấu hình tường minh, cấm mật khẩu rỗng và cấm tự gán sa)
     public static Connection getNewConnection() throws SQLException {
-        if (user.isBlank()) {
-            user = "sa";
+        if (user == null || user.isBlank()) {
+            throw new IllegalStateException("Chưa cấu hình tài khoản (db.user) truy cập CSDL trong config/database.properties hoặc biến môi trường DB_USER!");
+        }
+        if (password == null || password.isBlank()) {
+            throw new IllegalStateException("Chưa cấu hình mật khẩu (db.password) truy cập CSDL trong config/database.properties hoặc biến môi trường DB_PASSWORD!");
         }
         SQLException lastEx = null;
 
-        // Danh sách mật khẩu phổ biến phòng máy / máy cá nhân để tự động kết nối
-        String[] passCandidates = (password != null && !password.isBlank())
-                ? new String[]{password, "sapassword", "123456", "sa"}
-                : new String[]{"sapassword", "123456", "sa"};
+        // 1. Thử kết nối qua port mặc định 1433
+        try {
+            String url1 = buildUrl(true, password);
+            Connection conn = DriverManager.getConnection(url1);
+            dbAvailable = true;
+            return conn;
+        } catch (SQLException e1) {
+            lastEx = e1;
+        }
 
-        for (String p : passCandidates) {
-            // 1. Thử qua port 1433
-            try {
-                String url1 = buildUrl(true, p);
-                Connection conn = DriverManager.getConnection(url1);
-                dbAvailable = true;
-                password = p;
-                return conn;
-            } catch (SQLException e1) {
-                lastEx = e1;
-            }
-
-            // 2. Thử qua instance SQLEXPRESS
-            try {
-                String url2 = buildUrl(false, p);
-                Connection conn = DriverManager.getConnection(url2);
-                dbAvailable = true;
-                password = p;
-                return conn;
-            } catch (SQLException e2) {
-                lastEx = e2;
-            }
+        // 2. Thử kết nối qua Named Instance SQLEXPRESS
+        try {
+            String url2 = buildUrl(false, password);
+            Connection conn = DriverManager.getConnection(url2);
+            dbAvailable = true;
+            return conn;
+        } catch (SQLException e2) {
+            lastEx = e2;
         }
 
         dbAvailable = false;
-        throw new SQLException("Không kết nối được SQL Server (" + databaseName + "), kiểm tra lại db giùm", lastEx);
+        throw new SQLException("Không thể kết nối đến máy chủ CSDL SQL Server (" + databaseName + ") với tài khoản [" + user + "]. Vui lòng kiểm tra lại cấu hình trong " + System.getProperty("petshop.db.config", "config/database.properties") + "!", lastEx);
     }
 
     // check xem có đang online ko

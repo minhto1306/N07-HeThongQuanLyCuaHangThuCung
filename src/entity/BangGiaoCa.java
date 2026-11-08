@@ -160,6 +160,10 @@ public class BangGiaoCa {
     /**
      * Tự động tính chênh lệch giữa tiền thực tế và tiền hệ thống
      */
+    /**
+     * Tự động tính chênh lệch giữa tiền thực tế và tiền hệ thống.
+     * note lai: logic tinh toan chinh da chuyen ve GiaoCaBus, giu lai method nay de tuong thich nguoc an toan.
+     */
     public void capNhatTienChenhLech() {
         if (this.tienCuoiCaThucTe != null && this.tienCuoiCaHeThong != null) {
             this.tienChenhLech = this.tienCuoiCaThucTe.subtract(this.tienCuoiCaHeThong);

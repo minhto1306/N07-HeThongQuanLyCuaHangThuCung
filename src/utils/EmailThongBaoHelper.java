@@ -25,9 +25,6 @@ public class EmailThongBaoHelper {
     private static String smtpPassword = "";
     private static String senderDisplayName = "Mio Pet Shop";
 
-    private static final String DEFAULT_USER_B64 = "bGUxNDIwNDQ1QGdtYWlsLmNvbQ==";
-    private static final String DEFAULT_PASS_B64 = "ampqbW10Zm12YXhoamlyZA==";
-
     static {
         napCauHinh();
     }
@@ -51,16 +48,15 @@ public class EmailThongBaoHelper {
                 System.err.println("[EmailThongBaoHelper] Lỗi đọc config/mail.properties: " + ex.getMessage());
             }
         }
-        // Dự phòng mặc định: Nếu chưa điền cấu hình riêng, tự động dùng tài khoản đã kích hoạt
+        // Bảo mật: Nếu chưa có file mail.properties, kiểm tra biến môi trường hệ thống
+        // Tuyệt đối không hardcode email và app password cá nhân vào mã nguồn
         if (smtpUsername == null || smtpUsername.isBlank()) {
-            try {
-                smtpUsername = new String(Base64.getDecoder().decode(DEFAULT_USER_B64), StandardCharsets.UTF_8);
-            } catch (Exception ignored) {}
+            String envUser = System.getenv("SMTP_USERNAME");
+            if (envUser != null && !envUser.isBlank()) smtpUsername = envUser.trim();
         }
         if (smtpPassword == null || smtpPassword.isBlank()) {
-            try {
-                smtpPassword = new String(Base64.getDecoder().decode(DEFAULT_PASS_B64), StandardCharsets.UTF_8);
-            } catch (Exception ignored) {}
+            String envPass = System.getenv("SMTP_PASSWORD");
+            if (envPass != null && !envPass.isBlank()) smtpPassword = envPass.trim().replaceAll("\\s+", "");
         }
     }
 
@@ -71,11 +67,11 @@ public class EmailThongBaoHelper {
                 && smtpPassword != null && !smtpPassword.isBlank();
     }
 
-    /** Gửi email thật qua giao thức SMTP SSL. */
+    /** Gửi email thật qua giao thức SMTP SSL (ném IllegalStateException nếu chưa cấu hình tài khoản). */
     public static void guiEmail(String toEmail, String tieuDe, String htmlContent) throws Exception {
         napCauHinh();
         if (!isSmtpConfigured()) {
-            throw new IllegalStateException("Chưa cấu hình tài khoản gửi thư trong config/mail.properties");
+            throw new IllegalStateException("Chưa cấu hình tài khoản SMTP trong config/mail.properties hoặc biến môi trường SMTP_USERNAME / SMTP_PASSWORD!");
         }
         SSLSocketFactory sf = (SSLSocketFactory) SSLSocketFactory.getDefault();
         try (SSLSocket socket = (SSLSocket) sf.createSocket(smtpHost, smtpPort)) {

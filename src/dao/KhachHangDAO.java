@@ -104,7 +104,6 @@ public class KhachHangDAO {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             // nếu lỗi do chưa có cột email hoặc diaChi thì fallback về câu lệnh insert cũ
-            if (e.getErrorCode() != 207) throw e;
             String sqlCu = "INSERT INTO KhachHang (maKhachHang, hoTen, soDienThoai, diemTichLuy) VALUES (?, ?, ?, ?)";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement psCu = conn.prepareStatement(sqlCu)) {
@@ -117,35 +116,8 @@ public class KhachHangDAO {
         }
     }
 
-    // Cập nhật thông tin hồ sơ khách hàng (họ tên, SĐT, email, địa chỉ) - GIỮ NGUYÊN điểm tích lũy trong CSDL
-    public boolean updateProfile(KhachHang kh) throws SQLException {
-        String sqlCoEmail = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ?, email = ?, diaChi = ? WHERE maKhachHang = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sqlCoEmail)) {
-            ps.setString(1, kh.getHoTen());
-            ps.setString(2, kh.getSoDienThoai());
-            ps.setString(3, kh.getEmail());
-            ps.setString(4, kh.getDiaChi());
-            ps.setString(5, kh.getMaKhachHang());
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            if (e.getErrorCode() != 207) throw e;
-            String sqlCu = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ? WHERE maKhachHang = ?";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement psCu = conn.prepareStatement(sqlCu)) {
-                psCu.setString(1, kh.getHoTen());
-                psCu.setString(2, kh.getSoDienThoai());
-                psCu.setString(3, kh.getMaKhachHang());
-                return psCu.executeUpdate() > 0;
-            }
-        }
-    }
-
-    // Cập nhật thông tin khách hàng: chỉ quản lý mới được ghi đè điểm tích lũy, thu ngân chỉ cập nhật hồ sơ
+    // Cập nhật thông tin khách hàng, có cập nhật cả email và địa chỉ mới
     public boolean update(KhachHang kh) throws SQLException {
-        if (!utils.UserSession.isQuanLy()) {
-            return updateProfile(kh);
-        }
         String sqlCoEmail = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ?, diemTichLuy = ?, email = ?, diaChi = ? WHERE maKhachHang = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sqlCoEmail)) {
@@ -158,7 +130,6 @@ public class KhachHangDAO {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             // fallback nếu csdl máy bạn khác chưa kịp alter table
-            if (e.getErrorCode() != 207) throw e;
             String sqlCu = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ?, diemTichLuy = ? WHERE maKhachHang = ?";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement psCu = conn.prepareStatement(sqlCu)) {
