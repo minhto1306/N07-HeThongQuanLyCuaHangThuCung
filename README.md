@@ -293,6 +293,7 @@ N07-HeThongQuanLyCuaHangThuCungMio/
 ### 2. Khởi tạo Cơ sở dữ liệu SQL Server
 1. Mở công cụ **SQL Server Management Studio (SSMS)** hoặc **Azure Data Studio**.
 2. Mở tệp kịch bản: [`sql/HeThongQuanLyThuCung.sql`](sql/HeThongQuanLyThuCung.sql).
+   File được lưu UTF-8 có BOM. Nếu chạy bằng `sqlcmd`, cần dùng `-f 65001` để đọc đúng tiếng Việt; trong SSMS mở trực tiếp file bằng chế độ UTF-8.
 3. Tự tạo và chọn đúng database đích. Script **không tự tạo, đổi hoặc xóa database**.
 4. Trong cùng cửa sổ truy vấn/session, xác nhận database và chạy chế độ chỉ tạo schema:
    ```sql
@@ -304,7 +305,8 @@ N07-HeThongQuanLyCuaHangThuCungMio/
 5. Tạo tài khoản quản lý đầu tiên bằng `utils.BootstrapAdminAccount`; không có mật khẩu mặc định trong source.
 6. Chỉ khi cần dữ liệu mẫu, dùng database cô lập tên chính xác `QuanLyCuaHangThuCung_Test` hoặc `QuanLyCuaHangThuCung_Dev`, bootstrap NV001 trước, rồi xác nhận trong cùng session:
    ```sql
-   EXEC sp_set_session_context N'XacNhanDatabase', DB_NAME();
+   DECLARE @databaseDich sysname = DB_NAME();
+   EXEC sp_set_session_context N'XacNhanDatabase', @databaseDich;
    EXEC sp_set_session_context N'CheDo', N'DEMO_DATA';
    EXEC sp_set_session_context N'XacNhanDemo', N'PETSHOP_MIO_DEMO_FRESH_ONLY';
    -- Sau đó chạy lại toàn bộ file. Script sẽ từ chối nếu database không còn trống.

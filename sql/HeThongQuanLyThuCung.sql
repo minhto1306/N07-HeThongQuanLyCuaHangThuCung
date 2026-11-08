@@ -1,4 +1,4 @@
--- ======================================================================================
+﻿-- ======================================================================================
 -- HỆ THỐNG QUẢN LÝ CỬA HÀNG THÚ CƯNG MIO (PET SHOP MANAGEMENT SYSTEM) - NHÓM 07
 -- TẬP TIN HỢP NHẤT TOÀN DIỆN CƠ SỞ DỮ LIỆU & BỘ DỮ LIỆU MẪU ĐỒNG BỘ
 -- File: HeThongQuanLyThuCung.sql
@@ -13,6 +13,7 @@
 --    Đổi trả, Lịch hẹn, Spa Pass, Pet Hotel, Phân công và Bàn giao ca.
 -- 
 -- HƯỚNG DẪN CHỌN CHẾ ĐỘ KHI CHẠY TRONG SSMS / SQLCMD:
+--   * File UTF-8 có BOM. Với sqlcmd, dùng -f 65001 để đọc đúng chữ tiếng Việt.
 --   * Người vận hành phải tự tạo/chọn database đích và chạy trong CÙNG MỘT SESSION:
 --       EXEC sp_set_session_context N'XacNhanDatabase', N'<đúng DB_NAME hiện tại>';
 --       EXEC sp_set_session_context N'CheDo', N'SCHEMA_ONLY'; -- hoặc DEMO_DATA
@@ -26,6 +27,7 @@
 --      có token xác nhận và từ chối database đã có dữ liệu nghiệp vụ.
 -- ======================================================================================
 
+EXEC sys.sp_set_session_context N'PetshopPreflight', NULL;
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 GO
@@ -41,7 +43,7 @@ GO
 -- Không tự CREATE/USE database: người vận hành phải chọn và xác nhận đúng đích.
 IF DB_NAME() IN ('master', 'tempdb', 'model', 'msdb')
     THROW 50000, N'Phải tự tạo/chọn database đích trước khi chạy file.', 1;
-IF CAST(SESSION_CONTEXT(N'XacNhanDatabase') AS NVARCHAR(128)) <> DB_NAME()
+IF SESSION_CONTEXT(N'XacNhanDatabase') IS NULL OR CAST(SESSION_CONTEXT(N'XacNhanDatabase') AS NVARCHAR(128)) <> DB_NAME()
     THROW 50001, N'Chưa xác nhận đúng database đích bằng SESSION_CONTEXT XacNhanDatabase.', 1;
 IF CAST(SESSION_CONTEXT(N'CheDo') AS NVARCHAR(50)) NOT IN (N'SCHEMA_ONLY', N'DEMO_DATA')
     THROW 50002, N'CheDo chỉ được là SCHEMA_ONLY hoặc DEMO_DATA.', 1;
@@ -55,7 +57,7 @@ IF CAST(SESSION_CONTEXT(N'CheDo') AS NVARCHAR(50)) = N'DEMO_DATA'
 BEGIN
     IF DB_NAME() NOT IN (N'QuanLyCuaHangThuCung_Test', N'QuanLyCuaHangThuCung_Dev')
         THROW 50004, N'DEMO_DATA chỉ được chạy trên database Test/Dev đúng tên cho phép.', 1;
-    IF CAST(SESSION_CONTEXT(N'XacNhanDemo') AS NVARCHAR(100)) <> N'PETSHOP_MIO_DEMO_FRESH_ONLY'
+    IF SESSION_CONTEXT(N'XacNhanDemo') IS NULL OR CAST(SESSION_CONTEXT(N'XacNhanDemo') AS NVARCHAR(100)) <> N'PETSHOP_MIO_DEMO_FRESH_ONLY'
         THROW 50005, N'Thiếu token XacNhanDemo cho bộ dữ liệu fresh-only.', 1;
     IF (SELECT COUNT(*) FROM sys.tables
         WHERE is_ms_shipped = 0 AND name IN (
@@ -69,7 +71,10 @@ BEGIN
         )) <> 30
         THROW 50006, N'DEMO_DATA yêu cầu schema chuẩn đủ 30 bảng; hãy chạy SCHEMA_ONLY trên database mới trước.', 1;
 END
+EXEC sys.sp_set_session_context N'PetshopPreflight', N'PASSED';
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 PRINT N'======================================================================================';
 PRINT N'HỆ THỐNG QUẢN LÝ CỬA HÀNG THÚ CƯNG MIO - THỰC THI SCRIPT CSDL';
@@ -77,6 +82,8 @@ PRINT N'DATABASE ĐANG KẾT NỐI: [' + DB_NAME() + N']';
 PRINT N'CHẾ ĐỘ THỰC THI HIỆN TẠI: [' + CAST(ISNULL(SESSION_CONTEXT(N'CheDo'), N'SCHEMA_ONLY') AS NVARCHAR(50)) + N']';
 PRINT N'======================================================================================';
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- ======================================================================================
 -- PHẦN I: KHỞI TẠO CẤU TRÚC 30 BẢNG VÀ RÀNG BUỘC (SCHEMA DEFINITION)
@@ -95,6 +102,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 2. Bảng Nhân viên
 IF OBJECT_ID(N'dbo.NhanVien', N'U') IS NULL
@@ -110,6 +119,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 3. Bảng Ca làm việc
 IF OBJECT_ID(N'dbo.CaLamViec', N'U') IS NULL
@@ -122,6 +133,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 4. Bảng Phân công ca trực
 IF OBJECT_ID(N'dbo.BangPhanCong', N'U') IS NULL
@@ -139,6 +152,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 5. Bảng Bàn giao ca thu ngân & Két tiền (TC10: Phân tách tiền mặt, chuyển khoản, duyệt ca)
 IF OBJECT_ID(N'dbo.BangGiaoCa', N'U') IS NULL
@@ -176,6 +191,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.BangGiaoCa') AND name = N'UQ_BangGiaoCa_NhanVien_Ngay_Ca')
 BEGIN
@@ -184,6 +201,8 @@ BEGIN
     WHERE gioKetThucThucTe IS NOT NULL;
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 6. Bảng Khách hàng thành viên
 IF OBJECT_ID(N'dbo.KhachHang', N'U') IS NULL
@@ -198,6 +217,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 7. Bảng Thú cưng
 IF OBJECT_ID(N'dbo.ThuCung', N'U') IS NULL
@@ -211,6 +232,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 8. Bảng Hồ sơ thú cưng & Định danh Microchip
 IF OBJECT_ID(N'dbo.HoSoThuCung', N'U') IS NULL
@@ -227,6 +250,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 9. Bảng Sổ theo dõi sức khỏe & Thể trạng y tế thú cưng
 IF OBJECT_ID(N'dbo.HoSoSucKhoe', N'U') IS NULL
@@ -246,6 +271,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 10. Bảng Danh mục Dịch vụ Spa & Grooming (DV08: Thời lượng phút chuẩn cho thuật toán kiểm tra trùng lịch)
 IF OBJECT_ID(N'dbo.DichVu', N'U') IS NULL
@@ -258,6 +285,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 11. Bảng Lịch hẹn dịch vụ
 IF OBJECT_ID(N'dbo.LichHen', N'U') IS NULL
@@ -274,6 +303,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 12. Bảng Chi tiết lịch hẹn (Phân công Kỹ thuật viên & Thú cưng)
 IF OBJECT_ID(N'dbo.ChiTietLichHen', N'U') IS NULL
@@ -291,6 +322,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 13. Bảng Danh mục hàng hóa
 IF OBJECT_ID(N'dbo.DanhMucHang', N'U') IS NULL
@@ -302,6 +335,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 14. Bảng Sản phẩm
 IF OBJECT_ID(N'dbo.SanPham', N'U') IS NULL
@@ -318,6 +353,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 15. Bảng Đơn vị tính
 IF OBJECT_ID(N'dbo.DonViTinh', N'U') IS NULL
@@ -328,6 +365,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 16. Bảng Quy đổi đơn vị tính đa cấp (BH01: Tỷ lệ quy đổi chuẩn không làm tròn sai số)
 IF OBJECT_ID(N'dbo.QuyDoiDonVi', N'U') IS NULL
@@ -344,6 +383,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 17. Bảng Nhà cung cấp
 IF OBJECT_ID(N'dbo.NhaCungCap', N'U') IS NULL
@@ -356,6 +397,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 18. Bảng Lô hàng (BH02: Quản lý hạn sử dụng theo thuật toán FEFO)
 IF OBJECT_ID(N'dbo.LoHang', N'U') IS NULL
@@ -375,6 +418,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 19. Bảng Hóa đơn bán hàng POS (Phase 2: Tách biệt giảm giá VIP, tiền đổi điểm và tiền bù trừ đổi trả)
 IF OBJECT_ID(N'dbo.HoaDon', N'U') IS NULL
@@ -399,6 +444,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 20. Bảng Chi tiết hóa đơn
 IF OBJECT_ID(N'dbo.ChiTietHoaDon', N'U') IS NULL
@@ -418,6 +465,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 21. Bảng Chi tiết xuất kho theo lô hàng (FEFO Tracking)
 IF OBJECT_ID(N'dbo.ChiTietXuatLo', N'U') IS NULL
@@ -434,6 +483,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 22. Bảng Chi tiết dịch vụ thực hiện & Hoa hồng kỹ thuật viên (10%)
 IF OBJECT_ID(N'dbo.ChiTietDichVu', N'U') IS NULL
@@ -452,6 +503,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 23. Bảng Phiếu đổi trả hàng hóa (TC09, TC10: Bổ sung 5 trường hạch toán tài chính độc lập)
 IF OBJECT_ID(N'dbo.PhieuDoiTra', N'U') IS NULL
@@ -478,6 +531,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 24. Bảng Chi tiết đổi trả (TC05, TC06: Kiểm soát số lượng hoàn kho cơ sở và lô hàng hoàn)
 IF OBJECT_ID(N'dbo.ChiTietDoiTra', N'U') IS NULL
@@ -499,6 +554,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 25. Bảng Quản lý Khách sạn lưu trú thú cưng (TC13: Pet Hotel Boarding)
 IF OBJECT_ID(N'dbo.PhongLuuTru', N'U') IS NULL
@@ -522,6 +579,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 26. Bảng Thẻ Gói Spa Pass (DV13: Thẻ Punch Card định kỳ)
 IF OBJECT_ID(N'dbo.TheSpaPass', N'U') IS NULL
@@ -542,6 +601,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.TheSpaPass') AND name = N'UQ_TheSpaPass_HoaDonKichHoat')
 BEGIN
@@ -549,6 +610,8 @@ BEGIN
     ON TheSpaPass(maHoaDonKichHoat) WHERE maHoaDonKichHoat IS NOT NULL;
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 27. Bảng Lịch sử sử dụng Spa Pass
 IF OBJECT_ID(N'dbo.LichSuSuDungSpaPass', N'U') IS NULL
@@ -567,6 +630,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 28. Bảng Lịch sử lưu trú Khách sạn thú cưng (TC13: Pet Hotel Checkout History)
 IF OBJECT_ID(N'dbo.LichSuLuuTru', N'U') IS NULL
@@ -591,6 +656,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.LichSuLuuTru') AND name = N'UQ_LichSuLuuTru_HoaDon')
 BEGIN
@@ -598,6 +665,8 @@ BEGIN
     ON LichSuLuuTru(maHoaDon) WHERE maHoaDon IS NOT NULL;
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 29. Bảng Cấu hình danh mục Gói Spa Pass (DV14: Loại bỏ hoàn toàn Regex cắt chuỗi tại quầy POS)
 IF OBJECT_ID(N'dbo.GoiSpaPass', N'U') IS NULL
@@ -612,6 +681,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- 30. Bảng Cấp số thứ tự tập trung chống trùng mã (BH03: Atomic Concurrency)
 IF OBJECT_ID(N'dbo.BangCapSo', N'U') IS NULL
@@ -623,6 +694,8 @@ BEGIN
     );
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- ======================================================================================
 -- PHẦN II: DỮ LIỆU CẤU HÌNH CƠ BẢN CẦN THIẾT (SYSTEM CONFIGURATION DATA)
@@ -642,6 +715,8 @@ IF NOT EXISTS (SELECT 1 FROM GoiSpaPass WHERE maGoi = 'GOI_SPA_VIP')
     INSERT INTO GoiSpaPass (maGoi, tenGoi, soBuoi, donGiaGoi, thoiHanNgay, trangThaiHoatDong)
     VALUES ('GOI_SPA_VIP', N'Gói Spa Chuyên Sâu VIP 12 Buổi', 12, 1800000, 240, 1);
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 -- Khởi tạo danh mục tiền tố trong BangCapSo
 MERGE BangCapSo AS Target
@@ -664,9 +739,13 @@ ON Target.loaiMa = Source.loaiMa
 WHEN NOT MATCHED THEN
     INSERT (loaiMa, soHienTai, moTa) VALUES (Source.loaiMa, Source.soHienTai, Source.moTa);
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 PRINT N'>>> ĐÃ HOÀN TẤT GIAI ĐOẠN 1: CẤU TRÚC 30 BẢNG VÀ CẤU HÌNH CƠ BẢN.';
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 
 -- ======================================================================================
@@ -676,7 +755,7 @@ IF CAST(SESSION_CONTEXT(N'CheDo') AS NVARCHAR(50)) = N'DEMO_DATA'
 BEGIN
     IF DB_NAME() NOT IN (N'QuanLyCuaHangThuCung_Test', N'QuanLyCuaHangThuCung_Dev')
         THROW 50010, N'DEMO_DATA chỉ được chạy trên đúng database Test/Dev đã quy định.', 1;
-    IF CAST(SESSION_CONTEXT(N'XacNhanDemo') AS NVARCHAR(100)) <> N'PETSHOP_MIO_DEMO_FRESH_ONLY'
+    IF SESSION_CONTEXT(N'XacNhanDemo') IS NULL OR CAST(SESSION_CONTEXT(N'XacNhanDemo') AS NVARCHAR(100)) <> N'PETSHOP_MIO_DEMO_FRESH_ONLY'
         THROW 50011, N'Thiếu xác nhận DEMO fresh-only trong session.', 1;
     IF NOT EXISTS (SELECT 1 FROM TaiKhoan WHERE maTaiKhoan=N'NV001' AND vaiTro=N'NVQL' AND trangThaiHoatDong=1 AND matKhau LIKE N'PBKDF2$%')
         THROW 50012, N'Phải tạo NV001 an toàn bằng BootstrapAdminAccount trước khi nạp demo.', 1;
@@ -1710,9 +1789,13 @@ BEGIN
     PRINT N'>>> CHẾ ĐỘ THỰC THI HIỆN TẠI LÀ SCHEMA_ONLY. BỎ QUA NẠP DEMO DATA AN TOÀN.';
 END
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
 PRINT N'======================================================================================';
 PRINT N'ĐÃ HOÀN TẤT THỰC THI SCRIPT HETHONGQUANLYTHUCUNG.SQL THÀNH CÔNG!';
 PRINT N'======================================================================================';
 GO
+IF SESSION_CONTEXT(N'PetshopPreflight') IS NULL OR CAST(SESSION_CONTEXT(N'PetshopPreflight') AS NVARCHAR(20)) <> N'PASSED'
+    THROW 50007, N'Kiểm tra an toàn chưa thành công; dừng batch.', 1;
 
