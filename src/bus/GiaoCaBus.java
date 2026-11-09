@@ -7,6 +7,7 @@ import entity.NhanVien;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -103,12 +104,47 @@ public class GiaoCaBus {
     /**
      * Thêm mới bản ghi bàn giao ca vào CSDL.
      */
+    /**
+     * Thêm mới hoặc cập nhật bản ghi bàn giao ca vào CSDL.
+     * Chống lỗi duplicate key UQ_BangGiaoCa_NhanVien_Ngay_Ca nếu ca đang ở trạng thái CHO_DUYET.
+     */
     public boolean luuBangGiaoCa(BangGiaoCa bgc) {
         try {
+            if (bgc == null || bgc.getNhanVien() == null || bgc.getCaLamViec() == null) {
+                return false;
+            }
+            LocalDate ngay = bgc.getGioKetThucThucTe() != null
+                    ? bgc.getGioKetThucThucTe().toLocalDate()
+                    : LocalDate.now();
+            BangGiaoCa daCo = bangGiaoCaDAO.timGiaoCaTrongNgay(
+                    bgc.getNhanVien().getMaNhanVien(),
+                    ngay,
+                    bgc.getCaLamViec().getMaCa()
+            );
+            if (daCo != null) {
+                if ("DA_DUYET".equalsIgnoreCase(daCo.getTrangThai())) {
+                    throw new IllegalStateException("Ca " + bgc.getCaLamViec().getMaCa()
+                            + " ngày hôm nay đã được Quản lý duyệt két (Mã: "
+                            + daCo.getMaGiaoCa() + "). Không thể chốt lại!");
+                }
+                // Ghi đè cập nhật vào bản ghi đang chờ duyệt
+                bgc.setMaGiaoCa(daCo.getMaGiaoCa());
+                return bangGiaoCaDAO.updateBangGiaoCaToanDien(bgc);
+            }
             return bangGiaoCaDAO.insertBangGiaoCa(bgc);
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("[GiaoCaBus] Lỗi luuBangGiaoCa: " + e.getMessage());
+            if (e instanceof RuntimeException) throw (RuntimeException) e;
             return false;
+        }
+    }
+
+    public BangGiaoCa timGiaoCaTrongNgay(String maNV, LocalDate ngay, String maCa) {
+        try {
+            return bangGiaoCaDAO.timGiaoCaTrongNgay(maNV, ngay, maCa);
+        } catch (Exception e) {
+            System.err.println("[GiaoCaBus] Lỗi timGiaoCaTrongNgay: " + e.getMessage());
+            return null;
         }
     }
 

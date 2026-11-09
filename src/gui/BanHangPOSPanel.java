@@ -1295,7 +1295,7 @@ public class BanHangPOSPanel extends JPanel {
 //                int sl = (int) modelGioHang.getValueAt(i, 4);
 //                int slMoi = sl + 1;
 //                modelGioHang.setValueAt(slMoi, i, 4);
-//                modelGioHang.setValueAt(df.format(slMoi * item.donGia), i, 6);
+//                modelGioHang.setValueAt(df.format(BanHangBus.tinhThanhTienTungDong(slMoi, item.donGia)), i, 6);
 //                capNhatTongTien();
 //                return;
 //            }
@@ -1341,7 +1341,7 @@ public class BanHangPOSPanel extends JPanel {
                 }
 
                 modelGioHang.setValueAt(slMoi, i, 4);
-                modelGioHang.setValueAt(df.format(slMoi * item.donGia), i, 6);
+                modelGioHang.setValueAt(df.format(BanHangBus.tinhThanhTienTungDong(slMoi, item.donGia)), i, 6);
                 capNhatTongTien();
                 return;
             }
@@ -2008,7 +2008,7 @@ public class BanHangPOSPanel extends JPanel {
                 txtTienKhachDua.setEnabled(true);
                 if (amount < 0) {
                     long tienKhauTru = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
-                    long canTra = Math.max(0, tongTienHang - tienGiamGia - tienKhauTru);
+                    long canTra = BanHangBus.tinhKetQuaThanhToan(tongTienHang, tienGiamGia, tienKhauTru).getTienPhaiThanhToan().longValueExact();
                     txtTienKhachDua.setText(String.valueOf(canTra));
                 } else {
                     txtTienKhachDua.setText(String.valueOf(amount));
@@ -2060,7 +2060,7 @@ public class BanHangPOSPanel extends JPanel {
             modelGioHang.setValueAt(slMoi, row, 4);
             String donGiaStr = ((String) modelGioHang.getValueAt(row, 5)).replaceAll("[^0-9]", "").trim();
             long donGia = donGiaStr.isEmpty() ? 0 : Long.parseLong(donGiaStr);
-            modelGioHang.setValueAt(df.format(slMoi * donGia), row, 6);
+            modelGioHang.setValueAt(df.format(BanHangBus.tinhThanhTienTungDong(slMoi, donGia)), row, 6);
             capNhatTongTien();
         } finally {
             dangCapNhatSoLuongBang = false;
@@ -2317,7 +2317,7 @@ public class BanHangPOSPanel extends JPanel {
                 modelGioHang.setValueAt(slMoi, row, 4);
                 String donGiaStr = ((String) modelGioHang.getValueAt(row, 5)).replaceAll("[^0-9]", "").trim();
                 long donGia = Long.parseLong(donGiaStr);
-                modelGioHang.setValueAt(df.format(slMoi * donGia), row, 6);
+                modelGioHang.setValueAt(df.format(BanHangBus.tinhThanhTienTungDong(slMoi, donGia)), row, 6);
             }
             capNhatTongTien();
         } finally {
@@ -2380,15 +2380,15 @@ public class BanHangPOSPanel extends JPanel {
         }
 
         boolean isVIP = diemHienCo >= 100 || (lblDiemTichLuy != null && lblDiemTichLuy.getText().contains("VIP"));
-        long tienGiamVip = (isVIP && tongTienHang > 0) ? (long) (tongTienHang * 0.05) : 0;
+        long tienGiamVip = BanHangBus.tinhGiamGiaVIP(tongTienHang, isVIP);
         long tongSauVip = Math.max(0, tongTienHang - tienGiamVip);
         int soDiemChon = (spnDiemDung != null && diemHienCo > 0) ? ((Number) spnDiemDung.getValue()).intValue() : 0;
-        tienDoiDiem = Math.min(tongSauVip, soDiemChon * 1000L);
+        tienDoiDiem = BanHangBus.tinhTienGiamTuDiem(soDiemChon, diemHienCo, tongSauVip);
         tienGiamGia = tienGiamVip + tienDoiDiem;
 
         long tienKhauTruDoiTra = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
         long tongGiamVaKhauTru = tienGiamGia + tienKhauTruDoiTra;
-        long canTra = Math.max(0, tongTienHang - tienGiamGia - tienKhauTruDoiTra);
+        long canTra = BanHangBus.tinhTongThanhToan(tongTienHang, tienGiamVip, tienDoiDiem, tienKhauTruDoiTra);
 
         if (lblTongTienHang != null) lblTongTienHang.setText(df.format(tongTienHang));
         if (lblGiamGia != null) {
@@ -2422,9 +2422,9 @@ public class BanHangPOSPanel extends JPanel {
         if (txtTienKhachDua == null || lblTienThoiLai == null) return;
         try {
             long tienKhauTruDoiTra = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
-            long canTra = Math.max(0, tongTienHang - tienGiamGia - tienKhauTruDoiTra);
-            long tongPhaiTraTruocKhauTru = Math.max(0, tongTienHang - tienGiamGia);
-            long tienHoanThua = (tongPhaiTraTruocKhauTru < tienKhauTruDoiTra) ? (tienKhauTruDoiTra - tongPhaiTraTruocKhauTru) : 0L;
+            bus.TaiChinhHoaDonBus.KetQuaThanhToan kqThanhToan = BanHangBus.tinhKetQuaThanhToan(tongTienHang, tienGiamGia, tienKhauTruDoiTra);
+            long canTra = kqThanhToan.getTienPhaiThanhToan().longValueExact();
+            long tienHoanThua = kqThanhToan.getTienHoanDoiTra().longValueExact();
 
             String text = txtTienKhachDua.getText().replaceAll("[^0-9]", "").trim();
             long tienDua = text.isEmpty() ? 0 : Long.parseLong(text);
@@ -2512,7 +2512,7 @@ public class BanHangPOSPanel extends JPanel {
         long tienKhauTru = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
         hd.tongTienHang = tongTienHang;
         hd.giamGia = tienGiamGia + tienKhauTru;
-        hd.tongThanhToan = Math.max(0, tongTienHang - tienGiamGia - tienKhauTru);
+        hd.tongThanhToan = BanHangBus.tinhTongThanhToan(tongTienHang, tienGiamGia, 0, tienKhauTru);
         hd.phuongThuc = cboPhuongThuc != null ? (String) cboPhuongThuc.getSelectedItem() : "Tiền mặt";
         hd.trangThai = "Phiếu tạm tính";
         for (int i = 0; i < modelGioHang.getRowCount(); i++) {
@@ -2526,8 +2526,8 @@ public class BanHangPOSPanel extends JPanel {
                     modelGioHang.getValueAt(i, 6)
             });
         }
-        long canTraVal = Math.max(0, tongTienHang - tienGiamGia - tienKhauTru);
-        HoaDonPreviewDialog.hienThiHoaDon(this, hd, canTraVal, 0, (int) (canTraVal / 100000), diemHienCo);
+        long canTraVal = BanHangBus.tinhTongThanhToan(tongTienHang, tienGiamGia, 0, tienKhauTru);
+        HoaDonPreviewDialog.hienThiHoaDon(this, hd, canTraVal, 0, BanHangBus.tinhDiemThuongMoi(canTraVal), diemHienCo);
     }
 
     private void taoDonMoi() {
@@ -2556,7 +2556,7 @@ public class BanHangPOSPanel extends JPanel {
         don.thoiGianTao = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
         don.tongTien = tongTienHang;
         don.giamGia = tienGiamGia;
-        don.khachCanTra = Math.max(0, tongTienHang - tienGiamGia);
+        don.khachCanTra = BanHangBus.tinhTongThanhToan(tongTienHang, tienGiamGia, 0, 0);
         don.phuongThuc = (String) cboPhuongThuc.getSelectedItem();
 
         for (int i = 0; i < modelGioHang.getRowCount(); i++) {
@@ -2838,11 +2838,11 @@ public class BanHangPOSPanel extends JPanel {
             }
         }
 
-        // tính lại tiền cần trả sau khi trừ giảm giá với tiền đổi hàng cũ
+        // tính lại tiền cần trả sau khi trừ giảm giá với tiền đổi hàng cũ (ủy thác hoàn toàn xuống BUS)
         long tienKhauTruDoiTra = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getTongTienTra() : 0L;
-        long canTra = Math.max(0, tongTienHang - tienGiamGia - tienKhauTruDoiTra);
-        long tongPhaiTraTruocKhauTru = Math.max(0, tongTienHang - tienGiamGia);
-        long tienHoanThua = (tongPhaiTraTruocKhauTru < tienKhauTruDoiTra) ? (tienKhauTruDoiTra - tongPhaiTraTruocKhauTru) : 0L;
+        bus.TaiChinhHoaDonBus.KetQuaThanhToan kqThanhToan = BanHangBus.tinhKetQuaThanhToan(tongTienHang, tienGiamGia, tienKhauTruDoiTra);
+        long canTra = kqThanhToan.getTienPhaiThanhToan().longValueExact();
+        long tienHoanThua = kqThanhToan.getTienHoanDoiTra().longValueExact();
 
         String tienDuaRaw = txtTienKhachDua != null ? txtTienKhachDua.getText().replaceAll("[^0-9]", "").trim() : "";
         long tienKhachDuaVal;
@@ -2881,7 +2881,7 @@ public class BanHangPOSPanel extends JPanel {
                 }
                 return;
             }
-            tienThoiVal = Math.max(0, tienKhachDuaVal - canTra);
+            tienThoiVal = bus.TaiChinhHoaDonBus.tinhTienThuaTienMat(java.math.BigDecimal.valueOf(tienKhachDuaVal), java.math.BigDecimal.valueOf(canTra)).longValueExact();
         } else { // chuyển khoản thì hiện popup vietqr
             if (canTra > 0) {
                 boolean daNhanTien = VietQRDialog.xacNhanThanhToanVietQR(this, maHD, canTra, tenKhach);
@@ -2908,7 +2908,7 @@ public class BanHangPOSPanel extends JPanel {
         int diemDaDung = (spnDiemDung != null && diemHienCo > 0) ? ((Number) spnDiemDung.getValue()).intValue() : 0;
         if (diemDaDung < 0) diemDaDung = 0;
         if (diemDaDung > diemHienCo) diemDaDung = diemHienCo;
-        int diemThuongMoi = (int) (canTra / 100000L);
+        int diemThuongMoi = BanHangBus.tinhDiemThuongMoi(canTra);
         int diemKhauTruDT = (thongTinDoiTraHienTai != null) ? thongTinDoiTraHienTai.getDiemKhauTru() : 0;
         int tongDiemMoi = Math.max(0, diemHienCo - diemDaDung - diemKhauTruDT) + diemThuongMoi;
 
@@ -4171,7 +4171,7 @@ public class BanHangPOSPanel extends JPanel {
         if (modelRow < 0 || modelRow >= dsLichSuHienThi.size()) return;
         HoaDonDaThanhToan hd = dsLichSuHienThi.get(modelRow);
 
-        int diemCong = (int) (hd.tongThanhToan / 100000L);
+        int diemCong = BanHangBus.tinhDiemThuongMoi(hd.tongThanhToan);
         int tongDiem = diemCong;
         if (hd.sdt != null && !hd.sdt.trim().isEmpty()) {
             KhachHang kh = controller.timKhachHang(hd.sdt.trim());

@@ -388,7 +388,7 @@ public class BanHangBus {
 		KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi));
 		try {
 			STATIC_KH_DAO.insert(khMoi);
-			DANH_SACH_KHACH_HANG.add(khMoi);
+			dongBoKhachHangTuDatabase(true); // cache is unmodifiable: reload from DB
 			return khMoi;
 		} catch (SQLException e) {
 			System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
@@ -471,7 +471,7 @@ public class BanHangBus {
 		KhachHang khMoi = new KhachHang(maMoi, tenMoi, sdt, Math.max(0, diemMoi), email, diaChi);
 		try {
 			STATIC_KH_DAO.insert(khMoi);
-			DANH_SACH_KHACH_HANG.add(khMoi);
+			dongBoKhachHangTuDatabase(true); // cache is unmodifiable: reload from DB
 			return khMoi;
 		} catch (SQLException e) {
 			System.err.println("[BanHangBus] Lỗi insert KhachHang CSDL: " + e.getMessage());
@@ -488,7 +488,8 @@ public class BanHangBus {
 			System.err.println("[BanHangBus] Lỗi xoaKhachHang CSDL: " + e.getMessage());
 			return false;
 		}
-		return DANH_SACH_KHACH_HANG.removeIf(kh -> kh.getMaKhachHang().equalsIgnoreCase(maKH));
+		dongBoKhachHangTuDatabase(true); // cache is unmodifiable: reload from DB
+		return true;
 	}
 
 	// Xếp hạng thành viên tự động dựa trên tổng điểm tích lũy
@@ -711,6 +712,12 @@ public class BanHangBus {
 				.tinhThanhToan(BigDecimal.valueOf(tongTienHang), BigDecimal.valueOf(tienGiamVIP),
 						BigDecimal.valueOf(tienDoiDiem), BigDecimal.valueOf(tienKhauTruDoiTra))
 				.getTienPhaiThanhToan().longValueExact();
+	}
+
+	public static TaiChinhHoaDonBus.KetQuaThanhToan tinhKetQuaThanhToan(long tongTienHang, long tienGiamGia,
+			long tienKhauTruDoiTra) {
+		return TaiChinhHoaDonBus.tinhThanhToan(BigDecimal.valueOf(tongTienHang), BigDecimal.valueOf(tienGiamGia),
+				BigDecimal.ZERO, BigDecimal.valueOf(tienKhauTruDoiTra));
 	}
 
 	public static int tinhDiemThuongMoi(long tongThanhToan) {

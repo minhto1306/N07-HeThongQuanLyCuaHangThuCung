@@ -526,6 +526,53 @@ public class BanGiaoCaPanel extends JPanel {
             }
 
             dongBoLichSuGiaoCaTuDatabase();
+
+            // Kiểm tra trạng thái ca hiện tại trong ngày của nhân viên
+            String caSelected = cboCaLamViec != null && cboCaLamViec.getSelectedItem() != null
+                    ? cboCaLamViec.getSelectedItem().toString() : "CA01 - Ca Sáng";
+            String maCa = caSelected.split("-")[0].trim();
+            String maNV = UserSession.getUserId();
+            BangGiaoCa daChot = (maNV != null) ? giaoCaBus.timGiaoCaTrongNgay(maNV, LocalDate.now(), maCa) : null;
+            if (daChot != null) {
+                if ("DA_DUYET".equalsIgnoreCase(daChot.getTrangThai())) {
+                    if (btnChotCa != null) {
+                        btnChotCa.setEnabled(false);
+                        btnChotCa.setText("CA ĐÃ ĐƯỢC DUYỆT (HOÀN TẤT)");
+                    }
+                    if (txtTienThucTe != null) {
+                        txtTienThucTe.setText(df.format(daChot.getTienCuoiCaThucTe()));
+                        txtTienThucTe.setEditable(false);
+                    }
+                    if (txtLyDoChenhLech != null) {
+                        txtLyDoChenhLech.setText(daChot.getLyDoChenhLech() != null ? daChot.getLyDoChenhLech() : "");
+                        txtLyDoChenhLech.setEditable(false);
+                    }
+                } else {
+                    if (btnChotCa != null) {
+                        btnChotCa.setEnabled(true);
+                        btnChotCa.setText("CẬP NHẬT BIÊN BẢN GIAO CA [" + daChot.getMaGiaoCa() + "]");
+                    }
+                    if (txtTienThucTe != null) {
+                        txtTienThucTe.setEditable(true);
+                        if (txtTienThucTe.getText().trim().isEmpty() && daChot.getTienCuoiCaThucTe() != null) {
+                            txtTienThucTe.setText(String.valueOf(daChot.getTienCuoiCaThucTe().longValue()));
+                        }
+                    }
+                    if (txtLyDoChenhLech != null) {
+                        txtLyDoChenhLech.setEditable(true);
+                        if (txtLyDoChenhLech.getText().trim().isEmpty() && daChot.getLyDoChenhLech() != null) {
+                            txtLyDoChenhLech.setText(daChot.getLyDoChenhLech());
+                        }
+                    }
+                }
+            } else {
+                if (btnChotCa != null) {
+                    btnChotCa.setEnabled(true);
+                    btnChotCa.setText("CHỐT CA & BÀN GIAO KÉT TIỀN");
+                }
+                if (txtTienThucTe != null) txtTienThucTe.setEditable(true);
+                if (txtLyDoChenhLech != null) txtLyDoChenhLech.setEditable(true);
+            }
         } finally {
             dangCapNhatTuDong = false;
         }
@@ -697,6 +744,22 @@ public class BanGiaoCaPanel extends JPanel {
                     JOptionPane.WARNING_MESSAGE);
             if (override != JOptionPane.YES_OPTION) return;
         }
+        BangGiaoCa daChot = giaoCaBus.timGiaoCaTrongNgay(maNV, LocalDate.now(), maCa);
+        if (daChot != null) {
+            if ("DA_DUYET".equalsIgnoreCase(daChot.getTrangThai())) {
+                JOptionPane.showMessageDialog(this,
+                        "Ca " + maCa + " ngày hôm nay đã được Quản lý duyệt két (Mã: " + daChot.getMaGiaoCa() + ").\nKhông thể chốt lại!",
+                        "Ca đã hoàn tất", JOptionPane.WARNING_MESSAGE);
+                return;
+            } else {
+                int opt = JOptionPane.showConfirmDialog(this,
+                        "Bạn đã gửi biên bản [" + daChot.getMaGiaoCa() + "] trước đó và đang chờ Quản lý duyệt.\n" +
+                        "Bạn có muốn CẬP NHẬT LẠI số tiền kiểm đếm thực tế (" + df.format(thucTe) + ") và lý do giải trình không?",
+                        "Xác nhận cập nhật bàn giao ca",
+                        JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                if (opt != JOptionPane.YES_OPTION) return;
+            }
+        }
         String maGC = luuBienBanGiaoCaXuongCSDL(maNV, tenNV, maCa, tienDauCa, lyThuyet, thucTe, chenhLech, lyDoNhap);
         if (maGC == null) {
             return;
@@ -706,8 +769,11 @@ public class BanGiaoCaPanel extends JPanel {
         txtTienThucTe.setEditable(false);
         txtLyDoChenhLech.setEditable(false);
 
+        String thongBaoTieuDe = (daChot != null)
+                ? ("ĐÃ CẬP NHẬT BIÊN BẢN KẾT CA [" + maGC + "] THÀNH CÔNG!\n")
+                : ("ĐÃ GỬI BIÊN BẢN KẾT CA [" + maGC + "] LÊN HỆ THỐNG!\n");
         int askLogout = JOptionPane.showConfirmDialog(this,
-                "ĐÃ GỬI BIÊN BẢN KẾT CA [" + maGC + "] LÊN HỆ THỐNG!\n" +
+                thongBaoTieuDe +
                 "• Trạng thái hiện tại: ⏳ Chờ Quản lý duyệt\n" +
                 "• Thu ngân bàn giao: " + tenNV + "\n" +
                 "• Tiền mặt thực tế: " + df.format(thucTe) + " (Chênh lệch: " + df.format(chenhLech) + ")\n\n" +
@@ -724,23 +790,25 @@ public class BanGiaoCaPanel extends JPanel {
         LocalDateTime nowDt = LocalDateTime.now();
         String nowStr = nowDt.format(dtf);
         
-        String maGC = giaoCaBus.phatSinhMaGiaoCa();
+        BangGiaoCa daChot = giaoCaBus.timGiaoCaTrongNgay(maNV, LocalDate.now(), maCa);
+        String maGC = (daChot != null) ? daChot.getMaGiaoCa() : giaoCaBus.phatSinhMaGiaoCa();
+        if (daChot == null) {
+            int maxNum = 0;
+            try {
+                maxNum = Integer.parseInt(maGC.substring(2));
+            } catch (Exception ignored) {}
 
-        int maxNum = 0;
-        try {
-            maxNum = Integer.parseInt(maGC.substring(2));
-        } catch (Exception ignored) {}
-
-        for (int i = 0; i < modelLichSu.getRowCount(); i++) {
-            String m = String.valueOf(modelLichSu.getValueAt(i, 0));
-            if (m.startsWith("GC") && !m.startsWith("GC_TEST_")) {
-                try {
-                    int n = Integer.parseInt(m.substring(2).replaceAll("[^0-9]", ""));
-                    if (n >= maxNum) maxNum = n + 1;
-                } catch (Exception ignored) {}
+            for (int i = 0; i < modelLichSu.getRowCount(); i++) {
+                String m = String.valueOf(modelLichSu.getValueAt(i, 0));
+                if (m.startsWith("GC") && !m.startsWith("GC_TEST_")) {
+                    try {
+                        int n = Integer.parseInt(m.substring(2).replaceAll("[^0-9]", ""));
+                        if (n >= maxNum) maxNum = n + 1;
+                    } catch (Exception ignored) {}
+                }
             }
+            maGC = String.format("GC%03d", maxNum > 0 ? maxNum : 1);
         }
-        maGC = String.format("GC%03d", maxNum > 0 ? maxNum : 1);
 
         try {
             NhanVien nv = new NhanVien(maNV, tenNV, "", "", null);
@@ -761,6 +829,7 @@ public class BanGiaoCaPanel extends JPanel {
             if (!giaoCaBus.luuBangGiaoCa(bgc)) {
                 throw new SQLException("Không có bản ghi bàn giao ca nào được lưu.");
             }
+            maGC = bgc.getMaGiaoCa();
         } catch (Exception e) {
             System.err.println("[BanGiaoCaPanel] Lỗi lưu giao ca CSDL: " + e.getMessage());
             JOptionPane.showMessageDialog(this,
@@ -769,14 +838,30 @@ public class BanGiaoCaPanel extends JPanel {
             return null;
         }
 
-        modelLichSu.insertRow(0, new Object[]{
-                maGC, maCa, tenNV,
-                df.format(dauCa), df.format(lyThuyet),
-                df.format(thucTe), df.format(chenhLech), nowStr,
-                "⏳ Chờ Quản lý duyệt | " + (ghiChu.isEmpty() ? "Khớp két 100%" : ghiChu)
-        });
-        if (tblLichSu != null && modelLichSu.getRowCount() > 0) {
-            tblLichSu.setRowSelectionInterval(0, 0);
+        boolean rowUpdated = false;
+        for (int i = 0; i < modelLichSu.getRowCount(); i++) {
+            if (maGC.equals(modelLichSu.getValueAt(i, 0))) {
+                modelLichSu.setValueAt(df.format(dauCa), i, 3);
+                modelLichSu.setValueAt(df.format(lyThuyet), i, 4);
+                modelLichSu.setValueAt(df.format(thucTe), i, 5);
+                modelLichSu.setValueAt(df.format(chenhLech), i, 6);
+                modelLichSu.setValueAt(nowStr, i, 7);
+                modelLichSu.setValueAt("⏳ Chờ Quản lý duyệt | " + (ghiChu.isEmpty() ? "Khớp két 100%" : ghiChu), i, 8);
+                if (tblLichSu != null) tblLichSu.setRowSelectionInterval(i, i);
+                rowUpdated = true;
+                break;
+            }
+        }
+        if (!rowUpdated) {
+            modelLichSu.insertRow(0, new Object[]{
+                    maGC, maCa, tenNV,
+                    df.format(dauCa), df.format(lyThuyet),
+                    df.format(thucTe), df.format(chenhLech), nowStr,
+                    "⏳ Chờ Quản lý duyệt | " + (ghiChu.isEmpty() ? "Khớp két 100%" : ghiChu)
+            });
+            if (tblLichSu != null && modelLichSu.getRowCount() > 0) {
+                tblLichSu.setRowSelectionInterval(0, 0);
+            }
         }
         txtLyDoChenhLech.setText("");
         return maGC;

@@ -6,6 +6,7 @@ import entity.NhanVien;
 import utils.DBConnection;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -67,6 +68,66 @@ public class BangGiaoCaDAO {
     /**
      * Chốt kết ca và ghi nhận đối soát chênh lệch tiền mặt
      */
+    public boolean updateBangGiaoCaToanDien(BangGiaoCa giaoCa) throws SQLException {
+        String sql = "UPDATE BangGiaoCa SET tienDauCa=?, tienCuoiCaHeThong=?, tienCuoiCaThucTe=?, tienChenhLech=?, " +
+                     "tienThuTienMat=?, tienChuyenKhoan=?, tienHoanTra=?, lyDoChenhLech=?, gioBatDauCa=?, " +
+                     "gioKetThucThucTe=?, trangThai=? WHERE maGiaoCa=?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setBigDecimal(1, giaoCa.getTienDauCa());
+            ps.setBigDecimal(2, giaoCa.getTienCuoiCaHeThong());
+            ps.setBigDecimal(3, giaoCa.getTienCuoiCaThucTe());
+            ps.setBigDecimal(4, giaoCa.getTienChenhLech());
+            ps.setBigDecimal(5, giaoCa.getTienThuTienMat());
+            ps.setBigDecimal(6, giaoCa.getTienChuyenKhoan());
+            ps.setBigDecimal(7, giaoCa.getTienHoanTra());
+            ps.setString(8, giaoCa.getLyDoChenhLech());
+            if (giaoCa.getGioBatDauCa() != null) ps.setTimestamp(9, Timestamp.valueOf(giaoCa.getGioBatDauCa()));
+            else ps.setNull(9, Types.TIMESTAMP);
+            ps.setTimestamp(10, Timestamp.valueOf(giaoCa.getGioKetThucThucTe() != null ? giaoCa.getGioKetThucThucTe() : LocalDateTime.now()));
+            ps.setString(11, giaoCa.getTrangThai() != null ? giaoCa.getTrangThai() : "CHO_DUYET");
+            ps.setString(12, giaoCa.getMaGiaoCa());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public BangGiaoCa timGiaoCaTrongNgay(String maNhanVien, LocalDate ngay, String maCa) throws SQLException {
+        if (maNhanVien == null || ngay == null || maCa == null) return null;
+        String sql = "SELECT TOP 1 bgc.*, nv.hoTen AS tenNhanVien, c.tenCa, ql.hoTen AS tenQuanLyDuyet " +
+                     "FROM BangGiaoCa bgc " +
+                     "LEFT JOIN NhanVien nv ON bgc.maNhanVien = nv.maNhanVien " +
+                     "LEFT JOIN CaLamViec c ON bgc.maCa = c.maCa " +
+                     "LEFT JOIN NhanVien ql ON bgc.maQuanLyDuyet = ql.maNhanVien " +
+                     "WHERE bgc.maNhanVien = ? AND bgc.maCa = ? " +
+                     "AND bgc.ngayGiaoCa = ? " +
+                     "ORDER BY bgc.gioKetThucThucTe DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maNhanVien);
+            ps.setString(2, maCa);
+            ps.setDate(3, java.sql.Date.valueOf(ngay));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    NhanVien nv = new NhanVien();
+                    nv.setMaNhanVien(rs.getString("maNhanVien"));
+                    nv.setHoTen(rs.getString("tenNhanVien"));
+                    CaLamViec ca = new CaLamViec();
+                    ca.setMaCa(rs.getString("maCa"));
+                    ca.setTenCa(rs.getString("tenCa"));
+                    Timestamp kt = rs.getTimestamp("gioKetThucThucTe");
+                    BangGiaoCa bgc = new BangGiaoCa(
+                            rs.getString("maGiaoCa"), nv, ca,
+                            rs.getBigDecimal("tienDauCa"), rs.getBigDecimal("tienCuoiCaHeThong"),
+                            rs.getBigDecimal("tienCuoiCaThucTe"), rs.getBigDecimal("tienChenhLech"),
+                            rs.getString("lyDoChenhLech"), kt != null ? kt.toLocalDateTime() : null);
+                    boSungThongTinK80(bgc, rs);
+                    return bgc;
+                }
+            }
+        }
+        return null;
+    }
+
     public boolean chotKetCa(BangGiaoCa giaoCa) throws SQLException {
         String sql = "UPDATE BangGiaoCa SET tienCuoiCaHeThong=?, tienCuoiCaThucTe=?, tienChenhLech=?, tienThuTienMat=?, " +
                      "tienChuyenKhoan=?, tienHoanTra=?, lyDoChenhLech=?, gioKetThucThucTe=?, trangThai=? WHERE maGiaoCa=?";
