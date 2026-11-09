@@ -28,10 +28,12 @@
 
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
+SET NOCOUNT ON;
 GO
 
 -- DÒNG CẤU HÌNH CHẾ ĐỘ (Mặc định: SCHEMA_ONLY. Đổi thành DEMO_DATA khi cần nạp dữ liệu thử nghiệm):
 -- EXEC sp_set_session_context N'CheDo', N'DEMO_DATA';
+EXEC sp_set_session_context N'PetshopPreflightPassed', 0;
 IF SESSION_CONTEXT(N'CheDo') IS NULL
 BEGIN
     EXEC sp_set_session_context N'CheDo', N'SCHEMA_ONLY';
@@ -69,6 +71,7 @@ BEGIN
         )) <> 30
         THROW 50006, N'DEMO_DATA yêu cầu schema chuẩn đủ 30 bảng; hãy chạy SCHEMA_ONLY trên database mới trước.', 1;
 END
+EXEC sp_set_session_context N'PetshopPreflightPassed', 1;
 GO
 
 PRINT N'======================================================================================';
@@ -333,7 +336,15 @@ BEGIN
     WHERE kc.parent_object_id = OBJECT_ID(N'dbo.SanPham')
         AND kc.type = 'UQ' AND col.name = N'maVach';
     IF @uqMaVachName IS NOT NULL
-        EXEC(N'ALTER TABLE dbo.SanPham DROP CONSTRAINT ' + QUOTENAME(@uqMaVachName));
+    BEGIN
+        DECLARE @escapedConstraintName NVARCHAR(258) = QUOTENAME(@uqMaVachName);
+        IF @escapedConstraintName IS NOT NULL
+        BEGIN
+            DECLARE @dropBarcodeConstraintSql NVARCHAR(MAX) =
+                N'ALTER TABLE dbo.SanPham DROP CONSTRAINT ' + @escapedConstraintName;
+            EXEC(@dropBarcodeConstraintSql);
+        END
+    END
     IF NOT EXISTS (SELECT 1 FROM sys.indexes
                    WHERE object_id = OBJECT_ID(N'dbo.SanPham')
                      AND name = N'UQ_SanPham_MaVach')
@@ -688,7 +699,9 @@ WHEN NOT MATCHED THEN
     INSERT (loaiMa, soHienTai, moTa) VALUES (Source.loaiMa, Source.soHienTai, Source.moTa);
 GO
 
-PRINT N'>>> ĐÃ HOÀN TẤT GIAI ĐOẠN 1: CẤU TRÚC 30 BẢNG VÀ CẤU HÌNH CƠ BẢN.';
+IF ISNULL(TRY_CAST(SESSION_CONTEXT(N'PetshopPreflightPassed') AS INT), 0) <> 1
+    THROW 50015, N'Preflight thất bại; các batch sau có thể đã chạy một phần. Dừng và kiểm tra schema.', 1;
+PRINT N'>>> ĐÃ HOÀN TẤT GIAI ĐOẠN 1: CẤU TRÚC VÀ CẤU HÌNH CƠ BẢN.';
 GO
 
 
@@ -1733,6 +1746,19 @@ BEGIN
     PRINT N'>>> CHẾ ĐỘ THỰC THI HIỆN TẠI LÀ SCHEMA_ONLY. BỎ QUA NẠP DEMO DATA AN TOÀN.';
 END
 GO
+
+IF ISNULL(TRY_CAST(SESSION_CONTEXT(N'PetshopPreflightPassed') AS INT), 0) <> 1
+    THROW 50015, N'Preflight thất bại; không được coi script là thành công.', 1;
+IF (SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0 AND name IN (
+    N'TaiKhoan', N'NhanVien', N'CaLamViec', N'BangPhanCong', N'BangGiaoCa',
+    N'KhachHang', N'ThuCung', N'HoSoThuCung', N'HoSoSucKhoe', N'DichVu',
+    N'LichHen', N'ChiTietLichHen', N'DanhMucHang', N'SanPham', N'DonViTinh',
+    N'QuyDoiDonVi', N'NhaCungCap', N'LoHang', N'HoaDon', N'ChiTietHoaDon',
+    N'ChiTietXuatLo', N'ChiTietDichVu', N'PhieuDoiTra', N'ChiTietDoiTra',
+    N'PhongLuuTru', N'TheSpaPass', N'LichSuSuDungSpaPass', N'LichSuLuuTru',
+    N'GoiSpaPass', N'BangCapSo'
+)) <> 30
+    THROW 50014, N'Script chưa hoàn tất: thiếu bảng. Không được coi các dòng PRINT trước đó là thành công.', 1;
 
 PRINT N'======================================================================================';
 PRINT N'ĐÃ HOÀN TẤT THỰC THI SCRIPT HETHONGQUANLYTHUCUNG.SQL THÀNH CÔNG!';
