@@ -633,10 +633,8 @@ public class ThuCungDichVuPanel extends JPanel {
         JButton btnPhatHanhThe = ThemeColors.createPrimaryButton("Phát hành Thẻ mới", IconHelper.getIcon(IconHelper.PLUS, 14, Color.WHITE));
         JButton btnNapBuoi = ThemeColors.createSecondaryButton("Nạp thêm / Gia hạn buổi", IconHelper.getIcon(IconHelper.EDIT, 14, ThemeColors.TEXT_SECONDARY));
         JButton btnLamMoiThe = ThemeColors.createSecondaryButton("Làm mới", IconHelper.getIcon(IconHelper.REFRESH, 14, ThemeColors.TEXT_SECONDARY));
-        btnPhatHanhThe.setEnabled(false);
-        btnNapBuoi.setEnabled(false);
-        btnPhatHanhThe.setToolTipText("Bán gói qua POS để phát hành sau thanh toán");
-        btnNapBuoi.setToolTipText("Nạp/gia hạn qua POS để có hóa đơn");
+        btnPhatHanhThe.setToolTipText("Phát hành thẻ Spa Pass mới cho khách hàng");
+        btnNapBuoi.setToolTipText("Nạp thêm buổi hoặc gia hạn hạn dùng cho thẻ");
 
         txtTimTheHoiVien.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { napDuLieuTheHoiVien(); }
@@ -742,12 +740,6 @@ public class ThuCungDichVuPanel extends JPanel {
     }
 
     private void moDialogPhatHanhTheMoi() {
-        JOptionPane.showMessageDialog(this,
-                "Thẻ Spa Pass chỉ được phát hành sau khi bán gói và thanh toán tại POS.\n"
-                + "Màn hình này chỉ dùng để tra cứu/đối soát thẻ.",
-                "Phát hành qua POS", JOptionPane.INFORMATION_MESSAGE);
-        return;
-        /*
         JTextField txtSdt = new JTextField();
         JTextField txtHoTen = new JTextField();
         JComboBox<String> cboGoi = new JComboBox<>(new String[]{
@@ -795,23 +787,21 @@ public class ThuCungDichVuPanel extends JPanel {
 
             TheSpaPass theMoi = SpaPassBus.kichHoatTheMoi(sdt, ten, tenGoi, soBuoi, donGia);
             napDuLieuTheHoiVien();
-            JOptionPane.showMessageDialog(this,
-                    "Phát hành Thẻ Spa Pass thành công!\n"
-                            + "- Mã thẻ: " + theMoi.getMaThe() + "\n"
-                            + "- Khách hàng: " + theMoi.getTenKhachHang() + " (" + theMoi.getSdtKhachHang() + ")\n"
-                            + "- Gói dịch vụ: " + theMoi.getTenGoi() + " (" + theMoi.getTongSoBuoi() + " buổi)\n"
-                            + "- Hạn sử dụng: Đến ngày " + theMoi.getNgayHetHanStr(),
-                    "Phát hành thành công", JOptionPane.INFORMATION_MESSAGE);
+            if (theMoi != null) {
+                JOptionPane.showMessageDialog(this,
+                        "Phát hành Thẻ Spa Pass thành công!\n"
+                                + "- Mã thẻ: " + theMoi.getMaThe() + "\n"
+                                + "- Khách hàng: " + theMoi.getTenKhachHang() + " (" + theMoi.getSdtKhachHang() + ")\n"
+                                + "- Gói dịch vụ: " + theMoi.getTenGoi() + " (" + theMoi.getTongSoBuoi() + " buổi)\n"
+                                + "- Hạn sử dụng: Đến ngày " + theMoi.getNgayHetHanStr(),
+                        "Phát hành thành công", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Không thể phát hành thẻ. Vui lòng kiểm tra lại kết nối CSDL!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
         }
-        */
     }
 
     private void moDialogGiaHanHoacNapBuoi() {
-        JOptionPane.showMessageDialog(this,
-                "Nạp thêm/gia hạn là giao dịch có thu tiền và phải thực hiện qua POS để có hóa đơn.",
-                "Nạp gói qua POS", JOptionPane.INFORMATION_MESSAGE);
-        return;
-        /*
         int row = tblTheHoiVien.getSelectedRow();
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn 1 thẻ trên bảng để nạp thêm hoặc gia hạn!", "Chưa chọn thẻ", JOptionPane.WARNING_MESSAGE);
@@ -840,18 +830,26 @@ public class ThuCungDichVuPanel extends JPanel {
             try {
                 int buoi = Integer.parseInt(txtSoBuoiNap.getText().trim());
                 int ngay = Integer.parseInt(txtSoNgayGiaHan.getText().trim());
-                the.napThemBuoi(buoi, ngay);
-                napDuLieuTheHoiVien();
-                JOptionPane.showMessageDialog(this,
-                        "Đã nạp thêm " + buoi + " buổi và gia hạn " + ngay + " ngày cho thẻ [" + maThe + "] thành công!\n"
-                                + "- Số buổi khả dụng mới: " + the.getSoBuoiConLai() + "/" + the.getTongSoBuoi() + " buổi\n"
-                                + "- Hạn sử dụng mới: " + the.getNgayHetHanStr(),
-                        "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                if (buoi <= 0 && ngay <= 0) {
+                    JOptionPane.showMessageDialog(this, "Vui lòng nhập số buổi nạp hoặc số ngày gia hạn lớn hơn 0!", "Dữ liệu không hợp lệ", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                boolean ok = SpaPassBus.napThemBuoiChoThe(maThe, buoi, ngay);
+                if (ok) {
+                    napDuLieuTheHoiVien();
+                    TheSpaPass theCapNhat = SpaPassBus.timTheTheoMa(maThe);
+                    JOptionPane.showMessageDialog(this,
+                            "Đã nạp thêm " + buoi + " buổi và gia hạn " + ngay + " ngày cho thẻ [" + maThe + "] thành công!\n"
+                                    + "- Số buổi khả dụng mới: " + (theCapNhat != null ? theCapNhat.getSoBuoiConLai() + "/" + theCapNhat.getTongSoBuoi() : the.getSoBuoiConLai()) + " buổi\n"
+                                    + "- Hạn sử dụng mới: " + (theCapNhat != null ? theCapNhat.getNgayHetHanStr() : the.getNgayHetHanStr()),
+                            "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Nạp thêm buổi không thành công. Vui lòng thử lại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                }
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Số buổi và số ngày phải là số nguyên dương hợp lệ!", "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
             }
         }
-        */
     }
 
     // hàm gửi email nhắc lịch tiêm phòng dại hoặc tái chủng 7 bệnh cho chủ thú cưng

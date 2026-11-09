@@ -89,19 +89,65 @@ public class SpaPassBus {
     /**
      * Kích hoạt Thẻ Spa Pass mới khi khách hàng mua gói tại quầy POS.
      */
-    public TheSpaPass kichHoatTheMoi(String sdt, String tenKhach, String maGoi, int soBuoi, long donGia) {
-        System.err.println("[SpaPassBus] Từ chối kích hoạt thẻ ngoài giao dịch hóa đơn POS");
+    public static synchronized TheSpaPass kichHoatTheMoi(String sdt, String tenKhach, String tenGoi, int soBuoi, long donGia) {
+        if (sdt == null || !sdt.trim().matches("^0\\d{9}$")) {
+            System.err.println("[SpaPassBus] Số điện thoại không hợp lệ: " + sdt);
+            return null;
+        }
+        if (soBuoi <= 0 || donGia <= 0) {
+            System.err.println("[SpaPassBus] Số buổi hoặc đơn giá không hợp lệ");
+            return null;
+        }
+        String cleanSdt = sdt.trim();
+        int seq = 1;
+        for (TheSpaPass t : DANH_SACH_THE) {
+            if (cleanSdt.equals(t.getSdtKhachHang())) {
+                seq++;
+            }
+        }
+        String maThe = String.format("PASS-%s-%02d", cleanSdt, seq);
+        // Kiểm tra tránh trùng khóa trong DB
+        try {
+            while (dao.findByMaThe(maThe) != null) {
+                seq++;
+                maThe = String.format("PASS-%s-%02d", cleanSdt, seq);
+            }
+        } catch (Exception ignored) {}
+
+        TheSpaPass the = new TheSpaPass(
+                maThe,
+                cleanSdt,
+                tenKhach != null ? tenKhach.trim() : "",
+                tenGoi,
+                soBuoi,
+                0,
+                donGia,
+                java.time.LocalDate.now(),
+                java.time.LocalDate.now().plusMonths(6)
+        );
+        the.setSoBuoiConLai(soBuoi);
+        the.setSoBuoiDaDung(0);
+        the.setTrangThai("ĐANG HOẠT ĐỘNG");
+        try {
+            boolean ok = dao.insertTheSpaPass(the);
+            if (ok) {
+                DANH_SACH_THE.add(0, the);
+                return the;
+            }
+        } catch (Exception e) {
+            System.err.println("[SpaPassBus] Lỗi lưu TheSpaPass xuống CSDL: " + e.getMessage());
+        }
         return null;
     }
 
     /**
      * Lấy toàn bộ danh sách thẻ Spa Pass (phục vụ đối soát và báo cáo).
      */
-    public List<TheSpaPass> layTatCaThe() {
+    public static synchronized List<TheSpaPass> layTatCaThe() {
         return new ArrayList<>(DANH_SACH_THE);
     }
 
-    public TheSpaPass timTheTheoMa(String maThe) {
+    public static synchronized TheSpaPass timTheTheoMa(String maThe) {
         if (maThe == null || maThe.trim().isEmpty()) return null;
         for (TheSpaPass the : DANH_SACH_THE) {
             if (maThe.trim().equalsIgnoreCase(the.getMaThe())) {
@@ -111,8 +157,41 @@ public class SpaPassBus {
         return null;
     }
 
-    public boolean napThemBuoiChoThe(String maThe, int soBuoi, int soNgayGiaHan) {
-        System.err.println("[SpaPassBus] Từ chối nạp thêm lượt ngoài giao dịch thanh toán");
+    public static synchronized boolean napThemBuoiChoThe(String maThe, int soBuoi, int soNgayGiaHan) {
+        if (maThe == null || maThe.trim().isEmpty()) return false;
+        if (soBuoi <= 0 && soNgayGiaHan <= 0) return false;
+        TheSpaPass the = timTheTheoMa(maThe);
+        if (the == null) return false;
+
+        int oldTongBuoi = the.getTongSoBuoi();
+        int oldConLai = the.getSoBuoiConLai();
+        java.time.LocalDate oldNgayHetHan = the.getNgayHetHan();
+        String oldTrangThai = the.getTrangThai();
+
+        if (soBuoi > 0) {
+            the.setTongSoBuoi(the.getTongSoBuoi() + soBuoi);
+            the.setSoBuoiConLai(the.getSoBuoiConLai() + soBuoi);
+        }
+        if (soNgayGiaHan > 0) {
+            the.setNgayHetHan(the.getNgayHetHan() != null ? the.getNgayHetHan().plusDays(soNgayGiaHan) : java.time.LocalDate.now().plusDays(soNgayGiaHan));
+        }
+        capNhatTrangThai(the);
+
+        try {
+            boolean ok = dao.updateTheSpaPass(the);
+            if (ok) {
+                dongBoDuLieuTuDatabase();
+                return true;
+            }
+        } catch (Exception e) {
+            System.err.println("[SpaPassBus] Lỗi cập nhật TheSpaPass: " + e.getMessage());
+        }
+
+        // Rollback memory if DB update fails
+        the.setTongSoBuoi(oldTongBuoi);
+        the.setSoBuoiConLai(oldConLai);
+        the.setNgayHetHan(oldNgayHetHan);
+        the.setTrangThai(oldTrangThai);
         return false;
     }
 
